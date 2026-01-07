@@ -13,6 +13,7 @@ from app.core.logging import setup_logging
 from app.api.health import router as health_router
 from app.avito.webhook import router as avito_router
 from app.telegram.handlers.admin_menu import router as admin_router
+from app.telegram.handlers.availability import router as availability_router
 
 
 # -------------------------------------------------
@@ -50,6 +51,8 @@ bot = Bot(
 
 dp = Dispatcher()
 dp.include_router(admin_router)
+dp.include_router(availability_router)
+
 
 
 # -------------------------------------------------
