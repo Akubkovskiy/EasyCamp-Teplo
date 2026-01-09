@@ -49,9 +49,12 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 
+from app.telegram.handlers.bookings import router as bookings_router
+
 dp = Dispatcher()
 dp.include_router(admin_router)
 dp.include_router(availability_router)
+dp.include_router(bookings_router)
 
 
 
@@ -62,6 +65,11 @@ dp.include_router(availability_router)
 @app.on_event("startup")
 async def on_startup():
     logger.info("FastAPI startup")
+    
+    # Init DB
+    from app.database import init_db
+    await init_db()
+    
     logger.info("Starting Telegram polling")
 
     asyncio.create_task(dp.start_polling(bot))

@@ -9,6 +9,7 @@ load_dotenv()
 class Settings(BaseModel):
     telegram_bot_token: str
     telegram_chat_id: int
+    database_url: str = "sqlite+aiosqlite:///./easycamp.db"
 
 
 settings = Settings(
