@@ -10,6 +10,10 @@ MONTHS_RU = [
 ]
 
 
+def month_title(year: int, month: int) -> str:
+    return f"{MONTHS_RU[month - 1]} {year}"
+
+
 def build_month_keyboard(
     year: int,
     month: int,
@@ -20,33 +24,40 @@ def build_month_keyboard(
     dates = get_month_dates(year, month)
 
     keyboard: list[list[InlineKeyboardButton]] = []
-    row: list[InlineKeyboardButton] = []
+    
+    # 1. Заголовок (кликабельный месяц)
+    keyboard.append([
+        InlineKeyboardButton(
+            text=month_title(year, month),
+            callback_data=f"{prefix}_pick_month:{year}"
+        )
+    ])
+    
+    # 2. Дни недели
+    week_days = ["Пн", "Вт", "Ср", " Чт", "Пт", "Сб", "Вс"]
+    keyboard.append([InlineKeyboardButton(text=day, callback_data="ignore") for day in week_days])
 
+    # 3. Дни месяца
+    row: list[InlineKeyboardButton] = []
     for date in dates:
         # ⛔ Отсекаем даты раньше min_date (если задан)
         if min_date and date < min_date:
-            continue
-
-        label = str(date.day)
-
-        if date == today:
-            label = f"🔹 {label}"
-
-        row.append(
-            InlineKeyboardButton(
-                text=label,
-                callback_data=f"{prefix}:{date.isoformat()}",
-            )
-        )
+            row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
+        else:
+            label = str(date.day) if date != today else f"🔹 {date.day}"
+            row.append(InlineKeyboardButton(text=label, callback_data=f"{prefix}:{date.isoformat()}"))
 
         if len(row) == 7:
             keyboard.append(row)
             row = []
 
     if row:
+        # Добиваем пустками если ряд не полный
+        while len(row) < 7:
+            row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
         keyboard.append(row)
 
-    # Навигация по месяцам
+    # 4. Навигация
     prev_month = (datetime.date(year, month, 1) - datetime.timedelta(days=1)).replace(day=1)
     next_month = (datetime.date(year, month, 28) + datetime.timedelta(days=4)).replace(day=1)
 
@@ -63,10 +74,11 @@ def build_month_keyboard(
         ]
     )
 
+    # 5. Кнопка Назад
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="⬅️ Назад в меню",
+                text="🔙 Назад в меню",
                 callback_data="admin:menu",
             )
         ]
@@ -75,5 +87,25 @@ def build_month_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def month_title(year: int, month: int) -> str:
-    return f"{MONTHS_RU[month - 1]} {year}"
+def build_year_keyboard(year: int, prefix: str) -> InlineKeyboardMarkup:
+    """Клавиатура выбора месяца"""
+    keyboard = []
+    
+    # Заголовок года
+    keyboard.append([
+        InlineKeyboardButton(text=f"⬅️", callback_data=f"{prefix}_pick_year:{year-1}"),
+        InlineKeyboardButton(text=f"{year}", callback_data="ignore"),
+        InlineKeyboardButton(text=f"➡️", callback_data=f"{prefix}_pick_year:{year+1}"),
+    ])
+    
+    # Месяцы сеткой 3x4
+    row = []
+    for i, m_name in enumerate(MONTHS_RU):
+        row.append(InlineKeyboardButton(text=m_name, callback_data=f"{prefix}_month:{year}-{i+1}"))
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+            
+    keyboard.append([InlineKeyboardButton(text="🔙 Отмена", callback_data=f"{prefix}_month:{year}-1")]) # Вернет в Январь (или текущий, сложнее прокинуть)
+    
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

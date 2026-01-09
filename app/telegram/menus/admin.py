@@ -19,7 +19,7 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="📋 Бронирования",
-                    callback_data="admin:bookings",
+                    callback_data="bookings:menu",
                 )
             ],
             [
