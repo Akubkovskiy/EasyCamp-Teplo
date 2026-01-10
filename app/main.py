@@ -61,7 +61,9 @@ from app.telegram.handlers import (
     avito_fetch,
     scheduler,
     settings as settings_handler,
+    houses,
 )
+from app.telegram.handlers.booking_management import booking_routers
 
 dp = Dispatcher()
 dp.include_router(admin_menu.router)
@@ -72,6 +74,10 @@ dp.include_router(sync.router)
 dp.include_router(avito_fetch.router)
 dp.include_router(scheduler.router)
 dp.include_router(settings_handler.router)
+dp.include_router(houses.router)
+
+for r in booking_routers:
+    dp.include_router(r)
 
 
 # -------------------------------------------------

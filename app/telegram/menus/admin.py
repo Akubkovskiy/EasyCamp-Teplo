@@ -12,13 +12,19 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="🏠 Календарь домов",
+                    text="🏠 Домики",
                     callback_data="admin:houses",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="📋 Бронирования",
+                    text="🆕 Создать бронь",
+                    callback_data="admin:new_booking",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 Список броней",
                     callback_data="bookings:menu",
                 )
             ],
