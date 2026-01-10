@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.models import Booking, BookingStatus, BookingSource, House
 from app.services.avito_api_service import avito_api_service
 from app.database import AsyncSessionLocal
+from app.utils.validators import format_phone
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +38,18 @@ async def sync_avito_bookings(item_id: int, house_id: int) -> dict:
         house_id: ID домика в нашей системе
         
     Returns:
-        Статистика синхронизации
+        Словарь с ключами:
+        - total (int)
+        - new_bookings (List[Booking])
+        - updated_bookings (List[Booking])
+        - errors (int)
     """
     logger.info(f"Starting sync for Avito item {item_id} -> house {house_id}")
     
     stats = {
         "total": 0,
-        "new": 0,
-        "updated": 0,
+        "new_bookings": [],
+        "updated_bookings": [],
         "errors": 0
     }
     
@@ -62,7 +68,7 @@ async def sync_avito_bookings(item_id: int, house_id: int) -> dict:
             
             await session.commit()
         
-        logger.info(f"Sync completed: {stats}")
+        logger.info(f"Sync completed: total={stats['total']}, new={len(stats['new_bookings'])}, updated={len(stats['updated_bookings'])}")
         return stats
         
     except Exception as e:
@@ -106,12 +112,14 @@ async def process_avito_booking(
     existing = result.scalar_one_or_none()
     
     if existing:
+        is_updated = False
+        
         # Обновить статус если изменился
         new_status = map_avito_status(booking_data['status'])
         if existing.status != new_status:
             existing.status = new_status
             existing.updated_at = datetime.now()
-            stats["updated"] += 1
+            is_updated = True
             logger.info(f"Updated booking {avito_id}: {existing.status} -> {new_status}")
             
         # Update commission and owner prepayment
@@ -123,23 +131,33 @@ async def process_avito_booking(
             existing.commission = new_commission
             existing.prepayment_owner = new_owner_prep
             existing.updated_at = datetime.now()
+            # Commission update doesn't necessarily warrant a user notification, but we track it
             
         # Update advance amount if changed
         new_advance = get_prepayment(booking_data)
         if existing.advance_amount != new_advance:
             existing.advance_amount = new_advance
             existing.updated_at = datetime.now()
-            # Don't double count update if status also changed
-            if existing.status == new_status:
-                stats["updated"] += 1
+            is_updated = True
+
+        if is_updated:
+            # Ensure house is loaded for notification
+            house = await session.get(House, house_id)
+            existing.house = house 
+            stats["updated_bookings"].append(existing)
+
     else:
         # Создать новую бронь
         contact = booking_data.get('contact', {})
         
+        # Extract name with safety checks
+        raw_name = contact.get('name')
+        guest_name = raw_name if raw_name else 'Гость Avito'
+        
         new_booking = Booking(
             house_id=house_id,
-            guest_name=contact.get('name', 'Гость Avito'),
-            guest_phone=contact.get('phone', ''),
+            guest_name=guest_name,
+            guest_phone=format_phone(contact.get('phone', '')),
             check_in=datetime.strptime(booking_data['check_in'], '%Y-%m-%d').date(),
             check_out=datetime.strptime(booking_data['check_out'], '%Y-%m-%d').date(),
             guests_count=booking_data.get('guest_count', 1),
@@ -153,7 +171,13 @@ async def process_avito_booking(
         )
         
         session.add(new_booking)
-        stats["new"] += 1
+        
+        # Need to commit or flush to get ID, and load house
+        await session.flush()
+        house = await session.get(House, house_id)
+        new_booking.house = house
+        
+        stats["new_bookings"].append(new_booking)
         logger.info(f"Created new booking {avito_id}")
 
 
@@ -169,8 +193,8 @@ async def sync_all_avito_items(item_house_mapping: dict) -> dict:
     """
     total_stats = {
         "total": 0,
-        "new": 0,
-        "updated": 0,
+        "new_bookings": [],
+        "updated_bookings": [],
         "errors": 0
     }
     
@@ -178,8 +202,8 @@ async def sync_all_avito_items(item_house_mapping: dict) -> dict:
         stats = await sync_avito_bookings(item_id, house_id)
         
         total_stats["total"] += stats["total"]
-        total_stats["new"] += stats["new"]
-        total_stats["updated"] += stats["updated"]
+        total_stats["new_bookings"].extend(stats["new_bookings"])
+        total_stats["updated_bookings"].extend(stats["updated_bookings"])
         total_stats["errors"] += stats["errors"]
     
     return total_stats
