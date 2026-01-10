@@ -55,16 +55,28 @@ async def start_editing_field(callback: CallbackQuery, state: FSMContext):
         )
         await state.set_state(BookingStates.editing_dates)
     elif field == "name":
-        await callback.message.edit_text("👤 Введите новое имя гостя:")
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад к брони", callback_data=f"booking:cancel_edit:{booking_id}")]
+        ])
+        await callback.message.edit_text("👤 Введите новое имя гостя:", reply_markup=keyboard)
         await state.set_state(BookingStates.editing_guest_name)
     elif field == "phone":
-        await callback.message.edit_text("📞 Введите новый номер телефона:")
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад к брони", callback_data=f"booking:cancel_edit:{booking_id}")]
+        ])
+        await callback.message.edit_text("📞 Введите новый номер телефона:", reply_markup=keyboard)
         await state.set_state(BookingStates.editing_guest_phone)
     elif field == "count":
-        await callback.message.edit_text("👥 Введите количество гостей:")
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад к брони", callback_data=f"booking:cancel_edit:{booking_id}")]
+        ])
+        await callback.message.edit_text("👥 Введите количество гостей:", reply_markup=keyboard)
         await state.set_state(BookingStates.editing_guests_count)
     elif field == "price":
-        await callback.message.edit_text("💰 Введите новую стоимость (руб):")
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад к брони", callback_data=f"booking:cancel_edit:{booking_id}")]
+        ])
+        await callback.message.edit_text("💰 Введите новую стоимость (руб):", reply_markup=keyboard)
         await state.set_state(BookingStates.editing_price)
     elif field == "status":
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -177,6 +189,14 @@ async def process_edit_status(callback: CallbackQuery):
     await send_booking_details_refreshed(callback.message, booking_id, edit_instead=True)
 
 # --- Обработка текстовых полей ---
+
+@router.callback_query(F.data.startswith("booking:cancel_edit:"))
+async def cancel_edit_booking(callback: CallbackQuery, state: FSMContext):
+    """Отмена редактирования и возврат к просмотру брони"""
+    booking_id = int(callback.data.split(":")[2])
+    await state.clear()
+    await callback.answer("Редактирование отменено")
+    await send_booking_details_refreshed(callback.message, booking_id, edit_instead=True)
 
 @router.message(BookingStates.editing_guest_name)
 async def process_edit_name(message: Message, state: FSMContext):
