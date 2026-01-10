@@ -49,13 +49,15 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 
-from app.telegram.handlers.bookings import router as bookings_router
+# Регистрация обработчиков
+from app.telegram.handlers import admin_menu, availability, bookings, contacts, sync
 
 dp = Dispatcher()
-dp.include_router(admin_router)
-dp.include_router(availability_router)
-dp.include_router(bookings_router)
-
+dp.include_router(admin_menu.router)
+dp.include_router(availability.router)
+dp.include_router(bookings.router)
+dp.include_router(contacts.router)
+dp.include_router(sync.router)
 
 
 # -------------------------------------------------

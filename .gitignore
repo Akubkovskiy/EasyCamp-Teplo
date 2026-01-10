@@ -1,6 +1,9 @@
 # Python
 __pycache__/
 *.pyc
+.env
+google-credentials.json
+easycamp.db
 
 # Virtual environment
 venv/

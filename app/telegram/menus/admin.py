@@ -28,5 +28,11 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
                     callback_data="admin:settings",
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="📞 Контакты",
+                    callback_data="contacts",
+                )
+            ],
         ]
     )
