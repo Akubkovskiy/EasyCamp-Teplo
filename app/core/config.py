@@ -26,6 +26,11 @@ class Settings(BaseModel):
     enable_auto_sync: bool = True
     avito_sync_interval_minutes: int = 30
     sheets_sync_interval_minutes: int = 5
+    
+    # Sync behavior settings
+    sync_on_bot_start: bool = True
+    sync_on_user_interaction: bool = True
+    sync_cache_ttl_seconds: int = 30  # Minimum time between syncs
 
 
 settings = Settings(
@@ -40,4 +45,7 @@ settings = Settings(
     enable_auto_sync=os.environ.get("ENABLE_AUTO_SYNC", "true").lower() == "true",
     avito_sync_interval_minutes=int(os.environ.get("AVITO_SYNC_INTERVAL_MINUTES", "30")),
     sheets_sync_interval_minutes=int(os.environ.get("SHEETS_SYNC_INTERVAL_MINUTES", "5")),
+    sync_on_bot_start=os.environ.get("SYNC_ON_BOT_START", "true").lower() == "true",
+    sync_on_user_interaction=os.environ.get("SYNC_ON_USER_INTERACTION", "true").lower() == "true",
+    sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
 )

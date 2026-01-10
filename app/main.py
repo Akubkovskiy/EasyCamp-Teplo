@@ -96,6 +96,22 @@ async def on_startup():
     from app.services.scheduler_service import scheduler_service
     scheduler_service.start()
     
+    # Register auto-sync middleware if enabled
+    if settings.sync_on_user_interaction:
+        from app.telegram.middlewares import AutoSyncMiddleware
+        dp.message.middleware(AutoSyncMiddleware())
+        logger.info("✅ Auto-sync middleware registered")
+    
+    # Initial sync on bot start if enabled
+    if settings.sync_on_bot_start:
+        logger.info("🔄 Performing initial sync on bot startup...")
+        try:
+            from app.services.sheets_service import sheets_service
+            await sheets_service.sync_if_needed(force=True)
+            logger.info("✅ Initial sync completed")
+        except Exception as e:
+            logger.error(f"❌ Initial sync failed: {e}", exc_info=True)
+    
     logger.info("Starting Telegram polling")
 
     asyncio.create_task(dp.start_polling(bot))

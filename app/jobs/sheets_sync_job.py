@@ -1,6 +1,7 @@
 """
 Периодическая задача синхронизации с Google Sheets
 """
+import asyncio
 import logging
 from sqlalchemy import select
 
@@ -12,25 +13,32 @@ logger = logging.getLogger(__name__)
 
 
 async def sync_sheets_job():
-    """Периодическая синхронизация с Google Sheets"""
+    """Периодическая синхронизация с Google Sheets с retry логикой"""
     logger.info("📊 Starting scheduled Google Sheets sync...")
     
-    try:
-        async with AsyncSessionLocal() as session:
-            # Получаем все брони
-            result = await session.execute(
-                select(Booking).order_by(Booking.check_in)
-            )
-            bookings = result.scalars().all()
+    max_retries = 3
+    retry_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Use the smart sync method which handles caching
+            from app.services.sheets_service import sheets_service
+            success = await sheets_service.sync_if_needed(force=False)
             
-            if not bookings:
-                logger.info("No bookings to sync")
-                return
+            if success:
+                logger.info("✅ Scheduled sync completed successfully")
+            else:
+                logger.debug("Scheduled sync skipped (cache hit or no data)")
             
-            # Синхронизация
-            await sheets_service.sync_bookings_to_sheet(bookings)
+            return  # Success, exit
             
-            logger.info(f"✅ Synced {len(bookings)} bookings to Google Sheets")
-            
-    except Exception as e:
-        logger.error(f"❌ Sheets sync failed: {e}", exc_info=True)
+        except Exception as e:
+            attempt_num = attempt + 1
+            if attempt_num < max_retries:
+                wait_time = retry_delay * attempt_num  # Exponential backoff
+                logger.warning(f"❌ Sync attempt {attempt_num}/{max_retries} failed: {e}")
+                logger.info(f"⏳ Retrying in {wait_time} seconds...")
+                await asyncio.sleep(wait_time)
+            else:
+                logger.error(f"❌ Sheets sync failed after {max_retries} attempts: {e}", exc_info=True)
+
