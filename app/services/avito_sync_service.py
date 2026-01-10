@@ -21,7 +21,8 @@ def map_avito_status(avito_status: str) -> BookingStatus:
     mapping = {
         "active": BookingStatus.CONFIRMED,
         "pending": BookingStatus.NEW,
-        "cancelled": BookingStatus.CANCELLED
+        "cancelled": BookingStatus.CANCELLED,
+        "canceled": BookingStatus.CANCELLED
     }
     return mapping.get(avito_status, BookingStatus.NEW)
 
@@ -77,8 +78,25 @@ async def process_avito_booking(
     stats: dict
 ):
     """Обработка одной брони из Avito"""
+    # Robust logging for debugging
+    import json
+    try:
+        logger.info(f"DEBUG_AVITO_PAYLOAD: {json.dumps(booking_data, default=str)}")
+    except Exception:
+        logger.info(f"DEBUG_AVITO_PAYLOAD: {booking_data}")
+
     avito_id = str(booking_data['avito_booking_id'])
     
+    # Helper to extract prepayment/advance amount
+    def get_prepayment(data: dict) -> Decimal:
+        val = data.get('prepayment') \
+              or data.get('prepayment_amount') \
+              or data.get('advance') \
+              or data.get('deposit') \
+              or (data.get('safe_deposit') or {}).get('total_amount') \
+              or 0
+        return Decimal(str(val))
+
     # Проверка существования
     stmt = select(Booking).where(
         Booking.external_id == avito_id,
@@ -95,6 +113,25 @@ async def process_avito_booking(
             existing.updated_at = datetime.now()
             stats["updated"] += 1
             logger.info(f"Updated booking {avito_id}: {existing.status} -> {new_status}")
+            
+        # Update commission and owner prepayment
+        safe_deposit = booking_data.get('safe_deposit') or {}
+        new_commission = Decimal(str(safe_deposit.get('tax', 0)))
+        new_owner_prep = Decimal(str(safe_deposit.get('owner_amount', 0)))
+        
+        if existing.commission != new_commission or existing.prepayment_owner != new_owner_prep:
+            existing.commission = new_commission
+            existing.prepayment_owner = new_owner_prep
+            existing.updated_at = datetime.now()
+            
+        # Update advance amount if changed
+        new_advance = get_prepayment(booking_data)
+        if existing.advance_amount != new_advance:
+            existing.advance_amount = new_advance
+            existing.updated_at = datetime.now()
+            # Don't double count update if status also changed
+            if existing.status == new_status:
+                stats["updated"] += 1
     else:
         # Создать новую бронь
         contact = booking_data.get('contact', {})
@@ -109,7 +146,10 @@ async def process_avito_booking(
             total_price=Decimal(str(booking_data.get('base_price', 0))),
             status=map_avito_status(booking_data['status']),
             source=BookingSource.AVITO,
-            external_id=avito_id
+            external_id=avito_id,
+            advance_amount=get_prepayment(booking_data),
+            commission=Decimal(str((booking_data.get('safe_deposit') or {}).get('tax', 0))),
+            prepayment_owner=Decimal(str((booking_data.get('safe_deposit') or {}).get('owner_amount', 0)))
         )
         
         session.add(new_booking)

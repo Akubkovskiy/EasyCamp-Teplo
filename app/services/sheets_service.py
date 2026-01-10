@@ -71,6 +71,9 @@ class GoogleSheetsService:
             "Домик",
             "Гостей",
             "Цена",
+            "Предоплата (моя)",
+            "Остаток",
+            "Комиссия",
             "Статус",
             "Источник",
             "Создано"
@@ -79,7 +82,23 @@ class GoogleSheetsService:
         # Формируем данные
         data = [headers]
         
-        for booking in bookings:
+        for i, booking in enumerate(bookings, start=2):
+            # Calculate values
+            total_price = float(booking.total_price)
+            # Use direct fields from DB
+            advance_total = float(booking.advance_amount or 0)
+            commission = float(booking.commission or 0)
+            
+            # Use direct owner amount if available (Avito), or fallback to total (Direct bookings)
+            if booking.prepayment_owner and float(booking.prepayment_owner) > 0:
+                advance_user_share = float(booking.prepayment_owner)
+            elif booking.source == 'avito' and commission > 0:
+                 # Fallback if field wasn't populated yet but we have commission
+                 advance_user_share = advance_total - commission
+            else:
+                 # For direct/other bookings, advance is fully user's
+                 advance_user_share = advance_total
+            
             row = [
                 booking.id,
                 booking.check_in.strftime("%d.%m.%Y"),
@@ -88,7 +107,10 @@ class GoogleSheetsService:
                 booking.guest_phone,
                 booking.house.name,
                 booking.guests_count,
-                float(booking.total_price),
+                total_price,
+                advance_user_share,
+                f'=H{i}-I{i}-K{i} ',  # Remain formula: Total - OwnerAdvance - Commission
+                commission,
                 booking.status.value,
                 booking.source.value,
                 booking.created_at.strftime("%d.%m.%Y %H:%M")
@@ -99,9 +121,9 @@ class GoogleSheetsService:
         if len(data) > 0:
             # Используем batch_update для записи всех данных сразу
             worksheet.batch_update([{
-                'range': f'A1:K{len(data)}',
-                'values': data
-            }])
+                'range': f'A1:N{len(data)}',
+                'values': data,
+            }], value_input_option='USER_ENTERED')
         
         # Форматирование
         self._format_bookings_sheet(worksheet)
@@ -109,13 +131,148 @@ class GoogleSheetsService:
     def _format_bookings_sheet(self, worksheet):
         """Форматирование листа с бронями"""
         # Жирный шрифт для заголовков
-        worksheet.format('A1:K1', {
+        worksheet.format('A1:N1', {
             'textFormat': {'bold': True},
             'backgroundColor': {'red': 0.9, 'green': 0.9, 'blue': 0.9}
         })
         
         # Автоширина колонок
-        worksheet.columns_auto_resize(0, 10)
+        worksheet.columns_auto_resize(0, 13)
+        
+        # Выпадающий список для статусов (Column L / 12th column)
+        # Updated statuses based on user request
+        status_options = ["Ожидает оплаты", "Ждёт заселения", "Оплата внесена", "Отменена", "Завершена"]
+        
+        validation_rule = {
+            'condition': {
+                'type': 'ONE_OF_LIST',
+                'values': [{'userEnteredValue': v} for v in status_options]
+            },
+            'showCustomUi': True,
+            'strict': True
+        }
+        
+        # Apply validation to the whole Status column starting from row 2
+        # Column L is index 11 (0-based)
+        requests = [{
+            'setDataValidation': {
+                'range': {
+                    'sheetId': worksheet.id,
+                    'startRowIndex': 1,  # Skip header
+                    'endRowIndex': 1000,
+                    'startColumnIndex': 11,
+                    'endColumnIndex': 12
+                },
+                'rule': validation_rule
+            }
+        }]
+        
+        self.spreadsheet.batch_update({'requests': requests})
+
+    def sync_bookings_to_sheet(self, bookings: List[Booking]):
+        """Синхронизация броней в Google Sheets"""
+        if not self.client or not self.spreadsheet:
+            self.connect()
+        
+        # Mappings for localization
+        status_map = {
+            'new': 'Ожидает оплаты',
+            'confirmed': 'Ждёт заселения',
+            'paid': 'Оплата внесена',
+            'cancelled': 'Отменена',
+            'completed': 'Завершена'
+        }
+        
+        source_map = {
+            'avito': 'Авито',
+            'telegram': 'Телеграм',
+            'direct': 'Прямая',
+            'other': 'Другое'
+        }
+        
+        # Получаем или создаем лист "Все брони"
+        try:
+            worksheet = self.spreadsheet.worksheet("Все брони")
+        except gspread.WorksheetNotFound:
+            worksheet = self.spreadsheet.add_worksheet(
+                title="Все брони",
+                rows=1000,
+                cols=14
+            )
+        
+        # Очищаем лист
+        worksheet.clear()
+        
+        # Заголовки
+        headers = [
+            "ID",
+            "Дата заезда",
+            "Дата выезда",
+            "Гость",
+            "Телефон",
+            "Домик",
+            "Гостей",
+            "Цена",
+            "Предоплата (моя)",
+            "Остаток",
+            "Комиссия",
+            "Статус",
+            "Источник",
+            "Создано"
+        ]
+        
+        # Формируем данные
+        data = [headers]
+        
+        for i, booking in enumerate(bookings, start=2):
+            # Calculate values
+            total_price = float(booking.total_price)
+            # Use direct fields from DB
+            advance_total = float(booking.advance_amount or 0)
+            commission = float(booking.commission or 0)
+            
+            # Use direct owner amount if available (Avito), or fallback to total (Direct bookings)
+            if booking.prepayment_owner and float(booking.prepayment_owner) > 0:
+                advance_user_share = float(booking.prepayment_owner)
+            elif booking.source == 'avito' and commission > 0:
+                 # Fallback if field wasn't populated yet but we have commission
+                 advance_user_share = advance_total - commission
+            else:
+                 # For direct/other bookings, advance is fully user's
+                 advance_user_share = advance_total
+            
+            # Localize values
+            status_rus = status_map.get(booking.status.value, booking.status.value)
+            source_rus = source_map.get(booking.source.value, booking.source.value)
+            
+            row = [
+                booking.id,
+                booking.check_in.strftime("%d.%m.%Y"),
+                booking.check_out.strftime("%d.%m.%Y"),
+                booking.guest_name,
+                booking.guest_phone,
+                booking.house.name,
+                booking.guests_count,
+                total_price,
+                advance_user_share,
+                f'=H{i}-I{i}-K{i} ',  # Remain formula: Total - OwnerAdvance - Commission
+                commission,
+                status_rus,
+                source_rus,
+                booking.created_at.strftime("%d.%m.%Y %H:%M")
+            ]
+            data.append(row)
+        
+        # Записываем данные
+        if len(data) > 0:
+            # Используем batch_update для записи всех данных сразу
+            worksheet.batch_update([{
+                'range': f'A1:N{len(data)}',
+                'values': data,
+            }], value_input_option='USER_ENTERED')
+        
+        # Форматирование
+        self._format_bookings_sheet(worksheet)
     
     def create_dashboard(self, bookings: List[Booking]):
         """Создание Dashboard с общей статистикой"""
@@ -141,8 +298,9 @@ class GoogleSheetsService:
         })
         
         # Дата обновления
-        today = date.today().strftime("%d.%m.%Y")
-        worksheet.update_acell('A2', f'Обновлено: {today}')
+        from datetime import datetime
+        now = datetime.now().strftime("%d.%m.%Y %H:%M")
+        worksheet.update_acell('A2', f'Обновлено: {now}')
         
         # Статистика
         worksheet.update_acell('A4', 'СТАТИСТИКА')
@@ -150,12 +308,19 @@ class GoogleSheetsService:
         
         # Подсчет статистики
         total_bookings = len(bookings)
-        active_bookings = len([b for b in bookings if b.status.value in ['new', 'confirmed', 'paid', 'active']])
-        total_revenue = sum(b.total_price for b in bookings)
+        
+        # Filter for active bookings (excluding cancelled)
+        active_statuses = ['new', 'confirmed', 'paid', 'active']
+        active_list = [b for b in bookings if b.status.value in active_statuses]
+        
+        active_bookings_count = len(active_list)
+        
+        # Revenue should be sum of active bookings only (Total Price = Advance + Remainder)
+        total_revenue = sum(b.total_price for b in active_list)
         
         stats_data = [
             ['Всего броней:', total_bookings],
-            ['Активных:', active_bookings],
+            ['Активных:', active_bookings_count],
             ['Общий доход:', f'{total_revenue:,.0f} ₽']
         ]
         

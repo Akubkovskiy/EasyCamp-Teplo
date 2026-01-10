@@ -34,15 +34,14 @@ class AutoSyncMiddleware(BaseMiddleware):
         но только если прошло достаточно времени с последней синхронизации
         """
         
+        from aiogram.types import Message, CallbackQuery
+        
         # Trigger sync before handling the message (non-blocking)
         # sync_if_needed will check cache and skip if not needed
         if isinstance(event, (Message, CallbackQuery)):
             try:
                 # Don't await - run in background to not delay message processing
                 import asyncio
-                # Use create_task to run in background
-                # We need to import CallbackQuery if we haven't already
-                from aiogram.types import CallbackQuery
                 
                 asyncio.create_task(sheets_service.sync_if_needed())
             except Exception as e:
