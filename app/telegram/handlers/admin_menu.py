@@ -46,22 +46,7 @@ async def back_to_menu(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(lambda c: c.data == "admin:houses")
-async def show_houses_calendar(callback: CallbackQuery):
-    logger.info("Houses calendar requested")
-    
-    if callback.message:
-        await callback.message.edit_text(
-            "🏠 <b>Календарь домов</b>\n\n"
-            "⚠️ Функция в разработке\n\n"
-            "Здесь будет доступно:\n"
-            "• Визуальный календарь на месяц\n"
-            "• Быстрый просмотр свободных дат",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="admin:menu")]
-            ])
-        )
-    await callback.answer()
+# Обработчик admin:houses теперь в handlers/houses.py
 
 
 @router.callback_query(lambda c: c.data == "admin:availability")

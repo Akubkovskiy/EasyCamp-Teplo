@@ -32,11 +32,15 @@ class GoogleSheetsService:
         )
         
         self.client = gspread.authorize(creds)
-        self.spreadsheet = self.client.open_by_key(self.spreadsheet_id)
+        try:
+            self.spreadsheet = self.client.open_by_key(self.spreadsheet_id)
+        except Exception:
+            self.client = None  # Сбрасываем клиент при ошибке открытия таблицы
+            raise
     
     def sync_bookings_to_sheet(self, bookings: List[Booking]):
         """Синхронизация броней в Google Sheets"""
-        if not self.client:
+        if not self.client or not self.spreadsheet:
             self.connect()
         
         # Получаем или создаем лист "Все брони"
@@ -110,7 +114,7 @@ class GoogleSheetsService:
     
     def create_dashboard(self, bookings: List[Booking]):
         """Создание Dashboard с общей статистикой"""
-        if not self.client:
+        if not self.client or not self.spreadsheet:
             self.connect()
         
         try:
@@ -141,7 +145,7 @@ class GoogleSheetsService:
         
         # Подсчет статистики
         total_bookings = len(bookings)
-        active_bookings = len([b for b in bookings if b.status.value in ['NEW', 'CONFIRMED', 'PAID']])
+        active_bookings = len([b for b in bookings if b.status.value in ['new', 'confirmed', 'paid', 'active']])
         total_revenue = sum(b.total_price for b in bookings)
         
         stats_data = [
