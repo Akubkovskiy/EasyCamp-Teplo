@@ -250,7 +250,7 @@ class GoogleSheetsService:
                 booking.check_in.strftime("%d.%m.%Y"),
                 booking.check_out.strftime("%d.%m.%Y"),
                 booking.guest_name,
-                booking.guest_phone,
+                f"'{booking.guest_phone}" if booking.guest_phone else "", # Force text format
                 booking.house.name,
                 booking.guests_count,
                 total_price,

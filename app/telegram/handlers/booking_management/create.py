@@ -280,58 +280,105 @@ async def guests_count_entered(message: Message, state: FSMContext):
         
     await state.update_data(guests_count=count)
     
-    nights = (data['check_out'] - data['check_in']).days
-    price = 5000 * nights # Placeholder
-    await state.update_data(total_price=price)
+
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Подтвердить: {price}₽", callback_data="confirm_booking")],
-        [InlineKeyboardButton(text="✏️ Изменить цену", callback_data="change_price")],
-        [InlineKeyboardButton(text="🔙 Назад к количеству гостей", callback_data="back_to_guests_count")],
+        [InlineKeyboardButton(text="🔙 Назад к телефону", callback_data="back_to_phone")],
         [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
     ])
     
     await message.answer(
+        "💰 <b>Введите сумму предоплаты (RUB):</b>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_prepayment)
+
+# --- Финализация ---
+
+@router.message(BookingStates.waiting_for_prepayment)
+async def prepayment_entered(message: Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("❌ Введите число.")
+        return
+    prepayment = int(message.text)
+    await state.update_data(advance_amount=prepayment)
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к предоплате", callback_data="back_to_prepayment")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
+    ])
+    
+    await message.answer(
+        "💰 <b>Введите остаток при заселении (RUB):</b>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_remainder)
+
+@router.message(BookingStates.waiting_for_remainder)
+async def remainder_entered(message: Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("❌ Введите число.")
+        return
+    remainder = int(message.text)
+    await state.update_data(remainder_amount=remainder)
+    
+    # Calculate total price
+    data = await state.get_data()
+    total_price = data['advance_amount'] + remainder
+    await state.update_data(total_price=total_price)
+    
+    # Status selection
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⏳ Ожидает оплаты", callback_data="status:new")],
+        [InlineKeyboardButton(text="✅ Ждёт заселения (Оплачено)", callback_data="status:confirmed")],
+        [InlineKeyboardButton(text="🔙 Назад к остатку", callback_data="back_to_remainder")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
+    ])
+    
+    await message.answer(
+        "📊 <b>Выберите статус бронирования:</b>\n"
+        f"Общая цена: {total_price}₽ (Предоплата: {data['advance_amount']}₽, Остаток: {remainder}₽)",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_status)
+
+@router.callback_query(BookingStates.waiting_for_status, F.data.startswith("status:"))
+async def status_selected(callback: CallbackQuery, state: FSMContext):
+    status_val = callback.data.split(":")[1]
+    await state.update_data(status=status_val)
+    
+    data = await state.get_data()
+    nights = (data['check_out'] - data['check_in']).days
+    
+    # Map status to readable
+    status_map = {
+        'new': '⏳ Ожидает оплаты',
+        'confirmed': '✅ Ждёт заселения'
+    }
+    status_text = status_map.get(status_val, status_val)
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Подтвердить и создать", callback_data="confirm_booking")],
+        [InlineKeyboardButton(text="🔙 Назад к статусу", callback_data="back_to_status")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
+    ])
+    
+    await callback.message.edit_text(
         "📋 <b>Подтверждение бронирования</b>\n\n"
         f"🏠 Домик: <b>Teplo {data['house_id']}</b>\n"
         f"📅 Даты: {data['check_in'].strftime('%d.%m.%Y')} - {data['check_out'].strftime('%d.%m.%Y')} ({nights} н.)\n"
         f"👤 Гость: {data['guest_name']} ({data['guest_phone']})\n"
-        f"👥 Гостей: {count}\n"
-        f"💰 <b>Цена: {price}₽</b>",
+        f"👥 Гостей: {data['guests_count']}\n\n"
+        f"💰 <b>Цена: {data['total_price']}₽</b>\n"
+        f"💵 Предоплата: {data['advance_amount']}₽\n"
+        f"🪙 Остаток: {data['remainder_amount']}₽\n"
+        f"📊 Статус: {status_text}",
         reply_markup=keyboard,
         parse_mode="HTML"
     )
-    await state.set_state(BookingStates.waiting_for_confirmation)
-
-# --- Финализация ---
-
-@router.callback_query(F.data == "change_price")
-async def request_manual_price(callback: CallbackQuery, state: FSMContext):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад к подтверждению", callback_data="back_to_confirmation")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
-    ])
-    await callback.message.answer(
-        "💰 Введите итоговую стоимость бронирования (RUB):",
-        reply_markup=keyboard
-    )
-    await state.set_state(BookingStates.waiting_for_price)
-    await callback.answer()
-
-@router.message(BookingStates.waiting_for_price)
-async def price_entered(message: Message, state: FSMContext):
-    if not message.text.isdigit():
-        await message.answer("❌ Введите число.")
-        return
-    price = int(message.text)
-    await state.update_data(total_price=price)
-    data = await state.get_data()
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Подтвердить", callback_data="confirm_booking")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
-    ])
-    await message.answer(f"💰 Новая цена: <b>{price}₽</b>. Подтверждаете?", reply_markup=keyboard, parse_mode="HTML")
     await state.set_state(BookingStates.waiting_for_confirmation)
 
 @router.callback_query(F.data == "confirm_booking")
