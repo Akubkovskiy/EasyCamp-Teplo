@@ -10,8 +10,135 @@ from app.models import Booking, BookingStatus
 from app.core.config import settings
 from app.jobs.avito_sync_job import sync_avito_job
 from app.services.booking_service import booking_service
+from app.telegram.state.availability import availability_states
 
 router = Router()
+
+# LEGACY BOOKING FLOW - DISABLED
+# This old booking flow conflicts with the new FSM-based flow in booking_management/create.py
+# The @router.message(F.text) handler is too broad and intercepts all text messages
+# Keeping the code commented for reference, but it should be removed or refactored
+
+# @router.callback_query(lambda c: c.data and c.data.startswith("booking:create:"))
+# async def start_booking_from_availability(callback: CallbackQuery):
+#     """Начало процесса бронирования из проверки доступности"""
+#     if callback.from_user is None or callback.message is None or callback.data is None:
+#         return
+#     
+#     user_id = callback.from_user.id
+#     _, _, house_id_str = callback.data.split(":")
+#     house_id = int(house_id_str)
+#     
+#     # Получаем состояние доступности
+#     state = availability_states.get(user_id)
+#     if not state or not state.check_in or not state.check_out:
+#         await callback.answer("❌ Ошибка: даты не найдены. Попробуйте снова.", show_alert=True)
+#         return
+#     
+#     # Получаем информацию о доме
+#     from app.services.house_service import house_service
+#     house = await house_service.get_house(house_id)
+#     if not house:
+#         await callback.answer("❌ Домик не найден", show_alert=True)
+#         return
+#     
+#     # Вычисляем количество ночей и стоимость
+#     nights = (state.check_out - state.check_in).days
+#     
+#     # Сохраняем данные бронирования в состоянии (можно использовать FSM или временное хранилище)
+#     # Для простоты сохраним в availability_states
+#     state.selected_house_id = house_id
+#     state.waiting_for_guest_name = True
+#     
+#     # Запрашиваем имя гостя
+#     await callback.message.edit_text(
+#         f"📝 <b>Бронирование {house.name}</b>\n\n"
+#         f"📅 Даты: {state.check_in.strftime('%d.%m.%Y')} - {state.check_out.strftime('%d.%m.%Y')}\n"
+#         f"🌙 Ночей: {nights}\n\n"
+#         f"Пожалуйста, введите <b>имя гостя</b>:",
+#         parse_mode="HTML"
+#     )
+#     await callback.answer()
+
+# @router.message(F.text)
+# async def handle_guest_name_input(message: Message):
+#     """Обработчик ввода имени гостя для бронирования"""
+#     if message.from_user is None or message.text is None:
+#         return
+#     
+#     user_id = message.from_user.id
+#     state = availability_states.get(user_id)
+#     
+#     # Проверяем, ожидаем ли мы ввод имени гостя
+#     if not state or not state.waiting_for_guest_name:
+#         return  # Не наш случай, пропускаем
+#     
+#     # Проверяем наличие всех необходимых данных
+#     if not state.check_in or not state.check_out or not state.selected_house_id:
+#         await message.answer("❌ Ошибка: данные бронирования потеряны. Попробуйте снова через /availability")
+#         state.waiting_for_guest_name = False
+#         return
+#     
+#     guest_name = message.text.strip()
+#     
+#     # Валидация имени
+#     if len(guest_name) < 2:
+#         await message.answer("❌ Имя слишком короткое. Пожалуйста, введите полное имя гостя:")
+#         return
+#     
+#     # Сбрасываем флаг ожидания
+#     state.waiting_for_guest_name = False
+#     
+#     # Показываем индикатор загрузки
+#     loading_msg = await message.answer("⏳ Создаю бронирование...")
+#     
+#     # Вычисляем количество ночей
+#     nights = (state.check_out - state.check_in).days
+#     
+#     # Получаем информацию о доме для расчета цены
+#     from app.services.house_service import house_service
+#     house = await house_service.get_house(state.selected_house_id)
+#     
+#     if not house:
+#         await loading_msg.edit_text("❌ Ошибка: домик не найден")
+#         return
+#     
+#     # Создаем бронирование
+#     booking_data = {
+#         'house_id': state.selected_house_id,
+#         'guest_name': guest_name,
+#         'check_in': state.check_in,
+#         'check_out': state.check_out,
+#         'guests_count': 1,  # По умолчанию, можно расширить позже
+#         'total_price': 0,  # Можно добавить расчет цены позже
+#     }
+#     
+#     booking = await booking_service.create_booking(booking_data)
+#     
+#     if not booking:
+#         await loading_msg.edit_text("❌ Ошибка при создании бронирования. Попробуйте позже.")
+#         return
+#     
+#     # Успешное создание
+#     from app.telegram.auth.admin import is_admin
+#     back_callback = "admin:menu" if is_admin(user_id) else "guest:menu"
+#     
+#     await loading_msg.edit_text(
+#         f"✅ <b>Бронирование создано!</b>\n\n"
+#         f"🏠 Домик: {house.name}\n"
+#         f"👤 Гость: {guest_name}\n"
+#         f"📅 Даты: {state.check_in.strftime('%d.%m.%Y')} - {state.check_out.strftime('%d.%m.%Y')}\n"
+#         f"🌙 Ночей: {nights}\n"
+#         f"🆔 ID брони: #{booking.id}\n\n"
+#         f"Бронирование сохранено и синхронизируется с Google Таблицами.",
+#         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+#             [InlineKeyboardButton(text="🔙 В меню", callback_data=back_callback)]
+#         ]),
+#         parse_mode="HTML"
+#     )
+#     
+#     # Очищаем состояние
+#     availability_states.pop(user_id, None)
 
 @router.message(Command("broni"))
 @router.message(F.text.lower().in_(["брони", "бронь", "заезды", "гости"]))

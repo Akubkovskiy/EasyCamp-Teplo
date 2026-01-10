@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import select, and_, or_
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus, BookingSource
+from app.models import Booking, BookingStatus, BookingSource, House
 from app.services.sheets_service import sheets_service
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,36 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error checking availability: {e}")
             return False
+
+
+    async def get_available_houses(
+        self, 
+        check_in: date, 
+        check_out: date
+    ) -> List[House]:
+        """
+        Получить список доступных домов на указанные даты.
+        """
+        try:
+            async with AsyncSessionLocal() as session:
+                # Находим занятые дома
+                busy_houses_query = select(Booking.house_id).where(
+                    Booking.status != BookingStatus.CANCELLED,
+                    or_(
+                        and_(Booking.check_in <= check_in, Booking.check_out > check_in),     # Начинается внутри
+                        and_(Booking.check_in < check_out, Booking.check_out >= check_out),   # Заканчивается внутри
+                        and_(Booking.check_in >= check_in, Booking.check_out <= check_out)    # Полностью внутри
+                    )
+                )
+                
+                # Выбираем дома, которых нет в списке занятых
+                query = select(House).where(House.id.not_in(busy_houses_query))
+                result = await session.execute(query)
+                return result.scalars().all()
+                
+        except Exception as e:
+            logger.error(f"Error getting available houses: {e}")
+            return []
 
     async def create_booking(self, data: dict) -> Optional[Booking]:
         """
