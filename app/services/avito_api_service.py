@@ -104,7 +104,8 @@ class AvitoAPIService:
                 headers={"Authorization": f"Bearer {self.access_token}"},
                 params={
                     "date_start": date_start,
-                    "date_end": date_end
+                    "date_end": date_end,
+                    "with_unpaid": "true"
                 },
                 timeout=10
             )
@@ -125,7 +126,7 @@ class AvitoAPIService:
     def get_bookings_for_period(
         self, 
         item_id: int, 
-        days_forward: int = 90
+        days_forward: int = 180
     ) -> List[Dict]:
         """
         Получение броней за период (от сегодня вперед)

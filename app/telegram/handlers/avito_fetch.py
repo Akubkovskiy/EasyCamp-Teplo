@@ -59,11 +59,27 @@ async def fetch_from_avito(message: Message):
             f"✅ <b>Синхронизация с Avito завершена!</b>\n\n"
             f"📊 Статистика:\n"
             f"• Всего броней: {stats['total']}\n"
-            f"• Новых: {stats['new']}\n"
-            f"• Обновлено: {stats['updated']}\n"
+            f"• Новых: {len(stats['new_bookings'])}\n"
+            f"• Обновлено: {len(stats['updated_bookings'])}\n"
             f"• Ошибок: {stats['errors']}\n\n"
-            f"Используйте /sync для синхронизации с Google Sheets"
+            f"• Ошибок: {stats['errors']}\n\n"
+            f"🔄 Обновляю Google таблицу..."
         )
+        
+        # 1. Отправка уведомлений (как в job)
+        from app.jobs.avito_sync_job import notify_new_bookings, notify_updated_bookings
+        
+        if stats['new_bookings']:
+            await notify_new_bookings(stats['new_bookings'])
+            
+        if stats['updated_bookings']:
+            await notify_updated_bookings(stats['updated_bookings'])
+            
+        # 2. Синхронизация с таблицей
+        from app.services.sheets_service import sheets_service
+        await sheets_service.sync_if_needed(force=True)
+        
+        await message.answer("✅ Google таблица обновлена!")
         
     except Exception as e:
         await message.answer(
