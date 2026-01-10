@@ -10,7 +10,9 @@ class BookingStates(StatesGroup):
     waiting_for_guest_name = State() # Ожидание имени гостя
     waiting_for_guest_phone = State() # Ожидание телефона
     waiting_for_guests_count = State() # Ожидание количества гостей
-    waiting_for_price = State()      # Ожидание цены (если ручной ввод)
+    waiting_for_prepayment = State()   # Ожидание предоплаты
+    waiting_for_remainder = State()    # Ожидание остатка
+    waiting_for_status = State()       # Ожидание статуса
     waiting_for_confirmation = State() # Ожидание подтверждения
     
     # Состояния для редактирования

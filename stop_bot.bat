@@ -1,19 +1,13 @@
 @echo off
 chcp 65001 >nul
 echo Stopping Teplo Bot...
-echo.
 
-REM Kill uvicorn processes
+REM Kill processes by Window Title
+taskkill /F /IM python.exe /FI "WINDOWTITLE eq *Teplo*" 2>nul
 taskkill /F /IM python.exe /FI "WINDOWTITLE eq *uvicorn*" 2>nul
 
-REM Alternative: kill all Python processes running uvicorn
-for /f "tokens=2" %%a in ('tasklist /FI "IMAGENAME eq python.exe" /FO LIST ^| find "PID:"') do (
-    netstat -ano | find "8000" | find "%%a" >nul
-    if not errorlevel 1 (
-        echo Killing process %%a on port 8000...
-        taskkill /F /PID %%a
-    )
-)
+REM Kill processes by Command Line match
+wmic process where "name='python.exe' and commandline like '%EasyCamp-Teplo%'" call terminate >nul 2>nul
 
 echo.
 echo Bot stopped.

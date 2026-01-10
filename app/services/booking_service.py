@@ -30,10 +30,9 @@ class BookingService:
                 query = select(Booking).where(
                     Booking.house_id == house_id,
                     Booking.status != BookingStatus.CANCELLED,  # Исключаем только отмененные
-                    or_(
-                        and_(Booking.check_in <= check_in, Booking.check_out > check_in),     # Начинается внутри
-                        and_(Booking.check_in < check_out, Booking.check_out >= check_out),   # Заканчивается внутри
-                        and_(Booking.check_in >= check_in, Booking.check_out <= check_out)    # Полностью внутри
+                    and_(
+                        Booking.check_in < check_out,
+                        Booking.check_out > check_in
                     )
                 )
                 
@@ -63,10 +62,9 @@ class BookingService:
                 # Находим занятые дома
                 busy_houses_query = select(Booking.house_id).where(
                     Booking.status != BookingStatus.CANCELLED,
-                    or_(
-                        and_(Booking.check_in <= check_in, Booking.check_out > check_in),     # Начинается внутри
-                        and_(Booking.check_in < check_out, Booking.check_out >= check_out),   # Заканчивается внутри
-                        and_(Booking.check_in >= check_in, Booking.check_out <= check_out)    # Полностью внутри
+                    and_(
+                        Booking.check_in < check_out,
+                        Booking.check_out > check_in
                     )
                 )
                 
@@ -85,6 +83,20 @@ class BookingService:
         """
         try:
             async with AsyncSessionLocal() as session:
+                # User requested explicit fields for manual booking
+                advance_amount = data.get('advance_amount', 0)
+                commission = 0  # Telegram bookings have 0 commission
+                
+                # If commission is 0, owner gets full advance
+                prepayment_owner = advance_amount
+                
+                # Parse status string to enum if needed
+                status_raw = data.get('status', 'new')
+                status_enum = BookingStatus.NEW
+                if status_raw == 'confirmed':
+                     status_enum = BookingStatus.CONFIRMED
+                     
+                
                 booking = Booking(
                     house_id=data['house_id'],
                     # user_id not in model yet, removing
@@ -94,7 +106,10 @@ class BookingService:
                     check_out=data['check_out'],
                     guests_count=data.get('guests_count', 1),
                     total_price=data.get('total_price', 0),
-                    status=BookingStatus.CONFIRMED,
+                    advance_amount=advance_amount,
+                    commission=commission,
+                    prepayment_owner=prepayment_owner,
+                    status=status_enum,
                     source=BookingSource.TELEGRAM,
                     created_at=datetime.now(),
                     updated_at=datetime.now()
