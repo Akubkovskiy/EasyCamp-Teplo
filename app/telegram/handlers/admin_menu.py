@@ -48,15 +48,13 @@ async def back_to_menu(callback: CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "admin:houses")
 async def show_houses_calendar(callback: CallbackQuery):
-    """Заглушка для календаря домов"""
     logger.info("Houses calendar requested")
     
     if callback.message:
         await callback.message.edit_text(
             "🏠 <b>Календарь домов</b>\n\n"
             "⚠️ Функция в разработке\n\n"
-            "Здесь будет отображаться:\n"
-            "• Шахматка занятости по всем домикам\n"
+            "Здесь будет доступно:\n"
             "• Визуальный календарь на месяц\n"
             "• Быстрый просмотр свободных дат",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -66,22 +64,10 @@ async def show_houses_calendar(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(lambda c: c.data == "admin:settings")
-async def show_settings(callback: CallbackQuery):
-    """Заглушка для настроек"""
-    logger.info("Settings requested")
-    
-    if callback.message:
-        await callback.message.edit_text(
-            "⚙️ <b>Настройки</b>\n\n"
-            "⚠️ Функция в разработке\n\n"
-            "Здесь будут доступны:\n"
-            "• Управление домиками\n"
-            "• Настройка уведомлений\n"
-            "• Интеграции (Avito, другие платформы)\n"
-            "• Управление персоналом",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="admin:menu")]
-            ])
-        )
+@router.callback_query(lambda c: c.data == "admin:availability")
+async def show_availability(callback: CallbackQuery):
+    logger.info("Availability check requested")
+    await callback.message.answer(
+        "Используйте команду /availability для проверки доступности домиков"
+    )
     await callback.answer()
