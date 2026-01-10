@@ -53,6 +53,9 @@ class Booking(Base):
     check_out: Mapped[date] = mapped_column(Date)
     guests_count: Mapped[int] = mapped_column(Integer)
     total_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    advance_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    commission: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    prepayment_owner: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     
     # Метаданные
     status: Mapped[BookingStatus] = mapped_column(SQLEnum(BookingStatus), default=BookingStatus.NEW)
