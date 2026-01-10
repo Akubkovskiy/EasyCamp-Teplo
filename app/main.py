@@ -12,6 +12,7 @@ from app.core.logging import setup_logging
 
 from app.api.health import router as health_router
 from app.avito.webhook import router as avito_router
+from app.avito.oauth import router as avito_oauth_router
 from app.telegram.handlers.admin_menu import router as admin_router
 from app.telegram.handlers.availability import router as availability_router
 
@@ -38,6 +39,7 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(avito_router)
+app.include_router(avito_oauth_router)
 
 
 # -------------------------------------------------
@@ -50,7 +52,7 @@ bot = Bot(
 )
 
 # Регистрация обработчиков
-from app.telegram.handlers import admin_menu, availability, bookings, contacts, sync
+from app.telegram.handlers import admin_menu, availability, bookings, contacts, sync, avito_fetch
 
 dp = Dispatcher()
 dp.include_router(admin_menu.router)
@@ -58,6 +60,7 @@ dp.include_router(availability.router)
 dp.include_router(bookings.router)
 dp.include_router(contacts.router)
 dp.include_router(sync.router)
+dp.include_router(avito_fetch.router)
 
 
 # -------------------------------------------------
