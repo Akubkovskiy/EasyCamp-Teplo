@@ -32,35 +32,94 @@ async def sync_avito_job():
         
         logger.info(
             f"✅ Avito sync completed: "
-            f"total={stats['total']}, new={stats['new']}, "
-            f"updated={stats['updated']}, errors={stats['errors']}"
+            f"total={stats['total']}, new={len(stats['new_bookings'])}, "
+            f"updated={len(stats['updated_bookings'])}, errors={stats['errors']}"
         )
         
-        # Уведомление если есть новые брони
-        if stats['new'] > 0:
-            await notify_new_bookings(stats['new'])
+        # Уведомления о новых бронях
+        if stats['new_bookings']:
+            await notify_new_bookings(stats['new_bookings'])
+            
+        # Уведомления об обновленных бронях
+        if stats['updated_bookings']:
+            await notify_updated_bookings(stats['updated_bookings'])
+            
+        # Если были изменения, запускаем синхронизацию с таблицей
+        if stats['new_bookings'] or stats['updated_bookings']:
+            logger.info("Triggering Sheets sync due to Avito changes...")
+            from app.services.sheets_service import sheets_service
+            await sheets_service.sync_if_needed(force=True)
             
     except Exception as e:
         logger.error(f"❌ Avito sync failed: {e}", exc_info=True)
 
 
-async def notify_new_bookings(count: int):
+async def notify_new_bookings(bookings: list):
     """Отправить уведомление о новых бронях"""
     try:
         bot = Bot(token=settings.telegram_bot_token)
         
-        await bot.send_message(
-            chat_id=settings.telegram_chat_id,
-            text=(
-                f"🔔 <b>Новых броней из Avito: {count}</b>\n\n"
-                f"Используйте /bookings для просмотра\n"
-                f"Или /sync для синхронизации с Google Sheets"
-            ),
-            parse_mode="HTML"
-        )
+        for booking in bookings:
+            house_name = booking.house.name if booking.house else f"House {booking.house_id}"
+            
+            text = (
+                f"🆕 <b>Новая бронь (Avito)</b>\n\n"
+                f"🏠 <b>{house_name}</b>\n"
+                f"👤 {booking.guest_name}\n"
+                f"📞 {booking.guest_phone}\n"
+                f"📅 {booking.check_in.strftime('%d.%m')} - {booking.check_out.strftime('%d.%m')}\n"
+                f"💰 {booking.total_price}₽ (Предоплата: {booking.advance_amount}₽)"
+            )
+            
+            try:
+                await bot.send_message(
+                    chat_id=settings.telegram_chat_id,
+                    text=text,
+                    parse_mode="HTML"
+                )
+            except Exception as msg_err:
+                logger.error(f"Failed to send individual booking notification: {msg_err}")
         
         await bot.session.close()
-        logger.info(f"Sent notification about {count} new bookings")
+        logger.info(f"Sent notifications about {len(bookings)} new bookings")
         
+    except Exception as e:
+        logger.error(f"Failed to send notification: {e}")
+
+async def notify_updated_bookings(bookings: list):
+    """Отправить уведомление об обновлении броней"""
+    try:
+        bot = Bot(token=settings.telegram_bot_token)
+        
+        for booking in bookings:
+            house_name = booking.house.name if booking.house else f"House {booking.house_id}"
+            status_map = {
+                'confirmed': '✅ Подтверждено',
+                'cancelled': '❌ Отменено',
+                'new': '⏳ Требуется подтверждение!',
+                'paid': '💰 Оплачено'
+            }
+            status_text = status_map.get(booking.status.value, booking.status.value)
+            
+            text = (
+                f"🔄 <b>Бронь обновлена (Avito)</b>\n\n"
+                f"🏠 <b>{house_name}</b>\n"
+                f"👤 {booking.guest_name}\n"
+                f"📅 {booking.check_in.strftime('%d.%m')} - {booking.check_out.strftime('%d.%m')}\n"
+                f"Статус: {status_text}\n"
+                f"Предоплата: {booking.advance_amount}₽"
+            )
+            
+            try:
+                await bot.send_message(
+                    chat_id=settings.telegram_chat_id,
+                    text=text,
+                    parse_mode="HTML"
+                )
+            except Exception as msg_err:
+                logger.error(f"Failed to send individual booking notification: {msg_err}")
+                
+        await bot.session.close()
+
     except Exception as e:
         logger.error(f"Failed to send notification: {e}")

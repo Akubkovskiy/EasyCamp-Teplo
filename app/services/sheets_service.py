@@ -120,10 +120,12 @@ class GoogleSheetsService:
         # Записываем данные
         if len(data) > 0:
             # Используем batch_update для записи всех данных сразу
-            worksheet.batch_update([{
-                'range': f'A1:N{len(data)}',
-                'values': data,
-            }], value_input_option='USER_ENTERED')
+            # Используем update для записи данных
+            worksheet.update(
+                range_name=f'A1:N{len(data)}',
+                values=data,
+                value_input_option='USER_ENTERED'
+            )
         
         # Форматирование
         self._format_bookings_sheet(worksheet)
@@ -266,9 +268,10 @@ class GoogleSheetsService:
         # Записываем данные
         if len(data) > 0:
             # Используем batch_update для записи всех данных сразу
+            # Используем update для записи данных
             worksheet.batch_update([{
                 'range': f'A1:N{len(data)}',
-                'values': data,
+                'values': data
             }], value_input_option='USER_ENTERED')
         
         # Форматирование
