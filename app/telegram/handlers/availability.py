@@ -2,7 +2,9 @@ import datetime
 import logging
 
 from aiogram import Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command
+from app.services.booking_service import booking_service
 
 from app.telegram.ui.calendar import build_month_keyboard, month_title
 from app.telegram.state.availability import (
@@ -14,7 +16,30 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(lambda c: c.data == "admin:availability")
+from app.telegram.auth.admin import is_admin
+
+@router.message(Command("availability"))
+async def availability_command(message: Message):
+    """Обработчик команды /availability для проверки доступности домиков"""
+    if message.from_user is None:
+        return
+
+    user_id = message.from_user.id
+    today = datetime.date.today()
+
+    availability_states[user_id] = AvailabilityState()
+
+    await message.answer(
+        "📅 <b>Выберите дату заезда</b>",
+        reply_markup=build_month_keyboard(
+            today.year,
+            today.month,
+            prefix="checkin",
+            min_date=today,
+        ),
+    )
+
+@router.callback_query(lambda c: c.data in ["admin:availability", "guest:availability"])
 async def start_availability(callback: CallbackQuery):
     if callback.from_user is None or callback.message is None:
         return
@@ -176,18 +201,54 @@ async def select_checkout_date(callback: CallbackQuery):
     # Вычисляем количество ночей
     nights = (selected_date - state.check_in).days
     
-    # Показываем подтверждение
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    # Запрашиваем свободные дома
+    available_houses = await booking_service.get_available_houses(state.check_in, state.check_out)
+
+    if not available_houses:
+        back_callback = "admin:menu" if is_admin(user_id) else "guest:menu"
+        retry_callback = "admin:availability" if is_admin(user_id) else "guest:availability"
+
+        await callback.message.edit_text(
+            f"🚫 <b>Нет свободных домиков</b>\n\n"
+            f"📅 Даты: {state.check_in.strftime('%d.%m.%Y')} - {state.check_out.strftime('%d.%m.%Y')}\n"
+            f"Попробуйте выбрать другие даты.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Выбрать другие даты", callback_data=retry_callback)],
+                [InlineKeyboardButton(text="🔙 В меню", callback_data=back_callback)]
+            ])
+        )
+        await callback.answer()
+        return
+
+    # Формируем список доступных домов
+    text = (
+        f"✅ <b>Доступные домики:</b>\n\n"
+        f"📅 {state.check_in.strftime('%d.%m.%Y')} — {state.check_out.strftime('%d.%m.%Y')}\n"
+        f"🌙 Ночей: {nights}\n"
+        f"──────────────────\n"
+    )
+    
+    buttons = []
+    for house in available_houses:
+        text += f"🏠 <b>{house.name}</b>\n"
+        if house.description:
+            text += f"ℹ️ {house.description}\n"
+        text += f"👥 До {house.capacity} гостей\n\n"
+        
+        # Кнопка бронирования
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"✅ Забронировать {house.name}", 
+                callback_data=f"booking:create:{house.id}"
+            )
+        ])
+        
+    buttons.append([InlineKeyboardButton(text="🔄 Выбрать другие даты", callback_data="admin:availability" if is_admin(user_id) else "guest:availability")])
+    buttons.append([InlineKeyboardButton(text="🔙 В меню", callback_data="admin:menu" if is_admin(user_id) else "guest:menu")])
     
     await callback.message.edit_text(
-        f"✅ <b>Вы выбрали даты:</b>\n\n"
-        f"📅 Заезд: {state.check_in.strftime('%d.%m.%Y')}\n"
-        f"📅 Выезд: {state.check_out.strftime('%d.%m.%Y')}\n"
-        f"🌙 Количество ночей: {nights}\n\n"
-        f"⚠️ <i>Функция бронирования в разработке</i>",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Выбрать другие даты", callback_data="admin:availability")],
-            [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="admin:menu")],
-        ])
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        parse_mode="HTML"
     )
     await callback.answer()

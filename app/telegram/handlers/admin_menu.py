@@ -6,6 +6,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from app.telegram.auth.admin import is_admin
 from app.telegram.menus.admin import admin_menu_keyboard
+from app.telegram.menus.guest import guest_menu_keyboard
 
 
 router = Router()
@@ -24,8 +25,11 @@ async def start_handler(message: Message):
     )
 
     if not is_admin(message.from_user.id):
-        logger.warning("Access denied for user_id=%s", message.from_user.id)
-        await message.answer("Бот находится в разработке.")
+        # Гостевое меню
+        await message.answer(
+            "🏕 <b>Добро пожаловать в Teplo · Архыз!</b>\n\nЗдесь вы можете проверить доступность домиков и забронировать отдых.",
+            reply_markup=guest_menu_keyboard(),
+        )
         return
 
     await message.answer(
@@ -46,13 +50,19 @@ async def back_to_menu(callback: CallbackQuery):
     await callback.answer()
 
 
+@router.callback_query(lambda c: c.data == "guest:menu")
+async def back_to_guest_menu(callback: CallbackQuery):
+    logger.info("Back to guest menu")
+    
+    if callback.message:
+        await callback.message.edit_text(
+            "🏕 <b>Teplo · Архыз</b>\n\nГлавное меню",
+            reply_markup=guest_menu_keyboard(),
+        )
+    await callback.answer()
+
+
 # Обработчик admin:houses теперь в handlers/houses.py
 
 
-@router.callback_query(lambda c: c.data == "admin:availability")
-async def show_availability(callback: CallbackQuery):
-    logger.info("Availability check requested")
-    await callback.message.answer(
-        "Используйте команду /availability для проверки доступности домиков"
-    )
-    await callback.answer()
+

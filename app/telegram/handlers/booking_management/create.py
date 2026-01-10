@@ -13,8 +13,65 @@ from app.services.house_service import house_service
 from app.utils.validators import validate_phone, format_phone
 from app.telegram.ui.calendar import build_month_keyboard, build_year_keyboard
 from app.core.config import settings
+from app.telegram.state.availability import availability_states
 
 router = Router()
+
+# Bridge handler: connects availability check to FSM booking flow
+@router.callback_query(F.data.startswith("booking:create:"))
+async def start_booking_from_availability(callback: CallbackQuery, state: FSMContext):
+    """Начало бронирования из проверки доступности"""
+    if callback.from_user is None or callback.message is None:
+        return
+    
+    user_id = callback.from_user.id
+    house_id = int(callback.data.split(":")[2])
+    
+    # Получаем данные из availability_states
+    avail_state = availability_states.get(user_id)
+    if not avail_state or not avail_state.check_in or not avail_state.check_out:
+        await callback.answer("❌ Ошибка: даты не найдены. Попробуйте снова.", show_alert=True)
+        return
+    
+    # Получаем информацию о доме
+    house = await house_service.get_house(house_id)
+    if not house:
+        await callback.answer("❌ Домик не найден", show_alert=True)
+        return
+    
+    # Переносим данные в FSM
+    await state.clear()
+    await state.update_data(
+        house_id=house_id,
+        check_in=avail_state.check_in,
+        check_out=avail_state.check_out
+    )
+    
+    # Вычисляем количество ночей
+    nights = (avail_state.check_out - avail_state.check_in).days
+    
+    # Определяем callback для возврата
+    from app.telegram.auth.admin import is_admin
+    back_callback = "admin:availability" if is_admin(user_id) else "guest:availability"
+    
+    # Создаем клавиатуру с кнопками навигации
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к выбору домика", callback_data=back_callback)],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    # Запрашиваем имя гостя
+    await callback.message.edit_text(
+        f"📝 <b>Бронирование {house.name}</b>\n\n"
+        f"📅 Даты: {avail_state.check_in.strftime('%d.%m.%Y')} - {avail_state.check_out.strftime('%d.%m.%Y')}\n"
+        f"🌙 Ночей: {nights}\n\n"
+        f"Пожалуйста, введите <b>имя гостя</b>:",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_guest_name)
+    await callback.answer()
+
 
 @router.message(Command("new_booking"))
 @router.callback_query(F.data == "admin:new_booking")
@@ -150,9 +207,15 @@ async def select_checkout_date(callback: CallbackQuery, state: FSMContext):
     
     nights = (check_out - check_in).days
     
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к выбору дат", callback_data="back_to_checkout")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
     await callback.message.edit_text(
         f"📅 <b>Период: {check_in.strftime('%d.%m.%Y')} - {check_out.strftime('%d.%m.%Y')} ({nights} сут.)</b>\n\n"
         "👤 <b>Введите имя гостя:</b>",
+        reply_markup=keyboard,
         parse_mode="HTML"
     )
     await state.set_state(BookingStates.waiting_for_guest_name)
@@ -163,7 +226,16 @@ async def select_checkout_date(callback: CallbackQuery, state: FSMContext):
 @router.message(BookingStates.waiting_for_guest_name)
 async def guest_name_entered(message: Message, state: FSMContext):
     await state.update_data(guest_name=message.text)
-    await message.answer("📞 Введите телефон гостя (например: +79991234567):")
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к выбору дат", callback_data="back_to_checkout")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    await message.answer(
+        "📞 Введите телефон гостя (например: +79991234567):",
+        reply_markup=keyboard
+    )
     await state.set_state(BookingStates.waiting_for_guest_phone)
 
 @router.message(BookingStates.waiting_for_guest_phone)
@@ -173,7 +245,16 @@ async def guest_phone_entered(message: Message, state: FSMContext):
         await message.answer("❌ Некорректный номер телефона. Попробуйте еще раз.")
         return
     await state.update_data(guest_phone=format_phone(phone))
-    await message.answer("👥 Введите количество гостей (число):")
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к имени", callback_data="back_to_name")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    await message.answer(
+        "👥 Введите количество гостей (число):",
+        reply_markup=keyboard
+    )
     await state.set_state(BookingStates.waiting_for_guests_count)
 
 @router.message(BookingStates.waiting_for_guests_count)
@@ -206,6 +287,7 @@ async def guests_count_entered(message: Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"✅ Подтвердить: {price}₽", callback_data="confirm_booking")],
         [InlineKeyboardButton(text="✏️ Изменить цену", callback_data="change_price")],
+        [InlineKeyboardButton(text="🔙 Назад к количеству гостей", callback_data="back_to_guests_count")],
         [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
     ])
     
@@ -225,7 +307,14 @@ async def guests_count_entered(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "change_price")
 async def request_manual_price(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("💰 Введите итоговую стоимость бронирования (RUB):")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к подтверждению", callback_data="back_to_confirmation")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
+    ])
+    await callback.message.answer(
+        "💰 Введите итоговую стоимость бронирования (RUB):",
+        reply_markup=keyboard
+    )
     await state.set_state(BookingStates.waiting_for_price)
     await callback.answer()
 
@@ -275,6 +364,123 @@ async def cancel_creation(callback: CallbackQuery, state: FSMContext):
     ])
     
     await callback.message.edit_text("❌ Создание брони отменено.", reply_markup=keyboard)
+    await callback.answer()
+
+# --- Back Navigation Handlers ---
+
+@router.callback_query(F.data == "back_to_checkout")
+async def back_to_checkout_selection(callback: CallbackQuery, state: FSMContext):
+    """Возврат к выбору даты выезда"""
+    data = await state.get_data()
+    check_in = data.get('check_in')
+    
+    if not check_in:
+        await callback.answer("❌ Ошибка: дата заезда не найдена", show_alert=True)
+        return
+    
+    min_date = check_in + timedelta(days=1)
+    
+    await callback.message.edit_text(
+        f"📅 <b>Дата заезда: {check_in.strftime('%d.%m.%Y')}</b>\n\n"
+        "📅 <b>Выберите дату выезда:</b>",
+        reply_markup=build_month_keyboard(
+            min_date.year, min_date.month, prefix="bookout",
+            min_date=min_date
+        ),
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_check_out)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_name")
+async def back_to_name_input(callback: CallbackQuery, state: FSMContext):
+    """Возврат к вводу имени гостя"""
+    data = await state.get_data()
+    check_in = data.get('check_in')
+    check_out = data.get('check_out')
+    
+    if not check_in or not check_out:
+        await callback.answer("❌ Ошибка: даты не найдены", show_alert=True)
+        return
+    
+    nights = (check_out - check_in).days
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к выбору дат", callback_data="back_to_checkout")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    await callback.message.edit_text(
+        f"📅 <b>Период: {check_in.strftime('%d.%m.%Y')} - {check_out.strftime('%d.%m.%Y')} ({nights} сут.)</b>\n\n"
+        "👤 <b>Введите имя гостя:</b>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_guest_name)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_phone")
+async def back_to_phone_input(callback: CallbackQuery, state: FSMContext):
+    """Возврат к вводу телефона"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к имени", callback_data="back_to_name")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    await callback.message.edit_text(
+        "📞 Введите телефон гостя (например: +79991234567):",
+        reply_markup=keyboard
+    )
+    await state.set_state(BookingStates.waiting_for_guest_phone)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_guests_count")
+async def back_to_guests_count_input(callback: CallbackQuery, state: FSMContext):
+    """Возврат к вводу количества гостей"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад к телефону", callback_data="back_to_phone")],
+        [InlineKeyboardButton(text="❌ Отменить бронирование", callback_data="cancel_booking")]
+    ])
+    
+    await callback.message.edit_text(
+        "👥 Введите количество гостей (число):",
+        reply_markup=keyboard
+    )
+    await state.set_state(BookingStates.waiting_for_guests_count)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_confirmation")
+async def back_to_confirmation_screen(callback: CallbackQuery, state: FSMContext):
+    """Возврат к экрану подтверждения"""
+    data = await state.get_data()
+    
+    # Проверяем наличие всех необходимых данных
+    required_fields = ['house_id', 'check_in', 'check_out', 'guest_name', 'guest_phone', 'guests_count', 'total_price']
+    if not all(field in data for field in required_fields):
+        await callback.answer("❌ Ошибка: данные бронирования неполные", show_alert=True)
+        return
+    
+    nights = (data['check_out'] - data['check_in']).days
+    price = data['total_price']
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Подтвердить: {price}₽", callback_data="confirm_booking")],
+        [InlineKeyboardButton(text="✏️ Изменить цену", callback_data="change_price")],
+        [InlineKeyboardButton(text="🔙 Назад к количеству гостей", callback_data="back_to_guests_count")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
+    ])
+    
+    await callback.message.edit_text(
+        "📋 <b>Подтверждение бронирования</b>\n\n"
+        f"🏠 Домик: <b>Teplo {data['house_id']}</b>\n"
+        f"📅 Даты: {data['check_in'].strftime('%d.%m.%Y')} - {data['check_out'].strftime('%d.%m.%Y')} ({nights} н.)\n"
+        f"👤 Гость: {data['guest_name']} ({data['guest_phone']})\n"
+        f"👥 Гостей: {data['guests_count']}\n"
+        f"💰 <b>Цена: {price}₽</b>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await state.set_state(BookingStates.waiting_for_confirmation)
     await callback.answer()
 
 @router.callback_query(F.data == "ignore")
