@@ -21,6 +21,11 @@ class Settings(BaseModel):
     avito_user_id: int = 75878034  # Ваш user_id из документации
     avito_item_ids: str = ""  # Comma-separated list of item IDs
     avito_redirect_uri: str = "http://localhost:8000/avito/callback"  # Изменить на ngrok URL
+    
+    # Scheduler settings
+    enable_auto_sync: bool = True
+    avito_sync_interval_minutes: int = 30
+    sheets_sync_interval_minutes: int = 5
 
 
 settings = Settings(
@@ -32,4 +37,7 @@ settings = Settings(
     avito_client_secret=os.environ.get("AVITO_CLIENT_SECRET", ""),
     avito_item_ids=os.environ.get("AVITO_ITEM_IDS", ""),
     avito_redirect_uri=os.environ.get("AVITO_REDIRECT_URI", "http://localhost:8000/avito/callback"),
+    enable_auto_sync=os.environ.get("ENABLE_AUTO_SYNC", "true").lower() == "true",
+    avito_sync_interval_minutes=int(os.environ.get("AVITO_SYNC_INTERVAL_MINUTES", "30")),
+    sheets_sync_interval_minutes=int(os.environ.get("SHEETS_SYNC_INTERVAL_MINUTES", "5")),
 )

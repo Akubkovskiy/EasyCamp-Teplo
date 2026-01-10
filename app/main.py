@@ -52,7 +52,16 @@ bot = Bot(
 )
 
 # Регистрация обработчиков
-from app.telegram.handlers import admin_menu, availability, bookings, contacts, sync, avito_fetch
+from app.telegram.handlers import (
+    admin_menu,
+    availability,
+    bookings,
+    contacts,
+    sync,
+    avito_fetch,
+    scheduler,
+    settings as settings_handler,
+)
 
 dp = Dispatcher()
 dp.include_router(admin_menu.router)
@@ -61,6 +70,8 @@ dp.include_router(bookings.router)
 dp.include_router(contacts.router)
 dp.include_router(sync.router)
 dp.include_router(avito_fetch.router)
+dp.include_router(scheduler.router)
+dp.include_router(settings_handler.router)
 
 
 # -------------------------------------------------
@@ -75,6 +86,10 @@ async def on_startup():
     from app.database import init_db
     await init_db()
     
+    # Start scheduler
+    from app.services.scheduler_service import scheduler_service
+    scheduler_service.start()
+    
     logger.info("Starting Telegram polling")
 
     asyncio.create_task(dp.start_polling(bot))
@@ -83,4 +98,8 @@ async def on_startup():
 @app.on_event("shutdown")
 async def on_shutdown():
     logger.info("FastAPI shutdown")
+    
+    # Stop scheduler
+    from app.services.scheduler_service import scheduler_service
+    scheduler_service.shutdown()
     await bot.session.close()
