@@ -18,6 +18,11 @@ class GoogleSheetsService:
         self.credentials_file = settings.google_sheets_credentials_file
         self.client = None
         self.spreadsheet = None
+        
+        # Sync caching to prevent excessive API calls
+        self._last_sync_time = None
+        self._sync_cache_ttl_seconds = getattr(settings, 'sync_cache_ttl_seconds', 30)
+        self._is_syncing = False  # Prevent concurrent syncs
     
     def connect(self):
         """Подключение к Google Sheets"""
@@ -158,7 +163,86 @@ class GoogleSheetsService:
             'range': 'A5:B7',
             'values': stats_data
         }])
+    
+    async def sync_bookings_async(self, bookings: List[Booking]):
+        """Async wrapper для синхронизации броней"""
+        import asyncio
+        from datetime import datetime
+        
+        # Prevent concurrent syncs
+        if self._is_syncing:
+            return False
+        
+        try:
+            self._is_syncing = True
+            
+            # Run sync in thread pool to avoid blocking
+            await asyncio.to_thread(self.sync_bookings_to_sheet, bookings)
+            await asyncio.to_thread(self.create_dashboard, bookings)
+            
+            self._last_sync_time = datetime.now()
+            return True
+            
+        finally:
+            self._is_syncing = False
+    
+    async def sync_if_needed(self, force: bool = False) -> bool:
+        """
+        Умная синхронизация - только если прошло достаточно времени
+        
+        Args:
+            force: Принудительная синхронизация игнорируя кэш
+            
+        Returns:
+            True если синхронизация выполнена, False если пропущена
+        """
+        import asyncio
+        import logging
+        from datetime import datetime, timedelta
+        from sqlalchemy import select
+        from sqlalchemy.orm import joinedload
+        
+        logger = logging.getLogger(__name__)
+        
+        # Check if sync is needed
+        if not force and self._last_sync_time:
+            time_since_last_sync = (datetime.now() - self._last_sync_time).total_seconds()
+            if time_since_last_sync < self._sync_cache_ttl_seconds:
+                logger.debug(f"Skipping sync - last sync was {time_since_last_sync:.1f}s ago (TTL: {self._sync_cache_ttl_seconds}s)")
+                return False
+        
+        # Already syncing
+        if self._is_syncing:
+            logger.debug("Sync already in progress, skipping")
+            return False
+        
+        try:
+            # Get bookings from database
+            from app.database import AsyncSessionLocal
+            
+            async with AsyncSessionLocal() as session:
+                stmt = select(Booking).options(joinedload(Booking.house)).order_by(Booking.check_in)
+                result = await session.execute(stmt)
+                bookings = result.scalars().all()
+            
+            if not bookings:
+                logger.debug("No bookings to sync")
+                return False
+            
+            # Perform sync
+            logger.info(f"📊 Syncing {len(bookings)} bookings to Google Sheets...")
+            success = await self.sync_bookings_async(bookings)
+            
+            if success:
+                logger.info(f"✅ Successfully synced {len(bookings)} bookings")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Sync failed: {e}", exc_info=True)
+            return False
 
 
 # Глобальный экземпляр сервиса
 sheets_service = GoogleSheetsService()
+

@@ -159,6 +159,12 @@ GOOGLE_SHEETS_SPREADSHEET_ID=ваш_id_таблицы_из_шага_3.2
 ```env
 TELEGRAM_BOT_TOKEN=ваш_токен_из_шага_4.1
 TELEGRAM_CHAT_ID=ваш_chat_id_из_шага_4.2
+
+# Настройки синхронизации (опционально)
+ENABLE_AUTO_SYNC=true
+SYNC_ON_BOT_START=true
+SYNC_ON_USER_INTERACTION=true
+SYNC_CACHE_TTL_SECONDS=30
 ```
 
 </details>
