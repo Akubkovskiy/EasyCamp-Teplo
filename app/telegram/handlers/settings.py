@@ -28,7 +28,9 @@ async def show_settings(event):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Автосинхронизация", callback_data="settings_sync")],
         [InlineKeyboardButton(text="📅 Период бронирования", callback_data="settings_booking_window")],
+        [InlineKeyboardButton(text="⏰ Время уведомлений", callback_data="settings_cleaning_time")],
         [InlineKeyboardButton(text="👥 Пользователи", callback_data="settings_users")],
+        [InlineKeyboardButton(text="📝 Редактор контента", callback_data="admin:settings:content")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_admin")],
     ])
     
@@ -289,8 +291,7 @@ async def set_avito_interval(callback: CallbackQuery):
     
     # Перезапускаем планировщик
     from app.services.scheduler_service import scheduler_service
-    scheduler_service.shutdown()
-    scheduler_service.start()
+    scheduler_service.reload()
     
     status = "выключена" if interval == 0 else f"установлена на {interval} минут"
     
@@ -312,13 +313,80 @@ async def set_sheets_interval(callback: CallbackQuery):
     
     # Перезапускаем планировщик
     from app.services.scheduler_service import scheduler_service
-    scheduler_service.shutdown()
-    scheduler_service.start()
+    scheduler_service.reload()
     
     status = "выключена" if interval == 0 else f"установлена на {interval} минут"
     
     await callback.answer(f"✅ Sheets синхронизация {status}", show_alert=True)
     await sync_settings(callback)
+
+
+
+@router.callback_query(F.data == "settings_cleaning_time")
+async def cleaning_time_settings(callback: CallbackQuery):
+    """Настройки времени уведомлений об уборке"""
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="18:00", callback_data="set_clean_time_18:00"),
+            InlineKeyboardButton(text="19:00", callback_data="set_clean_time_19:00"),
+        ],
+        [
+            InlineKeyboardButton(text="20:00", callback_data="set_clean_time_20:00"),
+            InlineKeyboardButton(text="21:00", callback_data="set_clean_time_21:00"),
+        ],
+        [
+            InlineKeyboardButton(text="22:00", callback_data="set_clean_time_22:00"),
+            InlineKeyboardButton(text="09:00 (утро)", callback_data="set_clean_time_09:00"),
+        ],
+        [InlineKeyboardButton(text="🔔 Тест сейчас", callback_data="test_cleaning_notify")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_settings")],
+    ])
+    
+    await callback.message.edit_text(
+        "⏰ <b>Время уведомлений уборщиц</b>\n\n"
+        f"<b>Текущее время:</b> {settings.cleaning_notification_time}\n\n"
+        "<i>💡 В это время бот будет проверять выезды на ЗАВТРА и присылать уведомления уборщицам для подтверждения.</i>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("set_clean_time_"))
+async def set_cleaning_time(callback: CallbackQuery):
+    """Установить время уведомлений"""
+    
+    time_str = callback.data.split("_")[3]
+    
+    # Обновляем .env файл
+    update_env_variable("CLEANING_NOTIFICATION_TIME", time_str)
+    
+    # Обновляем настройки в памяти
+    settings.cleaning_notification_time = time_str
+    
+    # Перезапускаем планировщик (чтобы подхватилось новое время)
+    from app.services.scheduler_service import scheduler_service
+    scheduler_service.reload()
+    
+    
+    await callback.answer(f"✅ Время уведомлений: {time_str}", show_alert=True)
+    await cleaning_time_settings(callback)
+
+
+@router.callback_query(F.data == "test_cleaning_notify")
+async def test_cleaning_notify(callback: CallbackQuery):
+    """Тестовый запуск уведомлений"""
+    from app.jobs.cleaning_notifier import check_and_notify_cleaners
+    
+    await callback.answer("⏳ Запускаю проверку...", show_alert=False)
+    
+    try:
+        # Запускаем задачу
+        await check_and_notify_cleaners()
+        await callback.message.answer("✅ Тестовая проверка завершена. Если были брони на завтра — уведомления отправлены.")
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка при запуске: {e}")
 
 
 @router.callback_query(F.data == "back_to_settings")

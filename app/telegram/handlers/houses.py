@@ -132,10 +132,16 @@ async def execute_delete_house(callback: CallbackQuery):
 
 # --- Редактирование домика (Edit) ---
 
+
+# --- Редактирование домика (Edit) ---
+
 class EditHouseStates(StatesGroup):
     editing_name = State()
     editing_desc = State()
     editing_capacity = State()
+    editing_wifi = State()
+    editing_instr = State()
+    editing_photo = State()
 
 @router.callback_query(F.data.startswith("house:edit:"))
 async def edit_house_menu(callback: CallbackQuery):
@@ -150,6 +156,11 @@ async def edit_house_menu(callback: CallbackQuery):
         [InlineKeyboardButton(text="📝 Название", callback_data=f"house:edit_f:{house_id}:name")],
         [InlineKeyboardButton(text="📄 Описание", callback_data=f"house:edit_f:{house_id}:desc")],
         [InlineKeyboardButton(text="👥 Вместимость", callback_data=f"house:edit_f:{house_id}:cap")],
+        [
+            InlineKeyboardButton(text="📶 Wi-Fi", callback_data=f"house:edit_f:{house_id}:wifi"),
+            InlineKeyboardButton(text="🔑 Инструкция", callback_data=f"house:edit_f:{house_id}:instr"),
+        ],
+        [InlineKeyboardButton(text="📸 Фото", callback_data=f"house:edit_f:{house_id}:photo")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data=f"house:view:{house_id}")]
     ])
     
@@ -177,6 +188,15 @@ async def start_edit_field(callback: CallbackQuery, state: FSMContext):
     elif field == "cap":
         await callback.message.edit_text("👥 Введите новую вместимость (число):")
         await state.set_state(EditHouseStates.editing_capacity)
+    elif field == "wifi":
+        await callback.message.edit_text("📶 Введите данные Wi-Fi (SSID, пароль):")
+        await state.set_state(EditHouseStates.editing_wifi)
+    elif field == "instr":
+        await callback.message.edit_text("🔑 Введите инструкцию по заселению (код от кейбокса):")
+        await state.set_state(EditHouseStates.editing_instr)
+    elif field == "photo":
+        await callback.message.edit_text("📸 Отправьте фото домика (как картинку):")
+        await state.set_state(EditHouseStates.editing_photo)
     
     await callback.answer()
 
@@ -205,17 +225,44 @@ async def process_edit_capacity(message: Message, state: FSMContext):
     await house_service.update_house(house_id, capacity=int(message.text))
     await finish_editing(message, house_id, state)
 
+@router.message(EditHouseStates.editing_wifi)
+async def process_edit_wifi(message: Message, state: FSMContext):
+    data = await state.get_data()
+    house_id = data['editing_house_id']
+    await house_service.update_house(house_id, wifi_info=message.text)
+    await finish_editing(message, house_id, state)
+
+@router.message(EditHouseStates.editing_instr)
+async def process_edit_instr(message: Message, state: FSMContext):
+    data = await state.get_data()
+    house_id = data['editing_house_id']
+    await house_service.update_house(house_id, checkin_instruction=message.text)
+    await finish_editing(message, house_id, state)
+
+@router.message(EditHouseStates.editing_photo, F.photo)
+async def process_edit_photo(message: Message, state: FSMContext):
+    data = await state.get_data()
+    house_id = data['editing_house_id']
+    
+    # Берем самое большое фото
+    photo = message.photo[-1]
+    file_id = photo.file_id
+    
+    await house_service.update_house(house_id, promo_image_id=file_id)
+    await finish_editing(message, house_id, state)
+
 async def finish_editing(message: Message, house_id: int, state: FSMContext):
     await state.clear()
     await message.answer("✅ Изменения сохранены.")
     
-    # Показываем обновленную карточку (хак: создаем видимость колбэка)
-    # Но проще отправить новое сообщение с карточкой
     house = await house_service.get_house(house_id)
     text = (
         f"🏠 <b>{house.name}</b>\n\n"
-        f"📝 Описание: {house.description or 'Нет'}\n"
-        f"👥 Вместимость: {house.capacity} чел.\n"
+        f"📝 <b>Описание:</b> {house.description or 'Нет'}\n"
+        f"👥 <b>Вместимость:</b> {house.capacity} чел.\n"
+        f"📶 <b>Wi-Fi:</b> {house.wifi_info or 'Не задано'}\n"
+        f"🔑 <b>Инструкция:</b> {'Задана' if house.checkin_instruction else 'Не задано'}\n"
+        f"📸 <b>Фото:</b> {'Загружено' if house.promo_image_id else 'Нет'}\n"
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"house:edit:{house.id}")],
