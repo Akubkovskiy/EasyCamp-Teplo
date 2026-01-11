@@ -61,8 +61,8 @@ async def sync_avito_job():
 async def verify_local_bookings_in_avito(item_house_mapping: dict):
     """Проверить и синхронизировать локальные брони в Avito"""
     try:
-        from app.database.session import AsyncSessionLocal
-        from app.database.models import Booking, BookingStatus
+        from app.database import AsyncSessionLocal
+        from app.models import Booking, BookingStatus
         from sqlalchemy import select
         from datetime import datetime, timedelta
         from app.services.avito_api_service import avito_api_service

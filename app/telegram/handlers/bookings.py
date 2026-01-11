@@ -268,6 +268,22 @@ async def sync_and_open_table(callback: CallbackQuery):
     # 1. Синхронизация с Avito (получение новых броней)
     await sync_avito_job()
     
+    # 1.5 Проверка и блокировка локальных броней в Avito
+    await callback.message.edit_text("🔍 <b>Проверяем брони в Avito...</b>", parse_mode="HTML")
+    from app.jobs.avito_sync_job import verify_local_bookings_in_avito
+    from app.core.config import settings
+    
+    # Парсим маппинг item_id:house_id
+    item_house_mapping = {}
+    for pair in settings.avito_item_ids.split(','):
+        pair = pair.strip()
+        if ':' in pair:
+            item_id, house_id = pair.split(':')
+            item_house_mapping[int(item_id)] = int(house_id)
+    
+    if item_house_mapping:
+        await verify_local_bookings_in_avito(item_house_mapping)
+    
     # 2. Обновление статуса
     await callback.message.edit_text("⏳ <b>Обновляем Google Sheets...</b>", parse_mode="HTML")
     
