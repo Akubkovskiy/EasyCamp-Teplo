@@ -219,6 +219,7 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
 
     # Формируем текст списка
     text = f"<b>{title} ({len(bookings)})</b>\n\n"
+    text += "<i>🅰️ - Avito | 📱 - Telegram</i>\n\n"
     
     status_emoji = {
         BookingStatus.NEW: "🆕",
@@ -233,11 +234,20 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
     current_row = []
     
     for b in bookings:
+        # Определяем источник брони
+        source_emoji = "🅰️" if b.source == "AVITO" else "📱"
+        
+        # Вычисляем остаток оплаты
+        remaining = b.total_price - b.advance_amount if b.advance_amount else b.total_price
+        
+        # Форматируем телефон (показываем последние 4 цифры для компактности)
+        phone_display = b.guest_phone[-4:] if b.guest_phone and len(b.guest_phone) >= 4 else (b.guest_phone or "—")
+        
         text += (
-            f"#{b.id} {status_emoji.get(b.status, '❓')} <b>{b.check_in.strftime('%d.%m')} - {b.check_out.strftime('%d.%m')}</b>\n"
-            f"🏠 {b.house.name} | 👤 {b.guest_name}\n"
-            f"💰 {b.total_price:,.0f} ₽\n"
-            f"──────────────────\n"
+            f"#{b.id} {status_emoji.get(b.status, '❓')} {source_emoji} "
+            f"{b.check_in.strftime('%d.%m')}-{b.check_out.strftime('%d.%m')} | "
+            f"{b.house.name} | {b.guest_name} | "
+            f"☎️{phone_display} | 💰{remaining:,.0f}₽\n"
         )
         
         # Добавляем кнопку с ID
