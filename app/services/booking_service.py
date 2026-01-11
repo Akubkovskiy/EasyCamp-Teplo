@@ -119,6 +119,9 @@ class BookingService:
                 await session.commit()
                 await session.refresh(booking)
                 
+                # Блокировка дат в Avito
+                await self._block_avito_dates(booking)
+                
                 # Фоновая синхронизация с GS
                 asyncio.create_task(self.sync_all_to_sheets())
                 
@@ -127,6 +130,45 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error creating booking: {e}")
             return None
+    
+    async def _block_avito_dates(self, booking: Booking):
+        """Блокировка дат в Avito для брони"""
+        try:
+            # Получаем маппинг house_id -> avito_item_id
+            from app.core.config import settings
+            
+            item_house_mapping = {}
+            for pair in settings.avito_item_ids.split(','):
+                if ':' in pair:
+                    item_id, house_id = pair.strip().split(':')
+                    item_house_mapping[int(house_id)] = int(item_id)
+            
+            # Проверяем, есть ли Avito объявление для этого дома
+            avito_item_id = item_house_mapping.get(booking.house_id)
+            
+            if not avito_item_id:
+                logger.info(f"No Avito item ID for house {booking.house_id}, skipping calendar block")
+                return
+            
+            # Блокируем даты в Avito
+            from app.services.avito_api_service import avito_api_service
+            
+            success = await asyncio.to_thread(
+                avito_api_service.block_dates,
+                avito_item_id,
+                booking.check_in.isoformat(),
+                booking.check_out.isoformat(),
+                f"Бронь #{booking.id}: {booking.guest_name}"
+            )
+            
+            if success:
+                logger.info(f"✅ Avito dates blocked for booking #{booking.id}")
+            else:
+                logger.warning(f"⚠️ Failed to block Avito dates for booking #{booking.id}")
+                
+        except Exception as e:
+            logger.error(f"Error blocking Avito dates: {e}", exc_info=True)
+            # Не прерываем создание брони при ошибке Avito
 
     async def sync_all_to_sheets(self):
         """Синхронизация всех броней с Google Sheets"""
@@ -163,6 +205,9 @@ class BookingService:
                 booking.updated_at = datetime.now()
                 await session.commit()
                 
+                # Разблокировка дат в Avito
+                await self._unblock_avito_dates(booking)
+                
                 # Фоновая синхронизация
                 asyncio.create_task(self.sync_all_to_sheets())
                     
@@ -170,6 +215,44 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error cancelling booking: {e}")
             return False
+    
+    async def _unblock_avito_dates(self, booking: Booking):
+        """Разблокировка дат в Avito при отмене брони"""
+        try:
+            # Получаем маппинг house_id -> avito_item_id
+            from app.core.config import settings
+            
+            item_house_mapping = {}
+            for pair in settings.avito_item_ids.split(','):
+                if ':' in pair:
+                    item_id, house_id = pair.strip().split(':')
+                    item_house_mapping[int(house_id)] = int(item_id)
+            
+            # Проверяем, есть ли Avito объявление для этого дома
+            avito_item_id = item_house_mapping.get(booking.house_id)
+            
+            if not avito_item_id:
+                logger.info(f"No Avito item ID for house {booking.house_id}, skipping calendar unblock")
+                return
+            
+            # Разблокируем даты в Avito
+            from app.services.avito_api_service import avito_api_service
+            
+            success = await asyncio.to_thread(
+                avito_api_service.unblock_dates,
+                avito_item_id,
+                booking.check_in.isoformat(),
+                booking.check_out.isoformat()
+            )
+            
+            if success:
+                logger.info(f"✅ Avito dates unblocked for booking #{booking.id}")
+            else:
+                logger.warning(f"⚠️ Could not unblock Avito dates for booking #{booking.id}")
+                
+        except Exception as e:
+            logger.error(f"Error unblocking Avito dates: {e}", exc_info=True)
+            # Не прерываем отмену брони при ошибке Avito
 
     async def update_booking(self, booking_id: int, **kwargs) -> bool:
         """Обновление данных брони"""

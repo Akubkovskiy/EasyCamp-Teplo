@@ -31,6 +31,9 @@ class Settings(BaseModel):
     sync_on_bot_start: bool = True
     sync_on_user_interaction: bool = True
     sync_cache_ttl_seconds: int = 30  # Minimum time between syncs
+    
+    # Avito calendar settings
+    booking_window_days: int = 180  # На сколько дней вперед открыты брони
 
 
 settings = Settings(
@@ -48,4 +51,5 @@ settings = Settings(
     sync_on_bot_start=os.environ.get("SYNC_ON_BOT_START", "true").lower() == "true",
     sync_on_user_interaction=os.environ.get("SYNC_ON_USER_INTERACTION", "true").lower() == "true",
     sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
+    booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "180")),
 )
