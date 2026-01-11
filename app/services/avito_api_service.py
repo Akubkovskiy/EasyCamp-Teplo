@@ -481,6 +481,107 @@ class AvitoAPIService:
         except Exception as e:
             logger.error(f"❌ Failed to update calendar intervals: {e}", exc_info=True)
             return False
+    
+    def verify_and_sync_bookings(self, item_id: int, local_bookings: list) -> dict:
+        """
+        Проверить и синхронизировать брони из БД с Avito
+        
+        Получает текущие брони из Avito и сравнивает с локальными.
+        Блокирует в Avito те брони, которых там нет.
+        
+        Args:
+            item_id: ID объявления на Avito
+            local_bookings: Список броней из локальной БД
+            
+        Returns:
+            dict с результатами: {
+                'checked': int,
+                'missing': int,
+                'blocked': int,
+                'errors': int
+            }
+        """
+        self.ensure_token()
+        
+        logger.info(f"Verifying bookings for item {item_id}")
+        
+        try:
+            from datetime import datetime, timedelta
+            from app.core.config import settings
+            
+            # Получаем текущие брони из Avito
+            today = datetime.now().date()
+            end_date = today + timedelta(days=settings.booking_window_days)
+            
+            avito_bookings_data = self.get_bookings(
+                item_id=item_id,
+                date_start=today.isoformat(),
+                date_end=end_date.isoformat()
+            )
+            
+            avito_bookings = avito_bookings_data.get('bookings', [])
+            logger.info(f"Found {len(avito_bookings)} bookings in Avito")
+            
+            # Создаем множество дат из Avito броней для быстрой проверки
+            avito_date_ranges = set()
+            for booking in avito_bookings:
+                check_in = booking.get('check_in') or booking.get('date_start')
+                check_out = booking.get('check_out') or booking.get('date_end')
+                
+                if check_in and check_out:
+                    avito_date_ranges.add((check_in, check_out))
+            
+            # Проверяем локальные брони
+            stats = {
+                'checked': len(local_bookings),
+                'missing': 0,
+                'blocked': 0,
+                'errors': 0
+            }
+            
+            for booking in local_bookings:
+                check_in = booking.check_in.isoformat()
+                check_out = booking.check_out.isoformat()
+                
+                # Проверяем, есть ли эта бронь в Avito
+                if (check_in, check_out) not in avito_date_ranges:
+                    logger.warning(
+                        f"Booking #{booking.id} ({check_in} to {check_out}) "
+                        f"not found in Avito, blocking..."
+                    )
+                    stats['missing'] += 1
+                    
+                    # Блокируем в Avito
+                    success = self.block_dates(
+                        item_id=item_id,
+                        check_in=check_in,
+                        check_out=check_out,
+                        comment=f"Бронь #{booking.id}: {booking.guest_name}"
+                    )
+                    
+                    if success:
+                        stats['blocked'] += 1
+                        logger.info(f"✅ Booking #{booking.id} blocked in Avito")
+                    else:
+                        stats['errors'] += 1
+                        logger.error(f"❌ Failed to block booking #{booking.id}")
+            
+            logger.info(
+                f"Verification complete: checked={stats['checked']}, "
+                f"missing={stats['missing']}, blocked={stats['blocked']}, "
+                f"errors={stats['errors']}"
+            )
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to verify bookings: {e}", exc_info=True)
+            return {
+                'checked': 0,
+                'missing': 0,
+                'blocked': 0,
+                'errors': 1
+            }
 
 
 # Глобальный экземпляр сервиса
