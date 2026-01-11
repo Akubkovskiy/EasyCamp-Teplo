@@ -27,7 +27,7 @@ async def sync_avito_job():
             logger.warning("No item IDs configured for Avito sync")
             return
         
-        # Синхронизация
+        # Синхронизация броней из Avito в БД
         stats = await sync_all_avito_items(item_house_mapping)
         
         logger.info(
@@ -35,6 +35,10 @@ async def sync_avito_job():
             f"total={stats['total']}, new={len(stats['new_bookings'])}, "
             f"updated={len(stats['updated_bookings'])}, errors={stats['errors']}"
         )
+        
+        # Проверка и синхронизация локальных броней в Avito
+        logger.info("🔍 Verifying local bookings in Avito...")
+        await verify_local_bookings_in_avito(item_house_mapping)
         
         # Уведомления о новых бронях
         if stats['new_bookings']:
@@ -52,6 +56,72 @@ async def sync_avito_job():
             
     except Exception as e:
         logger.error(f"❌ Avito sync failed: {e}", exc_info=True)
+
+
+async def verify_local_bookings_in_avito(item_house_mapping: dict):
+    """Проверить и синхронизировать локальные брони в Avito"""
+    try:
+        from app.database.session import AsyncSessionLocal
+        from app.database.models import Booking, BookingStatus
+        from sqlalchemy import select
+        from datetime import datetime, timedelta
+        from app.services.avito_api_service import avito_api_service
+        import asyncio
+        
+        async with AsyncSessionLocal() as session:
+            # Получаем все активные брони из БД
+            today = datetime.now().date()
+            end_date = today + timedelta(days=settings.booking_window_days)
+            
+            result = await session.execute(
+                select(Booking).where(
+                    Booking.status.in_([BookingStatus.NEW, BookingStatus.CONFIRMED, BookingStatus.PAID]),
+                    Booking.check_in >= today,
+                    Booking.check_out <= end_date
+                )
+            )
+            local_bookings = result.scalars().all()
+            
+            logger.info(f"Found {len(local_bookings)} active local bookings to verify")
+            
+            # Группируем брони по домам
+            bookings_by_house = {}
+            for booking in local_bookings:
+                if booking.house_id not in bookings_by_house:
+                    bookings_by_house[booking.house_id] = []
+                bookings_by_house[booking.house_id].append(booking)
+            
+            # Проверяем каждый дом
+            total_stats = {'checked': 0, 'missing': 0, 'blocked': 0, 'errors': 0}
+            
+            for item_id, house_id in item_house_mapping.items():
+                house_bookings = bookings_by_house.get(house_id, [])
+                
+                if not house_bookings:
+                    logger.info(f"No bookings to verify for house {house_id}")
+                    continue
+                
+                logger.info(f"Verifying {len(house_bookings)} bookings for house {house_id} (item {item_id})")
+                
+                # Вызываем проверку синхронно через asyncio.to_thread
+                stats = await asyncio.to_thread(
+                    avito_api_service.verify_and_sync_bookings,
+                    item_id,
+                    house_bookings
+                )
+                
+                # Суммируем статистику
+                for key in total_stats:
+                    total_stats[key] += stats.get(key, 0)
+            
+            logger.info(
+                f"✅ Verification complete: "
+                f"checked={total_stats['checked']}, missing={total_stats['missing']}, "
+                f"blocked={total_stats['blocked']}, errors={total_stats['errors']}"
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Failed to verify local bookings: {e}", exc_info=True)
 
 
 async def notify_new_bookings(bookings: list):
