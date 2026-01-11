@@ -235,7 +235,8 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
     
     for b in bookings:
         # Определяем источник брони
-        source_emoji = "🅰️" if b.source == "AVITO" else "📱"
+        from app.models import BookingSource
+        source_emoji = "🅰️" if b.source == BookingSource.AVITO else "📱"
         
         text += (
             f"#{b.id} {status_emoji.get(b.status, '❓')} {source_emoji} "
