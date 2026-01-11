@@ -78,3 +78,11 @@ async def get_all_users() -> list[User]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).order_by(User.id))
         return list(result.scalars().all())
+
+
+async def get_user_name(user_id: int) -> str | None:
+    """Возвращает имя пользователя из БД"""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.telegram_id == user_id))
+        user = result.scalar_one_or_none()
+        return user.name if user else None

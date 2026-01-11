@@ -24,17 +24,25 @@ async def start_handler(message: Message):
         message.from_user.username,
     )
 
-    if not is_admin(message.from_user.id):
-        # Гостевое меню
+    # 1. Сначала проверяем админа
+    if is_admin(message.from_user.id):
         await message.answer(
-            "🏕 <b>Добро пожаловать в Teplo · Архыз!</b>\n\nЗдесь вы можете проверить доступность домиков и забронировать отдых.",
-            reply_markup=guest_menu_keyboard(),
+            "🏕 <b>Teplo · Архыз</b>\n\nАдминистративная панель",
+            reply_markup=admin_menu_keyboard(),
         )
         return
+        
+    # 2. Проверяем уборщицу
+    from app.telegram.auth.admin import is_cleaner
+    if is_cleaner(message.from_user.id):
+        from app.telegram.handlers.cleaner import show_cleaner_menu
+        await show_cleaner_menu(message, message.from_user.id)
+        return
 
+    # 3. Иначе - гость
     await message.answer(
-        "🏕 <b>Teplo · Архыз</b>\n\nАдминистративная панель",
-        reply_markup=admin_menu_keyboard(),
+        "🏕 <b>Добро пожаловать в Teplo · Архыз!</b>\n\nЗдесь вы можете проверить доступность домиков и забронировать отдых.",
+        reply_markup=guest_menu_keyboard(),
     )
 
 

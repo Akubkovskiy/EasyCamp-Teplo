@@ -63,6 +63,7 @@ from app.telegram.handlers import (
     settings as settings_handler,
     houses,
     settings_users,
+    cleaner,
 )
 from app.telegram.handlers.booking_management import booking_routers
 
@@ -76,6 +77,7 @@ dp.include_router(avito_fetch.router)
 dp.include_router(scheduler.router)
 dp.include_router(settings_handler.router)
 dp.include_router(settings_users.router)
+dp.include_router(cleaner.router)
 dp.include_router(houses.router)
 
 for r in booking_routers:
