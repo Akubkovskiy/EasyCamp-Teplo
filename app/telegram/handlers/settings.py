@@ -28,6 +28,7 @@ async def show_settings(event):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Автосинхронизация", callback_data="settings_sync")],
         [InlineKeyboardButton(text="📅 Период бронирования", callback_data="settings_booking_window")],
+        [InlineKeyboardButton(text="👥 Пользователи", callback_data="settings_users")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_admin")],
     ])
     

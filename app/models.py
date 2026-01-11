@@ -63,3 +63,18 @@ class Booking(Base):
     external_id: Mapped[Optional[str]] = mapped_column(String, index=True)  # ID брони в Avito
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    CLEANER = "cleaner"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole))
+    name: Mapped[str] = mapped_column(String)  # Имя для удобства (например "Анна")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
