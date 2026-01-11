@@ -27,6 +27,7 @@ async def show_settings(event):
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Автосинхронизация", callback_data="settings_sync")],
+        [InlineKeyboardButton(text="📅 Период бронирования", callback_data="settings_booking_window")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_admin")],
     ])
     
@@ -68,6 +69,157 @@ async def sync_settings(callback: CallbackQuery):
         parse_mode="HTML"
     )
     await callback.answer()
+
+
+@router.callback_query(F.data == "settings_booking_window")
+async def booking_window_settings(callback: CallbackQuery):
+    """Настройки периода бронирования"""
+    
+    days = settings.booking_window_days
+    months = days // 30
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"📝 Изменить период ({days} дн.)",
+            callback_data="edit_booking_window"
+        )],
+        [InlineKeyboardButton(
+            text="🔄 Применить сейчас ко всем домам",
+            callback_data="apply_booking_window"
+        )],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_settings")],
+    ])
+    
+    await callback.message.edit_text(
+        "📅 <b>Период бронирования</b>\n\n"
+        f"<b>Текущий период:</b> {days} дней (~{months} месяцев)\n\n"
+        "<i>💡 Определяет, на сколько дней вперед открыты брони в Avito.\n"
+        "Изменения применяются автоматически при создании/отмене брони.</i>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "edit_booking_window")
+async def edit_booking_window(callback: CallbackQuery):
+    """Изменить период бронирования"""
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="3 мес (90)", callback_data="set_window_90"),
+            InlineKeyboardButton(text="6 мес (180)", callback_data="set_window_180"),
+        ],
+        [
+            InlineKeyboardButton(text="9 мес (270)", callback_data="set_window_270"),
+            InlineKeyboardButton(text="1 год (365)", callback_data="set_window_365"),
+        ],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="settings_booking_window")],
+    ])
+    
+    await callback.message.edit_text(
+        "📅 <b>Период бронирования</b>\n\n"
+        f"Текущий: {settings.booking_window_days} дней\n\n"
+        "Выберите новый период:",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("set_window_"))
+async def set_booking_window(callback: CallbackQuery):
+    """Установить период бронирования"""
+    
+    days = int(callback.data.split("_")[2])
+    
+    # Обновляем .env файл
+    update_env_variable("BOOKING_WINDOW_DAYS", str(days))
+    
+    # Обновляем настройки в памяти
+    settings.booking_window_days = days
+    
+    months = days // 30
+    await callback.answer(f"✅ Период установлен: {days} дней (~{months} мес.)", show_alert=True)
+    await booking_window_settings(callback)
+
+
+@router.callback_query(F.data == "apply_booking_window")
+async def apply_booking_window(callback: CallbackQuery):
+    """Применить период бронирования ко всем домам"""
+    
+    await callback.answer("🔄 Обновляю календари...", show_alert=False)
+    
+    # Получаем маппинг домов
+    from app.core.config import settings
+    from app.services.avito_api_service import avito_api_service
+    import asyncio
+    
+    item_house_mapping = {}
+    for pair in settings.avito_item_ids.split(','):
+        if ':' in pair:
+            item_id, house_id = pair.strip().split(':')
+            item_house_mapping[int(item_id)] = int(house_id)
+    
+    success_count = 0
+    error_count = 0
+    
+    # Обновляем календарь для каждого дома
+    for item_id, house_id in item_house_mapping.items():
+        try:
+            # Вызываем метод обновления календаря
+            result = await asyncio.to_thread(
+                avito_api_service.update_calendar_intervals,
+                item_id
+            )
+            if result:
+                success_count += 1
+            else:
+                error_count += 1
+        except Exception as e:
+            error_count += 1
+    
+    # Показываем результат
+    result_text = ""
+    if error_count == 0:
+        result_text = (
+            f"✅ Календари обновлены!\n\n"
+            f"Обработано домов: {success_count}"
+        )
+    else:
+        result_text = (
+            f"⚠️ Календари частично обновлены\n\n"
+            f"Успешно: {success_count}\n"
+            f"Ошибок: {error_count}"
+        )
+    
+    # Используем answer вместо edit, чтобы избежать ошибки "message not modified"
+    await callback.answer(result_text, show_alert=True)
+    
+    # Обновляем меню настроек
+    days = settings.booking_window_days
+    months = days // 30
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"📝 Изменить период ({days} дн.)",
+            callback_data="edit_booking_window"
+        )],
+        [InlineKeyboardButton(
+            text="🔄 Применить сейчас ко всем домам",
+            callback_data="apply_booking_window"
+        )],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_settings")],
+    ])
+    
+    await callback.message.edit_text(
+        "📅 <b>Период бронирования</b>\n\n"
+        f"<b>Текущий период:</b> {days} дней (~{months} месяцев)\n\n"
+        "<i>💡 Определяет, на сколько дней вперед открыты брони в Avito.\n"
+        "Изменения применяются автоматически при создании/отмене брони.</i>",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
 
 
 @router.callback_query(F.data == "edit_avito_interval")
