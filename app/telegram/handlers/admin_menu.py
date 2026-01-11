@@ -39,11 +39,9 @@ async def start_handler(message: Message):
         await show_cleaner_menu(message, message.from_user.id)
         return
 
-    # 3. Иначе - гость
-    await message.answer(
-        "🏕 <b>Добро пожаловать в Teplo · Архыз!</b>\n\nЗдесь вы можете проверить доступность домиков и забронировать отдых.",
-        reply_markup=guest_menu_keyboard(),
-    )
+    # 3. Иначе - гость (авторизованный или нет)
+    from app.telegram.handlers.guest import show_guest_menu
+    await show_guest_menu(message)
 
 
 @router.callback_query(lambda c: c.data == "admin:menu")

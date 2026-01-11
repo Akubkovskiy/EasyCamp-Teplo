@@ -8,6 +8,7 @@ from app.models import User, UserRole
 # Глобальный кеш пользователей
 _db_admins: set[int] = set()
 _db_cleaners: set[int] = set()
+_db_guests: set[int] = set()
 
 
 def get_env_admins() -> set[int]:
@@ -21,7 +22,7 @@ def get_env_admins() -> set[int]:
 
 async def refresh_users_cache():
     """Обновляет кеш пользователей из БД"""
-    global _db_admins, _db_cleaners
+    global _db_admins, _db_cleaners, _db_guests
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User))
@@ -29,6 +30,7 @@ async def refresh_users_cache():
         
         _db_admins = {u.telegram_id for u in users if u.role == UserRole.ADMIN}
         _db_cleaners = {u.telegram_id for u in users if u.role == UserRole.CLEANER}
+        _db_guests = {u.telegram_id for u in users if u.role == UserRole.GUEST}
 
 
 def is_admin(user_id: int) -> bool:
@@ -41,7 +43,12 @@ def is_cleaner(user_id: int) -> bool:
     return user_id in _db_cleaners
 
 
-async def add_user(telegram_id: int, role: UserRole, name: str) -> bool:
+def is_guest(user_id: int) -> bool:
+    """Проверяет, является ли пользователь авторизованным гостем"""
+    return user_id in _db_guests
+
+
+async def add_user(telegram_id: int, role: UserRole, name: str, phone: str = None) -> bool:
     """Добавляет пользователя в БД и обновляет кеш"""
     async with AsyncSessionLocal() as session:
         # Проверяем, существует ли уже
@@ -49,7 +56,7 @@ async def add_user(telegram_id: int, role: UserRole, name: str) -> bool:
         if existing.scalar_one_or_none():
             return False
             
-        user = User(telegram_id=telegram_id, role=role, name=name)
+        user = User(telegram_id=telegram_id, role=role, name=name, phone=phone)
         session.add(user)
         await session.commit()
     

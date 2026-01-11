@@ -32,6 +32,17 @@ class House(Base):
     description: Mapped[Optional[str]] = mapped_column(String)
     capacity: Mapped[int] = mapped_column(Integer, default=2)
     
+    # Динамический контент
+    wifi_info: Mapped[Optional[str]] = mapped_column(String, nullable=True) # SSID/Pass (multiline)
+    address_coords: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Координаты
+    checkin_instruction: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Код/Инструкция
+    rules_text: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Правила
+    
+    # Промо для каталога
+    promo_description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    promo_image_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Tg File ID
+    guide_image_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Tg File ID (схема проезда)
+    
     bookings: Mapped[list["Booking"]] = relationship(back_populates="house")
 
 
@@ -68,6 +79,7 @@ class Booking(Base):
 class UserRole(str, Enum):
     ADMIN = "admin"
     CLEANER = "cleaner"
+    GUEST = "guest"
 
 
 class User(Base):
@@ -77,4 +89,13 @@ class User(Base):
     telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
     role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole))
     name: Mapped[str] = mapped_column(String)  # Имя для удобства (например "Анна")
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Телефон для связи с бронями
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GlobalSetting(Base):
+    __tablename__ = "global_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)

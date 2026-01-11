@@ -46,10 +46,11 @@ app.include_router(avito_oauth_router)
 # Telegram (aiogram)
 # -------------------------------------------------
 
-bot = Bot(
-    token=settings.telegram_bot_token,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-)
+# -------------------------------------------------
+# Telegram (aiogram)
+# -------------------------------------------------
+
+from app.telegram.bot import bot
 
 # Регистрация обработчиков
 from app.telegram.handlers import (
@@ -64,6 +65,8 @@ from app.telegram.handlers import (
     houses,
     settings_users,
     cleaner,
+    guest,
+    settings_content,
 )
 from app.telegram.handlers.booking_management import booking_routers
 
@@ -78,6 +81,8 @@ dp.include_router(scheduler.router)
 dp.include_router(settings_handler.router)
 dp.include_router(settings_users.router)
 dp.include_router(cleaner.router)
+dp.include_router(guest.router)
+dp.include_router(settings_content.router)
 dp.include_router(houses.router)
 
 for r in booking_routers:

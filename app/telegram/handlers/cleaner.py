@@ -226,3 +226,61 @@ async def show_schedule(callback: CallbackQuery):
          return
 
     await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:confirm:"))
+async def confirm_cleaning(callback: CallbackQuery):
+    """Подтверждение выхода на смену"""
+    # callback.data = cleaner:confirm:2025-01-12
+    date_str = callback.data.split(":")[2]
+    
+    # Редактируем сообщение (убираем кнопки и ставим галочку)
+    # Можно сохранить оригинал сообщения и добавить в начало статус
+    current_text = callback.message.text
+    # Удаляем футер с просьбой подтвердить
+    clean_text = current_text.replace("⚠️ Пожалуйста, подтвердите выход на смену!", "")
+    
+    new_text = f"✅ <b>ВЫ ПОДТВЕРДИЛИ ВЫХОД {date_str}</b>\n\n{clean_text}"
+    
+    await callback.message.edit_text(new_text, reply_markup=None)
+    await callback.answer("✅ Спасибо, принято!")
+
+
+@router.callback_query(F.data.startswith("cleaner:decline:"))
+async def decline_cleaning(callback: CallbackQuery):
+    """Отказ от смены"""
+    date_str = callback.data.split(":")[2]
+    cleaner_name = callback.from_user.first_name or "Неизвестно"
+    cleaner_username = callback.from_user.username
+    
+    # 1. Ответ уборщице
+    await callback.message.edit_text(
+        f"⚠️ <b>Отказ от смены {date_str}</b>\n\n"
+        "Информация передана администратору. Пожалуйста, оставайтесь на связи.",
+        reply_markup=None
+    )
+    
+    # 2. Оповещение ВСЕХ администраторов
+    from app.telegram.auth.admin import get_all_users, UserRole
+    from app.core.config import settings
+    
+    admin_users = await get_all_users()
+    admin_ids = {u.telegram_id for u in admin_users if u.role == UserRole.ADMIN}
+    # Добавляем главного админа
+    admin_ids.add(settings.telegram_chat_id)
+    
+    username_text = f"(@{cleaner_username})" if cleaner_username else ""
+    alert_text = (
+        f"🚨 <b>SOS! Уборщица отказалась от смены!</b>\n\n"
+        f"📅 Дата выезда: <b>{date_str}</b>\n"
+        f"👤 Кто: <b>{cleaner_name}</b> {username_text}\n\n"
+        "❗ <b>Срочно свяжитесь для замены!</b>"
+    )
+    
+    for admin_id in admin_ids:
+        try:
+            await callback.bot.send_message(admin_id, alert_text)
+        except Exception:
+            pass
+            
+    await callback.answer("Администратор оповещен", show_alert=True)

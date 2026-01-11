@@ -34,6 +34,9 @@ class Settings(BaseModel):
     
     # Avito calendar settings
     booking_window_days: int = 180  # На сколько дней вперед открыты брони
+    
+    # Cleaner settings
+    cleaning_notification_time: str = "20:00"
 
 
 settings = Settings(
@@ -52,4 +55,5 @@ settings = Settings(
     sync_on_user_interaction=os.environ.get("SYNC_ON_USER_INTERACTION", "true").lower() == "true",
     sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
     booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "180")),
+    cleaning_notification_time=os.environ.get("CLEANING_NOTIFICATION_TIME", "20:00"),
 )
