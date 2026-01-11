@@ -41,6 +41,17 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
     advance = booking.advance_amount or 0
     remaining = booking.total_price - advance
     
+    # Русские названия статусов
+    status_names = {
+        BookingStatus.NEW: "Ожидает",
+        BookingStatus.CONFIRMED: "Подтверждено",
+        BookingStatus.PAID: "Оплачено",
+        BookingStatus.CANCELLED: "Отменено",
+        BookingStatus.COMPLETED: "Завершено",
+    }
+    
+    status_display = status_names.get(booking.status, booking.status.value)
+
     text = (
         f"📋 <b>Бронирование #{booking.id}</b>\n\n"
         f"🏠 Домик: <b>{booking.house.name}</b>\n"
@@ -53,7 +64,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         f"💳 Аванс: {advance:,.0f} ₽\n"
         f"💵 Остаток: {remaining:,.0f} ₽\n"
         f"──────────────────\n"
-        f"📊 Статус: {status_emoji.get(booking.status, '❓')} {booking.status.value}\n"
+        f"📊 Статус: {status_emoji.get(booking.status, '❓')} <b>{status_display}</b>\n"
         f"🔗 Источник: {booking.source.value}\n"
     )
     
