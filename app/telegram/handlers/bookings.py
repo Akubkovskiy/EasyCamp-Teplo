@@ -219,7 +219,6 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
 
     # Формируем текст списка
     text = f"<b>{title} ({len(bookings)})</b>\n\n"
-    text += "<i>🅰️ - Avito | 🅣 - Telegram</i>\n\n"
     
     status_emoji = {
         BookingStatus.NEW: "🆕",
