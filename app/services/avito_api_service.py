@@ -365,6 +365,122 @@ class AvitoAPIService:
         except Exception as e:
             logger.error(f"❌ Failed to unblock dates: {e}", exc_info=True)
             return False
+    
+    def update_calendar_intervals(self, item_id: int) -> bool:
+        """
+        Обновить интервалы доступности для дома
+        
+        Получает все текущие брони и пересчитывает свободные интервалы
+        на основе текущего booking_window_days
+        
+        Args:
+            item_id: ID объявления на Avito
+            
+        Returns:
+            True если обновление успешно, False в случае ошибки
+        """
+        self.ensure_token()
+        
+        logger.info(f"Updating calendar intervals for item {item_id}")
+        
+        try:
+            from app.core.config import settings
+            from datetime import datetime, timedelta
+            
+            # Получаем все текущие брони
+            today = datetime.now().date()
+            end_date = today + timedelta(days=settings.booking_window_days)
+            
+            logger.info(f"Fetching bookings for item {item_id} from {today} to {end_date}")
+            
+            bookings_data = self.get_bookings(
+                item_id=item_id,
+                date_start=today.isoformat(),
+                date_end=end_date.isoformat()
+            )
+            
+            bookings = bookings_data.get('bookings', [])
+            logger.info(f"Found {len(bookings)} existing bookings")
+            
+            # DEBUG: Логируем первую бронь для проверки формата
+            if bookings:
+                logger.info(f"DEBUG: First booking structure: {bookings[0]}")
+            
+            # Преобразуем брони в объекты date
+            remaining_bookings = []
+            for booking in bookings:
+                # Avito API возвращает поля check_in/check_out, а не date_start/date_end
+                check_in = booking.get('check_in') or booking.get('date_start')
+                check_out = booking.get('check_out') or booking.get('date_end')
+                
+                if not check_in or not check_out:
+                    logger.warning(f"Skipping booking with missing dates: {booking}")
+                    continue
+                
+                booking_start = datetime.fromisoformat(check_in).date()
+                booking_end = datetime.fromisoformat(check_out).date()
+                
+                remaining_bookings.append({
+                    'start': booking_start,
+                    'end': booking_end
+                })
+            
+            # Сортируем брони по дате начала
+            remaining_bookings.sort(key=lambda x: x['start'])
+            
+            # Вычисляем свободные интервалы
+            free_intervals = []
+            current_date = today
+            
+            for booking in remaining_bookings:
+                # Если есть промежуток между current_date и началом брони
+                if current_date < booking['start']:
+                    free_intervals.append({
+                        'date_start': current_date.isoformat(),
+                        'date_end': booking['start'].isoformat(),
+                        'open': 1
+                    })
+                # Сдвигаем current_date на конец текущей брони
+                if booking['end'] > current_date:
+                    current_date = booking['end']
+            
+            # Добавляем последний интервал до конца окна бронирования
+            if current_date < end_date:
+                free_intervals.append({
+                    'date_start': current_date.isoformat(),
+                    'date_end': end_date.isoformat(),
+                    'open': 1
+                })
+            
+            logger.info(f"Calculated {len(free_intervals)} free intervals")
+            
+            # Отправляем обновленные интервалы через /intervals API
+            response = requests.post(
+                f"{self.BASE_URL}/realty/v1/items/intervals",
+                headers={
+                    "Authorization": f"Bearer {self.access_token}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "intervals": free_intervals,
+                    "item_id": item_id,
+                    "source": "EasyCamp"
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            
+            logger.info(f"✅ Calendar intervals updated successfully for item {item_id}")
+            return True
+            
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else None
+            logger.error(f"❌ HTTP error updating calendar (status {status_code}): {e}")
+            logger.error(f"Response: {e.response.text if e.response else 'No response'}")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Failed to update calendar intervals: {e}", exc_info=True)
+            return False
 
 
 # Глобальный экземпляр сервиса
