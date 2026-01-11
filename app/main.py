@@ -62,6 +62,7 @@ from app.telegram.handlers import (
     scheduler,
     settings as settings_handler,
     houses,
+    settings_users,
 )
 from app.telegram.handlers.booking_management import booking_routers
 
@@ -74,6 +75,7 @@ dp.include_router(sync.router)
 dp.include_router(avito_fetch.router)
 dp.include_router(scheduler.router)
 dp.include_router(settings_handler.router)
+dp.include_router(settings_users.router)
 dp.include_router(houses.router)
 
 for r in booking_routers:
@@ -111,6 +113,11 @@ async def on_startup():
             logger.info("✅ Initial sync completed")
         except Exception as e:
             logger.error(f"❌ Initial sync failed: {e}", exc_info=True)
+
+    # Refresh user cache
+    from app.telegram.auth.admin import refresh_users_cache
+    await refresh_users_cache()
+    logger.info("👥 User cache refreshed")
     
     logger.info("Starting Telegram polling")
 
