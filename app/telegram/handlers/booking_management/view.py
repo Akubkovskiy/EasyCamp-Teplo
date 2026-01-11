@@ -37,6 +37,10 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
     # Расчет суток
     nights = (booking.check_out - booking.check_in).days
     
+    # Финансы
+    advance = booking.advance_amount or 0
+    remaining = booking.total_price - advance
+    
     text = (
         f"📋 <b>Бронирование #{booking.id}</b>\n\n"
         f"🏠 Домик: <b>{booking.house.name}</b>\n"
@@ -44,7 +48,11 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         f"👤 Гость: <b>{booking.guest_name}</b>\n"
         f"📞 Телефон: <code>{booking.guest_phone}</code>\n"
         f"👥 Гостей: {booking.guests_count}\n"
-        f"💰 Цена: {booking.total_price:,.0f} ₽\n"
+        f"──────────────────\n"
+        f"💰 <b>Итого: {booking.total_price:,.0f} ₽</b>\n"
+        f"💳 Аванс: {advance:,.0f} ₽\n"
+        f"💵 Остаток: {remaining:,.0f} ₽\n"
+        f"──────────────────\n"
         f"📊 Статус: {status_emoji.get(booking.status, '❓')} {booking.status.value}\n"
         f"🔗 Источник: {booking.source.value}\n"
     )
