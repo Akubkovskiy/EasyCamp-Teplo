@@ -97,6 +97,13 @@ for r in booking_routers:
 async def on_startup():
     logger.info("FastAPI startup")
     
+    # 0. Smart Recovery (Restore from Drive if DB missing)
+    try:
+        from app.services.backup_service import restore_latest_backup
+        await restore_latest_backup()
+    except Exception as e:
+        logger.error(f"❌ Smart Recovery failed: {e}", exc_info=True)
+    
     # Init DB
     from app.database import init_db
     await init_db()
