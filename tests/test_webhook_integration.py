@@ -8,6 +8,7 @@ the mock is applied. This is somewhat fragile but works for smoke tests.
 import pytest
 
 
+@pytest.mark.integration
 class TestWebhookIntegration:
     """Integration tests for webhook endpoint modes"""
     
