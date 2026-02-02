@@ -2,9 +2,13 @@
 Периодическая задача для автоматического обновления статусов броней
 """
 import logging
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
+
+# Moscow timezone for business logic (check-in/check-out transitions)
+MOSCOW_TZ = ZoneInfo("Europe/Moscow")
 
 
 async def update_booking_statuses_job():
@@ -12,6 +16,8 @@ async def update_booking_statuses_job():
     Автоматическое обновление статусов броней:
     - CONFIRMED/PAID -> CHECKED_IN (если check_in <= сегодня < check_out)
     - CHECKED_IN -> COMPLETED (если check_out <= сегодня)
+    
+    Note: Uses Moscow timezone for date comparisons regardless of server timezone.
     """
     logger.info("🔄 Starting automatic booking status update...")
     
@@ -20,7 +26,10 @@ async def update_booking_statuses_job():
         from app.models import Booking, BookingStatus
         from sqlalchemy import select
         
-        today = date.today()
+        # Use Moscow timezone for correct date comparison
+        today = datetime.now(MOSCOW_TZ).date()
+        logger.info(f"📅 Today (Moscow): {today}")
+        
         updated_count = 0
         
         async with AsyncSessionLocal() as session:
