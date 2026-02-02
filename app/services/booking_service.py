@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Optional
 from sqlalchemy import select, and_, or_
 
@@ -110,8 +110,8 @@ class BookingService:
                     prepayment_owner=prepayment_owner,
                     status=status_enum,
                     source=BookingSource.TELEGRAM,
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
                 
                 session.add(booking)
@@ -170,22 +170,25 @@ class BookingService:
             # Не прерываем создание брони при ошибке Avito
 
     async def sync_all_to_sheets(self):
-        """Синхронизация всех броней с Google Sheets"""
-        try:
-            async with AsyncSessionLocal() as session:
-                from sqlalchemy.orm import joinedload
-                stmt = select(Booking).options(joinedload(Booking.house)).order_by(Booking.check_in)
-                result = await session.execute(stmt)
-                bookings = result.scalars().all()
-                
-                # Выполняем синхронный gspread запрос в отдельном потоке
-                await asyncio.to_thread(sheets_service.sync_bookings_to_sheet, bookings)
-                logger.info("Google Sheets sync completed successfully.")
-        except Exception as e:
-            logger.error(f"Background Sheets sync failed: {e}")
+        """
+        Синхронизация всех броней с Google Sheets.
+        Raises exception on failure (caller should handle).
+        """
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy.orm import joinedload
+            stmt = select(Booking).options(joinedload(Booking.house)).order_by(Booking.check_in)
+            result = await session.execute(stmt)
+            bookings = result.scalars().all()
+            
+            # Выполняем синхронный gspread запрос в отдельном потоке
+            await asyncio.to_thread(sheets_service.sync_bookings_to_sheet, bookings)
+            logger.info("Google Sheets sync completed successfully.")
 
     async def _safe_background_sheets_sync(self):
-        """Safe wrapper for background sheets sync - catches and logs all errors"""
+        """
+        Safe wrapper for background sheets sync.
+        Catches and logs all errors to prevent task crashes.
+        """
         try:
             await self.sync_all_to_sheets()
         except Exception as e:
@@ -208,7 +211,7 @@ class BookingService:
                     return False
                 
                 booking.status = BookingStatus.CANCELLED
-                booking.updated_at = datetime.now()
+                booking.updated_at = datetime.now(timezone.utc)
                 await session.commit()
                 
                 # Разблокировка дат в Avito
@@ -307,7 +310,7 @@ class BookingService:
                     if hasattr(booking, key):
                         setattr(booking, key, value)
                 
-                booking.updated_at = datetime.now()
+                booking.updated_at = datetime.now(timezone.utc)
                 await session.commit()
                 
                 # Фоновая синхронизация (safe wrapper)
