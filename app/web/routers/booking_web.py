@@ -56,6 +56,90 @@ async def list_bookings(
     )
 
 
+@router.get("/new", response_class=HTMLResponse)
+async def create_booking_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(get_current_admin),
+):
+    """
+    Страница создания нового бронирования.
+    """
+    houses = await HouseService.get_all_houses(db)
+    
+    return templates.TemplateResponse(
+        "bookings/create.html",
+        {
+            "request": request,
+            "houses": houses,
+            "user": admin,
+            "title": "Новое бронирование",
+            "active_tab": "bookings",
+            "BookingStatus": BookingStatus,
+            "BookingSource": BookingSource,
+        },
+    )
+
+
+@router.post("/new", response_class=HTMLResponse)
+async def create_booking(
+    request: Request,
+    house_id: int = Form(...),
+    guest_name: str = Form(...),
+    guest_phone: str = Form(...),
+    check_in: date = Form(...),
+    check_out: date = Form(...),
+    guests_count: int = Form(...),
+    total_price: Decimal = Form(...),
+    advance_amount: Decimal = Form(0),
+    commission: Decimal = Form(0),
+    prepayment_owner: Decimal = Form(0),
+    booking_status: str = Form(..., alias="status"),
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(get_current_admin),
+):
+    """
+    Обработка создания бронирования.
+    """
+    try:
+        from app.schemas.booking import BookingCreate
+        
+        booking_in = BookingCreate(
+            house_id=house_id,
+            guest_name=guest_name,
+            guest_phone=guest_phone,
+            check_in=check_in,
+            check_out=check_out,
+            guests_count=guests_count,
+            total_price=total_price,
+            advance_amount=advance_amount,
+            commission=commission,
+            prepayment_owner=prepayment_owner,
+            status=BookingStatus(booking_status),
+            source=BookingSource.MANUAL # По умолчанию для веба
+        )
+        
+        booking = await BookingService.create_booking(db, booking_in)
+        
+        if booking:
+            return RedirectResponse(
+                url=f"/admin-web/bookings/{booking.id}",
+                status_code=http_status.HTTP_303_SEE_OTHER
+            )
+        else:
+            return RedirectResponse(
+                url="/admin-web/bookings/new?error=create_failed",
+                status_code=http_status.HTTP_303_SEE_OTHER
+            )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error creating booking: {e}", exc_info=True)
+        return RedirectResponse(
+            url="/admin-web/bookings/new?error=exception",
+            status_code=http_status.HTTP_303_SEE_OTHER
+        )
+
+
 @router.get("/{booking_id}", response_class=HTMLResponse)
 async def view_booking(
     request: Request,
