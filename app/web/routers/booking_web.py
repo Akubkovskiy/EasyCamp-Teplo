@@ -102,7 +102,7 @@ async def update_booking(
     advance_amount: Decimal = Form(0),
     commission: Decimal = Form(0),
     prepayment_owner: Decimal = Form(0),
-    status: str = Form(...),
+    booking_status: str = Form(..., alias="status"),
     db: AsyncSession = Depends(get_db),
     admin: dict = Depends(get_current_admin),
 ):
@@ -121,7 +121,7 @@ async def update_booking(
             advance_amount=advance_amount,
             commission=commission,
             prepayment_owner=prepayment_owner,
-            status=BookingStatus(status),
+            status=BookingStatus(booking_status),
         )
         
         success = await BookingService.update_booking(db, booking_id, update_data)
