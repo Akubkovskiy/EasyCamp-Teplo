@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout" style="display: flex; min-height: 100vh;">
+    <!-- Sidebar -->
+    <div class="sidebar" style="width: 250px; background: white; border-right: 1px solid #e5e7eb; padding: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 2rem;">{{ project_name or "EasyCamp" }}</h2>
+        <nav>
+            <a href="/admin-web/" style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏠
+                Дашборд</a>
+            <a href="/admin-web/houses"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏡
+                Дома</a>
+            <a href="/admin-web/bookings"
+                style="display: block; padding: 0.75rem 0; color: #2563eb; font-weight: 500;">📅
+                Бронирования</a>
+            <a href="/admin-web/settings"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">⚙️ Настройки</a>
+            <a href="/admin-web/logout"
+                style="display: block; padding: 0.75rem 0; color: #dc2626; margin-top: 2rem; text-decoration: none;">Выход</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" style="flex: 1; padding: 2rem;">
+        <div style="margin-bottom: 2rem;">
+            <a href="/admin-web/bookings" style="color: #2563eb; text-decoration: none; font-size: 0.875rem;">← Назад к
+                списку</a>
+        </div>
+
+        <h1 style="font-size: 1.875rem; font-weight: bold; margin-bottom: 2rem;">{{ title }}</h1>
+
+        <form method="post" action="/admin-web/bookings/{{ booking.id }}">
+            <div class="auth-card" style="max-width: 900px;">
+                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem;">Информация о бронировании</h2>
+
+                <!-- Основная информация -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="label">Домик</label>
+                        <select name="house_id" class="input" required>
+                            {% for house in houses %}
+                            <option value="{{ house.id }}" {% if house.id==booking.house_id %}selected{% endif %}>
+                                {{ house.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="label">Статус</label>
+                        <select name="status" class="input" required>
+                            <option value="new" {% if booking.status.value=='new' %}selected{% endif %}>Новая</option>
+                            <option value="confirmed" {% if booking.status.value=='confirmed' %}selected{% endif %}>
+                                Подтверждена</option>
+                            <option value="paid" {% if booking.status.value=='paid' %}selected{% endif %}>Оплачена
+                            </option>
+                            <option value="checking_in" {% if booking.status.value=='checking_in' %}selected{% endif %}>
+                                Ждёт заселения</option>
+                            <option value="checked_in" {% if booking.status.value=='checked_in' %}selected{% endif %}>
+                                Проживает</option>
+                            <option value="completed" {% if booking.status.value=='completed' %}selected{% endif %}>
+                                Завершена</option>
+                            <option value="cancelled" {% if booking.status.value=='cancelled' %}selected{% endif %}>
+                                Отменена</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Информация о госте -->
+                <h3 style="font-size: 1.125rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">Гость</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="label">Имя гостя</label>
+                        <input type="text" name="guest_name" class="input" value="{{ booking.guest_name }}" required>
+                    </div>
+
+                    <div>
+                        <label class="label">Телефон</label>
+                        <input type="text" name="guest_phone" class="input" value="{{ booking.guest_phone or '' }}">
+                    </div>
+
+                    <div>
+                        <label class="label">Количество гостей</label>
+                        <input type="number" name="guests_count" class="input" value="{{ booking.guests_count }}"
+                            min="1" required>
+                    </div>
+                </div>
+
+                <!-- Даты -->
+                <h3 style="font-size: 1.125rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">Даты</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="label">Дата заезда</label>
+                        <input type="date" name="check_in" class="input" value="{{ booking.check_in.isoformat() }}"
+                            required>
+                    </div>
+
+                    <div>
+                        <label class="label">Дата выезда</label>
+                        <input type="date" name="check_out" class="input" value="{{ booking.check_out.isoformat() }}"
+                            required>
+                    </div>
+
+                    <div>
+                        <label class="label">Ночей</label>
+                        <input type="text" class="input" value="{{ (booking.check_out - booking.check_in).days }}"
+                            disabled>
+                    </div>
+                </div>
+
+                <!-- Финансы -->
+                <h3 style="font-size: 1.125rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">Финансы</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="label">Общая стоимость (₽)</label>
+                        <input type="number" name="total_price" class="input" value="{{ booking.total_price }}"
+                            step="0.01" required>
+                    </div>
+
+                    <div>
+                        <label class="label">Предоплата (₽)</label>
+                        <input type="number" name="advance_amount" class="input" value="{{ booking.advance_amount }}"
+                            step="0.01">
+                    </div>
+
+                    <div>
+                        <label class="label">Комиссия (₽)</label>
+                        <input type="number" name="commission" class="input" value="{{ booking.commission }}"
+                            step="0.01">
+                    </div>
+
+                    <div>
+                        <label class="label">Владельцу (₽)</label>
+                        <input type="number" name="prepayment_owner" class="input"
+                            value="{{ booking.prepayment_owner }}" step="0.01">
+                    </div>
+                </div>
+
+                <!-- Метаданные -->
+                <div
+                    style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <strong>Источник:</strong>
+                            {% if booking.source.value == 'avito' %}
+                            <span style="color: #059669;">🟢 Avito</span>
+                            {% elif booking.source.value == 'telegram' %}
+                            <span style="color: #2563eb;">✈️ Telegram</span>
+                            {% else %}
+                            {{ booking.source.value }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>Создано:</strong> {{ booking.created_at.strftime('%d.%m.%Y %H:%M') }}
+                        </div>
+                        <div>
+                            <strong>Обновлено:</strong> {{ booking.updated_at.strftime('%d.%m.%Y %H:%M') }}
+                        </div>
+                    </div>
+                    {% if booking.external_id %}
+                    <div style="margin-top: 0.5rem;">
+                        <strong>External ID:</strong> {{ booking.external_id }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Кнопки действий -->
+                <div
+                    style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                    <button type="submit" class="btn" style="width: auto; padding: 0.75rem 2rem;">
+                        💾 Сохранить изменения
+                    </button>
+                    <a href="/admin-web/bookings" class="btn"
+                        style="background: #6b7280; width: auto; padding: 0.75rem 2rem; text-decoration: none;">
+                        Отмена
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
