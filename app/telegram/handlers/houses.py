@@ -9,6 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
 from app.services.house_service import house_service
+from app.core.config import settings
 
 router = Router()
 
@@ -90,7 +91,7 @@ async def view_house(callback: CallbackQuery):
 @router.callback_query(F.data == "house:add")
 async def start_add_house(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        "🏠 <b>Добавление нового домика</b>\n\nВведите название (например: Teplo 4):",
+        f"🏠 <b>Добавление нового домика</b>\n\nВведите название (например: {settings.project_name} 4):",
         parse_mode="HTML",
     )
     await state.set_state(HouseStates.waiting_for_name)

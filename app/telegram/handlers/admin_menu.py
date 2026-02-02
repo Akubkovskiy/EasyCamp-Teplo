@@ -10,6 +10,7 @@ from aiogram.types import (
 from app.telegram.auth.admin import is_admin
 from app.telegram.menus.admin import admin_menu_keyboard
 from app.telegram.menus.guest import guest_menu_keyboard
+from app.core.messages import messages
 
 
 router = Router()
@@ -30,7 +31,7 @@ async def start_handler(message: Message):
     # 1. Сначала проверяем админа
     if is_admin(message.from_user.id):
         await message.answer(
-            "🏕 <b>Teplo · Архыз</b>\n\nАдминистративная панель",
+            messages.ADMIN_PANEL_TITLE,
             reply_markup=admin_menu_keyboard(),
         )
         return
@@ -56,7 +57,7 @@ async def back_to_menu(callback: CallbackQuery):
 
     if callback.message:
         await callback.message.edit_text(
-            "🏕 <b>Teplo · Архыз</b>\n\nАдминистративная панель",
+            messages.ADMIN_PANEL_TITLE,
             reply_markup=admin_menu_keyboard(),
         )
     await callback.answer()
@@ -68,7 +69,7 @@ async def back_to_guest_menu(callback: CallbackQuery):
 
     if callback.message:
         await callback.message.edit_text(
-            "🏕 <b>Teplo · Архыз</b>\n\nГлавное меню",
+            messages.GUEST_MENU_TITLE,
             reply_markup=guest_menu_keyboard(),
         )
     await callback.answer()

@@ -99,26 +99,22 @@ async def start_new_booking(event: Message | CallbackQuery, state: FSMContext):
     """Начало создания новой брони"""
     await state.clear()
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
+    # Получаем список домов динамически
+    houses = await house_service.get_all_houses()
+
+    keyboard_buttons = []
+    for h in houses:
+        keyboard_buttons.append(
             [
                 InlineKeyboardButton(
-                    text="🏠 Teplo 1", callback_data="new_booking:house:1"
+                    text=f"🏠 {h.name}", callback_data=f"new_booking:house:{h.id}"
                 )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🏠 Teplo 2", callback_data="new_booking:house:2"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🏠 Teplo 3", callback_data="new_booking:house:3"
-                )
-            ],
-            [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")],
-        ]
-    )
+            ]
+        )
+    
+    keyboard_buttons.append([InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
     text = "🆕 <b>Создание новой брони</b>\n\nВыберите домик:"
 
@@ -136,11 +132,15 @@ async def house_selected(callback: CallbackQuery, state: FSMContext):
     """Домик выбран -> Календарь заезда"""
     house_id = int(callback.data.split(":")[2])
     await state.update_data(house_id=house_id)
+    
+    # Fetch house name for display
+    house = await house_service.get_house(house_id)
+    house_name = house.name if house else f"Дом {house_id}"
 
     today = datetime.now().date()
 
     await callback.message.edit_text(
-        f"🏠 Выбран домик: <b>Teplo {house_id}</b>\n\n📅 <b>Выберите дату заезда:</b>",
+        f"🏠 Выбран домик: <b>{house_name}</b>\n\n📅 <b>Выберите дату заезда:</b>",
         reply_markup=build_month_keyboard(
             today.year, today.month, prefix="bookin", min_date=today
         ),
@@ -257,7 +257,7 @@ async def select_checkout_date(callback: CallbackQuery, state: FSMContext):
         )
         await callback.message.edit_text(
             f"❌ <b>Даты {check_in.strftime('%d.%m')} - {check_out.strftime('%d.%m')} ЗАНЯТЫ!</b>\n\n"
-            f"Попробуйте выбрать другой период для домика Teplo {data['house_id']}.",
+            f"Попробуйте выбрать другой период для домика {data['house_id']}.",
             reply_markup=keyboard,
             parse_mode="HTML",
         )
@@ -508,9 +508,15 @@ async def status_selected(callback: CallbackQuery, state: FSMContext):
         ]
     )
 
+    # Fetch house name again if possible or just use ID (to be safe/fast)
+    # Ideally should store name in state, but simpler to just show ID or "Дом ID"
+    # Actually, let's fetch it for better UX
+    house = await house_service.get_house(data['house_id'])
+    house_name = house.name if house else f"Дом {data['house_id']}"
+
     await callback.message.edit_text(
         "📋 <b>Подтверждение бронирования</b>\n\n"
-        f"🏠 Домик: <b>Teplo {data['house_id']}</b>\n"
+        f"🏠 Домик: <b>{house_name}</b>\n"
         f"📅 Даты: {data['check_in'].strftime('%d.%m.%Y')} - {data['check_out'].strftime('%d.%m.%Y')} ({nights} н.)\n"
         f"👤 Гость: {data['guest_name']} ({data['guest_phone']})\n"
         f"👥 Гостей: {data['guests_count']}\n\n"
@@ -729,9 +735,12 @@ async def back_to_confirmation_screen(callback: CallbackQuery, state: FSMContext
         ]
     )
 
+    house = await house_service.get_house(data['house_id'])
+    house_name = house.name if house else f"Дом {data['house_id']}"
+
     await callback.message.edit_text(
         "📋 <b>Подтверждение бронирования</b>\n\n"
-        f"🏠 Домик: <b>Teplo {data['house_id']}</b>\n"
+        f"🏠 Домик: <b>{house_name}</b>\n"
         f"📅 Даты: {data['check_in'].strftime('%d.%m.%Y')} - {data['check_out'].strftime('%d.%m.%Y')} ({nights} н.)\n"
         f"👤 Гость: {data['guest_name']} ({data['guest_phone']})\n"
         f"👥 Гостей: {data['guests_count']}\n"

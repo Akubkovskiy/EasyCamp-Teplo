@@ -51,6 +51,25 @@ class Settings(BaseModel):
     log_format: str = "console"  # Options: "console", "json"
     log_slow_request_threshold_ms: int = 500  # Log timing only if duration > threshold
 
+    # ----------------------------------------------------
+    # SaaS / Branding Settings (De-branding)
+    # ----------------------------------------------------
+    project_name: str = "EasyCamp-Teplo"
+    project_location: str = "Архыз"
+    project_address: str = "с. Архыз, ул. Банковская, 26д"
+    project_coords: str = "43.560731, 41.284236"  # Default fallback
+
+    # Contacts
+    contact_phone: str = "+7 928 000-00-00"
+    contact_admin_username: str = "@sergey_teplo"
+    contact_email: str = "info@easycamp.ru"
+    contact_work_hours: str = "Круглосуточно"
+    contact_website: str = ""
+
+    # Payment Info
+    payment_receiver: str = "Сергей Иванович П."
+    payment_methods: str = "Сбер/Тинькофф"
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -95,4 +114,16 @@ settings = Settings(
     log_slow_request_threshold_ms=int(
         os.environ.get("LOG_SLOW_REQUEST_THRESHOLD_MS", "500")
     ),
+    # SaaS Settings
+    project_name=os.environ.get("PROJECT_NAME", "EasyCamp-Teplo"),
+    project_location=os.environ.get("PROJECT_LOCATION", "Архыз"),
+    project_address=os.environ.get("PROJECT_ADDRESS", "с. Архыз, ул. Банковская, 26д"),
+    project_coords=os.environ.get("PROJECT_COORDS", "43.560731, 41.284236"),
+    contact_phone=os.environ.get("CONTACT_PHONE", "+7 928 000-00-00"),
+    contact_admin_username=os.environ.get("CONTACT_ADMIN_USERNAME", "@sergey_teplo"),
+    contact_email=os.environ.get("CONTACT_EMAIL", "info@easycamp.ru"),
+    contact_work_hours=os.environ.get("CONTACT_WORK_HOURS", "Круглосуточно"),
+    contact_website=os.environ.get("CONTACT_WEBSITE", ""),
+    payment_receiver=os.environ.get("PAYMENT_RECEIVER", "Сергей Иванович П."),
+    payment_methods=os.environ.get("PAYMENT_METHODS", "Сбер/Тинькофф"),
 )

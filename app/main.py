@@ -69,6 +69,13 @@ app.include_router(health_router)
 app.include_router(avito_router)
 app.include_router(avito_oauth_router)
 
+# Web Admin
+from fastapi.staticfiles import StaticFiles
+from app.web.routers import auth_web
+
+app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
+app.include_router(auth_web.router)
+
 
 # -------------------------------------------------
 # Telegram (aiogram)
@@ -78,25 +85,10 @@ app.include_router(avito_oauth_router)
 # Telegram (aiogram)
 # -------------------------------------------------
 
-from app.telegram.bot import bot
-
-# Регистрация обработчиков
-from app.telegram.handlers import (
-    admin_menu,
-    availability,
-    bookings,
-    contacts,
-    sync,
-    avito_fetch,
-    scheduler,
-    settings as settings_handler,
-    houses,
-    settings_users,
-    cleaner,
-    guest,
-    settings_content,
-)
-from app.telegram.handlers.booking_management import booking_routers
+# -------------------------------------------------
+# Telegram Handlers Registration
+# -------------------------------------------------
+# (Imports are at the top of the file)
 
 dp = Dispatcher()
 dp.include_router(admin_menu.router)
