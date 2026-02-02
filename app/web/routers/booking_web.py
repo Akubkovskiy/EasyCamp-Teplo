@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Form, status
+from fastapi import APIRouter, Depends, Request, Form, status as http_status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,7 +68,7 @@ async def view_booking(
     """
     booking = await BookingService.get_booking(db, booking_id)
     if not booking:
-        return RedirectResponse(url="/admin-web/bookings", status_code=303)
+        return RedirectResponse(url="/admin-web/bookings", status_code=http_status.HTTP_303_SEE_OTHER)
     
     # Получить список домов для выпадающего списка
     houses = await HouseService.get_all_houses(db)
@@ -129,17 +129,17 @@ async def update_booking(
         if success:
             return RedirectResponse(
                 url=f"/admin-web/bookings/{booking_id}",
-                status_code=status.HTTP_303_SEE_OTHER
+                status_code=http_status.HTTP_303_SEE_OTHER
             )
         else:
             return RedirectResponse(
                 url="/admin-web/bookings",
-                status_code=status.HTTP_303_SEE_OTHER
+                status_code=http_status.HTTP_303_SEE_OTHER
             )
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Error updating booking {booking_id}: {e}", exc_info=True)
         return RedirectResponse(
             url=f"/admin-web/bookings/{booking_id}?error=update_failed",
-            status_code=status.HTTP_303_SEE_OTHER
+            status_code=http_status.HTTP_303_SEE_OTHER
         )

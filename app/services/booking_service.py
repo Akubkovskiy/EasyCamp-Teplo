@@ -289,7 +289,7 @@ class BookingService:
 
     @classmethod
     async def update_booking(
-        cls, db: AsyncSession, booking_id: int, update_data: BookingUpdate
+        cls, db: AsyncSession, booking_id: int, update_data: BookingUpdate | dict
     ) -> bool:
         """
         Обновление существующего бронирования.
@@ -300,11 +300,22 @@ class BookingService:
                 logger.warning(f"Booking {booking_id} not found for update")
                 return False
 
+            # Преобразуем словарь в схему, если нужно
+            if isinstance(update_data, dict):
+                # Фильтруем None значения и создаем dict для обновления
+                update_dict = {k: v for k, v in update_data.items() if v is not None}
+            else:
+                update_dict = update_data.model_dump(exclude_unset=True)
+
             # Проверяем доступность новых дат, если они изменились
-            if update_data.check_in or update_data.check_out or update_data.house_id:
-                new_check_in = update_data.check_in or booking.check_in
-                new_check_out = update_data.check_out or booking.check_out
-                new_house_id = update_data.house_id or booking.house_id
+            check_in = update_dict.get("check_in") or (update_data.check_in if hasattr(update_data, "check_in") else None)
+            check_out = update_dict.get("check_out") or (update_data.check_out if hasattr(update_data, "check_out") else None)
+            house_id = update_dict.get("house_id") or (update_data.house_id if hasattr(update_data, "house_id") else None)
+
+            if check_in or check_out or house_id:
+                new_check_in = check_in or booking.check_in
+                new_check_out = check_out or booking.check_out
+                new_house_id = house_id or booking.house_id
 
                 # Проверяем доступность только если даты или дом изменились
                 if (
@@ -326,10 +337,10 @@ class BookingService:
                         )
                         return False
 
-            # Обновляем только предоставленные поля
-            update_dict = update_data.model_dump(exclude_unset=True)
+            # Обновляем поля
             for field, value in update_dict.items():
-                setattr(booking, field, value)
+                if hasattr(booking, field):
+                    setattr(booking, field, value)
 
             booking.updated_at = datetime.now(timezone.utc)
             await db.commit()
@@ -345,77 +356,6 @@ class BookingService:
         except Exception as e:
             logger.error(f"❌ Error updating booking {booking_id}: {e}", exc_info=True)
             await db.rollback()
-            return False
-
-    @staticmethod
-    async def _unblock_avito_dates(booking: Booking):
-        """Разблокировка дат в Avito при отмене брони"""
-        try:
-            # Получаем маппинг house_id -> avito_item_id
-            from app.core.config import settings
-
-            item_house_mapping = {}
-            for pair in settings.avito_item_ids.split(","):
-                if ":" in pair:
-                    item_id, house_id = pair.strip().split(":")
-                    item_house_mapping[int(house_id)] = int(item_id)
-
-            # Проверяем, есть ли Avito объявление для этого дома
-            avito_item_id = item_house_mapping.get(booking.house_id)
-
-            if not avito_item_id:
-                logger.info(
-                    f"No Avito item ID for house {booking.house_id}, skipping calendar unblock"
-                )
-                return
-
-            # Разблокируем даты в Avito
-            from app.services.avito_api_service import avito_api_service
-
-            success = await asyncio.to_thread(
-                avito_api_service.unblock_dates,
-                avito_item_id,
-                booking.check_in.isoformat(),
-                booking.check_out.isoformat(),
-            )
-
-            if success:
-                logger.info(f"✅ Avito dates unblocked for booking #{booking.id}")
-            else:
-                logger.warning(
-                    f"⚠️ Could not unblock Avito dates for booking #{booking.id}"
-                )
-
-        except Exception as e:
-            logger.error(f"Error unblocking Avito dates: {e}", exc_info=True)
-            # Не прерываем отмену брони при ошибке Avito
-
-    @classmethod
-    async def update_booking(cls, db: AsyncSession, booking_id: int, booking_in: BookingUpdate | dict) -> bool:
-        """Обновление данных брони"""
-        try:
-            booking = await db.get(Booking, booking_id)
-            if not booking:
-                return False
-
-            if isinstance(booking_in, dict):
-                update_data = booking_in
-            else:
-                update_data = booking_in.model_dump(exclude_unset=True)
-
-            for key, value in update_data.items():
-                if hasattr(booking, key) and value is not None:
-                    setattr(booking, key, value)
-
-            booking.updated_at = datetime.now(timezone.utc)
-            await db.commit()
-
-            # Фоновая синхронизация (safe wrapper)
-            asyncio.create_task(cls._safe_background_sheets_sync())
-
-            return True
-        except Exception as e:
-            logger.error(f"Error updating booking: {e}")
             return False
     @staticmethod
     async def create_or_update_avito_booking(
