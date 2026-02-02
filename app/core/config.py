@@ -37,6 +37,11 @@ class Settings(BaseModel):
     
     # Cleaner settings
     cleaning_notification_time: str = "20:00"
+    
+    # Webhook security settings
+    # Mode: "off" = no verification, "warn" = log warning but allow, "enforce" = reject invalid
+    avito_webhook_mode: str = "warn"  # Default: warn (safe rollout)
+    avito_webhook_secret: str = ""  # If empty, behaves as "off" mode
 
 
 # Resolve database URL with preference for Docker volume path
@@ -67,4 +72,6 @@ settings = Settings(
     sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
     booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "180")),
     cleaning_notification_time=os.environ.get("CLEANING_NOTIFICATION_TIME", "20:00"),
+    avito_webhook_mode=os.environ.get("AVITO_WEBHOOK_MODE", "warn"),
+    avito_webhook_secret=os.environ.get("AVITO_WEBHOOK_SECRET", ""),
 )

@@ -121,8 +121,8 @@ class BookingService:
                 # Блокировка дат в Avito
                 await self._block_avito_dates(booking)
                 
-                # Фоновая синхронизация с GS
-                asyncio.create_task(self.sync_all_to_sheets())
+                # Фоновая синхронизация с GS (safe wrapper)
+                asyncio.create_task(self._safe_background_sheets_sync())
                 
                 return booking
                 
@@ -184,6 +184,13 @@ class BookingService:
         except Exception as e:
             logger.error(f"Background Sheets sync failed: {e}")
 
+    async def _safe_background_sheets_sync(self):
+        """Safe wrapper for background sheets sync - catches and logs all errors"""
+        try:
+            await self.sync_all_to_sheets()
+        except Exception as e:
+            logger.error(f"Background sheets sync failed: {e}", exc_info=True)
+
     async def get_booking(self, booking_id: int) -> Optional[Booking]:
         """Получить бронь по ID с информацией о доме"""
         async with AsyncSessionLocal() as session:
@@ -207,8 +214,8 @@ class BookingService:
                 # Разблокировка дат в Avito
                 await self._unblock_avito_dates(booking)
                 
-                # Фоновая синхронизация
-                asyncio.create_task(self.sync_all_to_sheets())
+                # Фоновая синхронизация (safe wrapper)
+                asyncio.create_task(self._safe_background_sheets_sync())
                     
                 return True
         except Exception as e:
@@ -241,8 +248,8 @@ class BookingService:
                 
                 logger.info(f"✅ Booking #{booking_id} deleted successfully")
                 
-                # Фоновая синхронизация с Google Sheets
-                asyncio.create_task(self.sync_all_to_sheets())
+                # Фоновая синхронизация с Google Sheets (safe wrapper)
+                asyncio.create_task(self._safe_background_sheets_sync())
                 
                 return True
                 
@@ -303,8 +310,8 @@ class BookingService:
                 booking.updated_at = datetime.now()
                 await session.commit()
                 
-                # Фоновая синхронизация
-                asyncio.create_task(self.sync_all_to_sheets())
+                # Фоновая синхронизация (safe wrapper)
+                asyncio.create_task(self._safe_background_sheets_sync())
                     
                 return True
         except Exception as e:
