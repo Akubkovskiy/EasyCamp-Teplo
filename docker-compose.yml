@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: easycamp_bot
+    restart: always
+    environment:
+      - TZ=Europe/Moscow
+      - DATABASE_URL=sqlite+aiosqlite:///data/easycamp.db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./google-credentials.json:/app/google-credentials.json
+    ports:
+      - "8000:8000"
+
+#  If we were using a real db like postgres, we'd add it here.
+#  Since we use sqlite (presumably in ./data or root), the volume binding handles persistence.
