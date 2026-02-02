@@ -216,6 +216,41 @@ class BookingService:
             logger.error(f"Error cancelling booking: {e}")
             return False
     
+    async def delete_booking(self, booking_id: int) -> bool:
+        """
+        Полное удаление брони из базы данных.
+        ВНИМАНИЕ: Это действие необратимо!
+        """
+        try:
+            async with AsyncSessionLocal() as session:
+                booking = await session.get(Booking, booking_id)
+                if not booking:
+                    logger.warning(f"Booking {booking_id} not found for deletion")
+                    return False
+                
+                logger.info(
+                    f"Deleting booking #{booking_id}: {booking.guest_name} "
+                    f"({booking.check_in} - {booking.check_out})"
+                )
+                
+                # Разблокируем даты в Avito перед удалением
+                await self._unblock_avito_dates(booking)
+                
+                # Удаляем из базы
+                await session.delete(booking)
+                await session.commit()
+                
+                logger.info(f"✅ Booking #{booking_id} deleted successfully")
+                
+                # Фоновая синхронизация с Google Sheets
+                asyncio.create_task(self.sync_all_to_sheets())
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Error deleting booking {booking_id}: {e}", exc_info=True)
+            return False
+    
     async def _unblock_avito_dates(self, booking: Booking):
         """Разблокировка дат в Avito при отмене брони"""
         try:
