@@ -165,35 +165,35 @@ async def start_editing_field(callback: CallbackQuery, state: FSMContext):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🆕 NEW", callback_data=f"booking:st:{booking_id}:new"
+                        text="🆕 Ожидает оплаты", callback_data=f"booking:st:{booking_id}:new"
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="✅ CONFIRMED",
+                        text="✅ Подтверждена",
                         callback_data=f"booking:st:{booking_id}:confirmed",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="💰 PAID", callback_data=f"booking:st:{booking_id}:paid"
+                        text="💰 Оплачена", callback_data=f"booking:st:{booking_id}:paid"
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🔔 CHECKING_IN (Заезд сегодня)",
+                        text="🔔 Заезд сегодня",
                         callback_data=f"booking:st:{booking_id}:checking_in",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🏠 CHECKED_IN (Проживает)",
+                        text="🏠 Проживает",
                         callback_data=f"booking:st:{booking_id}:checked_in",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🏁 COMPLETED",
+                        text="🏁 Завершена",
                         callback_data=f"booking:st:{booking_id}:completed",
                     )
                 ],
