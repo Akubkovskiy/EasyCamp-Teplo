@@ -56,7 +56,7 @@
                         </td>
                         <td style="padding: 0.75rem;">
                             <div style="font-weight: 500;">{{ booking.guest_name }}</div>
-                            <div style="font-size: 0.75rem; color: #6b7280;">{{ booking.guest_phone or '-' }}</div>
+                            <div style="font-size: 0.75rem; color: #6b7280;">{{ booking.guest_phone|format_phone or '-' }}</div>
                         </td>
                         <td style="padding: 0.75rem;">{{ booking.check_in.strftime('%d.%m.%Y') }}</td>
                         <td style="padding: 0.75rem;">{{ booking.check_out.strftime('%d.%m.%Y') }}</td>
