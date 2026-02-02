@@ -57,7 +57,7 @@ class GoogleSheetsService:
         
         # Выпадающий список для статусов (Column L / 12th column)
         # Updated statuses based on user request
-        status_options = ["Ожидает оплаты", "Ждёт заселения", "Оплата внесена", "Отменена", "Завершена"]
+        status_options = ["Ожидает оплаты", "Ждёт заселения", "Оплата внесена", "Проживает", "Отменена", "Завершена"]
         
         validation_rule = {
             'condition': {
@@ -95,6 +95,7 @@ class GoogleSheetsService:
             'new': 'Ожидает оплаты',
             'confirmed': 'Ждёт заселения',
             'paid': 'Оплата внесена',
+            'checked_in': 'Проживает',
             'cancelled': 'Отменена',
             'completed': 'Завершена'
         }
@@ -190,6 +191,10 @@ class GoogleSheetsService:
         
         # Форматирование
         self._format_bookings_sheet(worksheet)
+        
+        # Сортировка по дате заезда (колонка B)
+        if len(data) > 1:  # Если есть данные кроме заголовка
+            worksheet.sort((2, 'asc'), range=f'A2:N{len(data)}')  # Колонка 2 = B (Дата заезда)
     
     def create_dashboard(self, bookings: List[Booking]):
         """Создание Dashboard с общей статистикой"""
