@@ -5,6 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
 
+class AuthRedirectException(Exception):
+    """Custom exception for authentication redirects in web routes"""
+    pass
+
 from app.database import get_db
 from app.models import User, UserRole
 from app.core.security import decode_access_token
@@ -50,10 +54,4 @@ async def get_current_admin_or_redirect(request: Request, db: AsyncSession = Dep
     try:
         return await get_current_admin(request, db)
     except HTTPException:
-        # RedirectException pattern if we want to catch it in middleware, 
-        # or just return RedirectResponse?
-        # Dependency cannot return Response directly easily. 
-        # But we can raise a special exception handled by global handler?
-        # Or just return None and let route handle it?
-        # Simpler: raise HTTPException(401) and let a custom exception handler redirect for Web?
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Redirect to login")
+        raise AuthRedirectException()
