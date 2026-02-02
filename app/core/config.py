@@ -43,6 +43,10 @@ class Settings(BaseModel):
     avito_webhook_mode: str = "warn"  # Default: warn (safe rollout)
     avito_webhook_secret: str = ""  # If empty, behaves as "off" mode
 
+    # Rate limiting settings
+    rate_limit_enabled: bool = True  # Killswitch for quick disable
+    rate_limit_webhook: str = "30/minute"  # Default: 30 requests per minute per IP
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -81,4 +85,6 @@ settings = Settings(
     cleaning_notification_time=os.environ.get("CLEANING_NOTIFICATION_TIME", "20:00"),
     avito_webhook_mode=os.environ.get("AVITO_WEBHOOK_MODE", "warn"),
     avito_webhook_secret=os.environ.get("AVITO_WEBHOOK_SECRET", ""),
+    rate_limit_enabled=os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true",
+    rate_limit_webhook=os.environ.get("RATE_LIMIT_WEBHOOK", "30/minute"),
 )
