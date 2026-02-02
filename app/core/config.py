@@ -47,6 +47,10 @@ class Settings(BaseModel):
     rate_limit_enabled: bool = True  # Killswitch for quick disable
     rate_limit_webhook: str = "30/minute"  # Default: 30 requests per minute per IP
 
+    # Logging settings
+    log_format: str = "console"  # Options: "console", "json"
+    log_slow_request_threshold_ms: int = 500  # Log timing only if duration > threshold
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -87,4 +91,8 @@ settings = Settings(
     avito_webhook_secret=os.environ.get("AVITO_WEBHOOK_SECRET", ""),
     rate_limit_enabled=os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true",
     rate_limit_webhook=os.environ.get("RATE_LIMIT_WEBHOOK", "30/minute"),
+    log_format=os.environ.get("LOG_FORMAT", "console"),
+    log_slow_request_threshold_ms=int(
+        os.environ.get("LOG_SLOW_REQUEST_THRESHOLD_MS", "500")
+    ),
 )

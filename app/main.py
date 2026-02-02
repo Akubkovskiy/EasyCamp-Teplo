@@ -46,10 +46,12 @@ from slowapi.middleware import SlowAPIMiddleware
 
 # Import limiter from separate module to avoid circular imports
 from app.core.rate_limiter import limiter
+from app.middleware.request_logger import RequestLoggerMiddleware
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RequestLoggerMiddleware)
 
 
 app.include_router(health_router)
