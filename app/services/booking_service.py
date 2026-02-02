@@ -92,14 +92,13 @@ class BookingService:
                 
                 # Parse status string to enum if needed
                 status_raw = data.get('status', 'new')
-                status_enum = BookingStatus.NEW
-                if status_raw == 'confirmed':
-                     status_enum = BookingStatus.CONFIRMED
-                     
+                try:
+                    status_enum = BookingStatus(status_raw)
+                except ValueError:
+                    status_enum = BookingStatus.NEW
                 
                 booking = Booking(
                     house_id=data['house_id'],
-                    # user_id not in model yet, removing
                     guest_name=data['guest_name'],
                     guest_phone=data.get('guest_phone'),
                     check_in=data['check_in'],

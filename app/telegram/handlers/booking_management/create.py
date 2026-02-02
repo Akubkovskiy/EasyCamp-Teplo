@@ -330,12 +330,21 @@ async def remainder_entered(message: Message, state: FSMContext):
     await state.update_data(total_price=total_price)
     
     # Status selection
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    buttons = [
         [InlineKeyboardButton(text="⏳ Ожидает оплаты", callback_data="status:new")],
-        [InlineKeyboardButton(text="✅ Ждёт заселения (Оплачено)", callback_data="status:confirmed")],
+        [InlineKeyboardButton(text="✅ Ждёт заселения (Оплачено)", callback_data="status:confirmed")]
+    ]
+    
+    # Если заезд сегодня, добавляем статус "Заезд сегодня"
+    if data['check_in'] == date.today():
+        buttons.insert(0, [InlineKeyboardButton(text="🔔 Заезд сегодня", callback_data="status:checking_in")])
+        
+    buttons.extend([
         [InlineKeyboardButton(text="🔙 Назад к остатку", callback_data="back_to_remainder")],
         [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
     ])
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     
     await message.answer(
         "📊 <b>Выберите статус бронирования:</b>\n"
@@ -356,7 +365,8 @@ async def status_selected(callback: CallbackQuery, state: FSMContext):
     # Map status to readable
     status_map = {
         'new': '⏳ Ожидает оплаты',
-        'confirmed': '✅ Ждёт заселения'
+        'confirmed': '✅ Ждёт заселения',
+        'checking_in': '🔔 Заезд сегодня'
     }
     status_text = status_map.get(status_val, status_val)
     

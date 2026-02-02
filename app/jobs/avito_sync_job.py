@@ -75,7 +75,13 @@ async def verify_local_bookings_in_avito(item_house_mapping: dict):
             
             result = await session.execute(
                 select(Booking).where(
-                    Booking.status.in_([BookingStatus.NEW, BookingStatus.CONFIRMED, BookingStatus.PAID]),
+                    Booking.status.in_([
+                        BookingStatus.NEW, 
+                        BookingStatus.CONFIRMED, 
+                        BookingStatus.PAID,
+                        BookingStatus.CHECKING_IN,
+                        BookingStatus.CHECKED_IN
+                    ]),
                     Booking.check_in >= today,
                     Booking.check_out <= end_date
                 )

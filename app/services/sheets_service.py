@@ -57,7 +57,7 @@ class GoogleSheetsService:
         
         # Выпадающий список для статусов (Column L / 12th column)
         # Updated statuses based on user request
-        status_options = ["Ожидает оплаты", "Ждёт заселения", "Оплата внесена", "Проживает", "Отменена", "Завершена"]
+        status_options = ["Ожидает оплаты", "Ждёт заселения", "Оплата внесена", "Заезд сегодня", "Проживает", "Отменена", "Завершена"]
         
         validation_rule = {
             'condition': {
@@ -95,6 +95,7 @@ class GoogleSheetsService:
             'new': 'Ожидает оплаты',
             'confirmed': 'Ждёт заселения',
             'paid': 'Оплата внесена',
+            'checking_in': 'Заезд сегодня',
             'checked_in': 'Проживает',
             'cancelled': 'Отменена',
             'completed': 'Завершена'
