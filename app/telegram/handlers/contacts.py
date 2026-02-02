@@ -10,7 +10,6 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 
-from app.core.config import settings
 
 router = Router()
 

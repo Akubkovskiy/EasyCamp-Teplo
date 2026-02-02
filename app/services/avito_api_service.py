@@ -222,7 +222,7 @@ class AvitoAPIService:
 
             if status_code == 409:
                 logger.warning(
-                    f"⚠️ Conflict: Dates overlap with existing paid booking on Avito"
+                    "⚠️ Conflict: Dates overlap with existing paid booking on Avito"
                 )
             elif status_code == 403:
                 logger.error(f"❌ Forbidden: User doesn't own item {item_id}")

@@ -11,7 +11,7 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from aiogram.fsm.context import FSMContext
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from app.telegram.states.booking import BookingStates
 from app.services.booking_service import booking_service

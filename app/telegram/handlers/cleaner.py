@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from aiogram import Router, F
 from aiogram.types import (
     Message,
@@ -6,7 +6,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal

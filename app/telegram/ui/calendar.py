@@ -116,11 +116,11 @@ def build_year_keyboard(year: int, prefix: str) -> InlineKeyboardMarkup:
     keyboard.append(
         [
             InlineKeyboardButton(
-                text=f"⬅️", callback_data=f"{prefix}_pick_year:{year - 1}"
+                text="⬅️", callback_data=f"{prefix}_pick_year:{year - 1}"
             ),
             InlineKeyboardButton(text=f"{year}", callback_data="ignore"),
             InlineKeyboardButton(
-                text=f"➡️", callback_data=f"{prefix}_pick_year:{year + 1}"
+                text="➡️", callback_data=f"{prefix}_pick_year:{year + 1}"
             ),
         ]
     )

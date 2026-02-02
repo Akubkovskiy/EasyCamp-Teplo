@@ -8,7 +8,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
@@ -362,7 +362,6 @@ async def guest_pay(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:contact_admin")
 async def contact_admin(callback: CallbackQuery):
-    from app.core.config import settings
 
     # Тут можно дать ссылку на админа
     await callback.message.answer(

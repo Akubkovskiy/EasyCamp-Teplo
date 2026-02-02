@@ -1,5 +1,4 @@
 import os
-import shutil
 import logging
 from datetime import datetime
 from google.oauth2 import service_account

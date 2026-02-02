@@ -3,7 +3,7 @@ OAuth авторизация для Avito API
 """
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 import requests
 import logging
 
@@ -57,7 +57,7 @@ async def oauth_callback(request: Request, code: str = None, error: str = None):
     """Обработка callback от Avito"""
 
     # Логируем все параметры
-    logger.info(f"OAuth callback received")
+    logger.info("OAuth callback received")
     logger.info(f"Query params: {dict(request.query_params)}")
     logger.info(f"Code: {code}")
     logger.info(f"Error: {error}")
@@ -106,7 +106,7 @@ async def oauth_callback(request: Request, code: str = None, error: str = None):
         _token_storage["access_token"] = data.get("access_token")
         _token_storage["refresh_token"] = data.get("refresh_token")
 
-        logger.info(f"OAuth successful! Token obtained.")
+        logger.info("OAuth successful! Token obtained.")
 
         return HTMLResponse(f"""
         <html>

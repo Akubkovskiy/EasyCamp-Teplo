@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from app.models import UserRole
-from app.telegram.auth.admin import add_user, remove_user, get_all_users, is_admin
+from app.telegram.auth.admin import add_user, remove_user, get_all_users
 
 router = Router()
 
@@ -109,7 +109,7 @@ async def start_add_user(callback: CallbackQuery, state: FSMContext):
     await state.set_state(UserAddStates.waiting_for_id)
 
     await callback.message.edit_text(
-        f"➕ <b>Добавление пользователя</b>\n\n"
+        "➕ <b>Добавление пользователя</b>\n\n"
         "Пожалуйста, отправьте <b>Telegram ID</b> пользователя (число) или перешлите сообщение от него.\n\n"
         "<i>Узнать ID можно через бота @userinfobot</i>",
         reply_markup=InlineKeyboardMarkup(

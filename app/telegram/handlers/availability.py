@@ -10,8 +10,9 @@ from aiogram.types import (
 )
 from aiogram.filters import Command
 from app.services.booking_service import booking_service
+from app.telegram.auth.admin import is_admin
 
-from app.telegram.ui.calendar import build_month_keyboard, month_title
+from app.telegram.ui.calendar import build_month_keyboard
 from app.telegram.state.availability import (
     availability_states,
     AvailabilityState,
@@ -19,9 +20,6 @@ from app.telegram.state.availability import (
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-
-from app.telegram.auth.admin import is_admin
 
 
 @router.message(Command("availability"))

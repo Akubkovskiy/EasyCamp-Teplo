@@ -119,7 +119,7 @@ async def process_content_edit(message: Message, state: FSMContext):
         await session.commit()
 
     await state.clear()
-    await message.answer(f"✅ Данные сохранены!")
+    await message.answer("✅ Данные сохранены!")
 
     # Возвращаемся в меню (нужно отправить новое сообщение с кнопками)
     # Или просто кнопку "Назад в меню редактора"

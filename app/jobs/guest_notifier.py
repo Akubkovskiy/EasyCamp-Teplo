@@ -1,6 +1,5 @@
 import logging
 from typing import List, Any
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from app.models import Booking
 from app.services.notification_service import notification_service, NotificationRule

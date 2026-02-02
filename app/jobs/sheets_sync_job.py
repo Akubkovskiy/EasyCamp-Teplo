@@ -4,11 +4,7 @@
 
 import asyncio
 import logging
-from sqlalchemy import select
 
-from app.database import AsyncSessionLocal
-from app.models import Booking
-from app.services.sheets_service import sheets_service
 
 logger = logging.getLogger(__name__)
 
