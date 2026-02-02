@@ -14,8 +14,9 @@ from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta, date
 
 from app.telegram.states.booking import BookingStates
-from app.services.booking_service import booking_service
-from app.services.house_service import house_service
+from app.services.booking_service import BookingService
+from app.services.house_service import HouseService
+from app.database import AsyncSessionLocal
 from app.utils.validators import validate_phone, format_phone
 from app.telegram.ui.calendar import build_month_keyboard, build_year_keyboard
 from app.core.config import settings
@@ -43,7 +44,9 @@ async def start_booking_from_availability(callback: CallbackQuery, state: FSMCon
         return
 
     # Получаем информацию о доме
-    house = await house_service.get_house(house_id)
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
+        
     if not house:
         await callback.answer("❌ Домик не найден", show_alert=True)
         return
@@ -100,7 +103,8 @@ async def start_new_booking(event: Message | CallbackQuery, state: FSMContext):
     await state.clear()
 
     # Получаем список домов динамически
-    houses = await house_service.get_all_houses()
+    async with AsyncSessionLocal() as db:
+        houses = await HouseService.get_all_houses(db)
 
     keyboard_buttons = []
     for h in houses:
@@ -134,7 +138,8 @@ async def house_selected(callback: CallbackQuery, state: FSMContext):
     await state.update_data(house_id=house_id)
     
     # Fetch house name for display
-    house = await house_service.get_house(house_id)
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
     house_name = house.name if house else f"Дом {house_id}"
 
     today = datetime.now().date()
@@ -234,9 +239,10 @@ async def select_checkout_date(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     check_in = data.get("check_in")
 
-    is_available = await booking_service.check_availability(
-        data["house_id"], check_in, check_out
-    )
+    async with AsyncSessionLocal() as db:
+        is_available = await BookingService.check_availability(
+            db, data["house_id"], check_in, check_out
+        )
 
     if not is_available:
         # UX FIX: Добавляем кнопку возврата к заезду
@@ -359,7 +365,9 @@ async def guests_count_entered(message: Message, state: FSMContext):
     house_id = data["house_id"]
 
     # Проверка вместимости
-    house = await house_service.get_house(house_id)
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
+        
     if house and count > house.capacity:
         await message.answer(
             f"❌ <b>Слишком много гостей!</b>\n"
@@ -511,7 +519,8 @@ async def status_selected(callback: CallbackQuery, state: FSMContext):
     # Fetch house name again if possible or just use ID (to be safe/fast)
     # Ideally should store name in state, but simpler to just show ID or "Дом ID"
     # Actually, let's fetch it for better UX
-    house = await house_service.get_house(data['house_id'])
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, data['house_id'])
     house_name = house.name if house else f"Дом {data['house_id']}"
 
     await callback.message.edit_text(
@@ -534,7 +543,8 @@ async def status_selected(callback: CallbackQuery, state: FSMContext):
 async def confirm_booking(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     await callback.message.edit_text("⏳ Сохраняем бронирование...")
-    booking = await booking_service.create_booking(data)
+    async with AsyncSessionLocal() as db:
+        booking = await BookingService.create_booking(db, data)
 
     if booking:
         sheet_link = f"https://docs.google.com/spreadsheets/d/{settings.google_sheets_spreadsheet_id}"
@@ -735,7 +745,8 @@ async def back_to_confirmation_screen(callback: CallbackQuery, state: FSMContext
         ]
     )
 
-    house = await house_service.get_house(data['house_id'])
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, data['house_id'])
     house_name = house.name if house else f"Дом {data['house_id']}"
 
     await callback.message.edit_text(

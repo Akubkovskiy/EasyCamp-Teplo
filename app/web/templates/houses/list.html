@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Управление домами{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout" style="display: flex; min-height: 100vh;">
+    <!-- Sidebar -->
+    <div class="sidebar" style="width: 250px; background: white; border-right: 1px solid #e5e7eb; padding: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 2rem;">{{ project_name }}</h2>
+        <nav>
+            <a href="/admin-web/" style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏠
+                Дашборд</a>
+            <a href="/admin-web/houses" style="display: block; padding: 0.75rem 0; color: #2563eb; font-weight: 500;">🏡
+                Дома</a>
+            <a href="/admin-web/settings"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">⚙️ Настройки</a>
+            <a href="/admin-web/logout"
+                style="display: block; padding: 0.75rem 0; color: #dc2626; margin-top: 2rem; text-decoration: none;">Выход</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" style="flex: 1; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.875rem; font-weight: bold;">🏡 Список домов</h1>
+            <a href="/admin-web/houses/new" class="btn"
+                style="width: auto; padding: 0.75rem 1.5rem; text-decoration: none;">+ Добавить дом</a>
+        </div>
+
+        <div class="auth-card" style="max-width: 1000px; padding: 0; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <tr>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #6b7280;">ID</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #6b7280;">Название</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #6b7280;">Вместимость</th>
+                        <th style="padding: 1rem; text-align: right; font-weight: 600; color: #6b7280;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for house in houses %}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 1rem;">#{{ house.id }}</td>
+                        <td style="padding: 1rem; font-weight: 500;">{{ house.name }}</td>
+                        <td style="padding: 1rem;">{{ house.capacity }} чел.</td>
+                        <td style="padding: 1rem; text-align: right;">
+                            <a href="/admin-web/houses/{{ house.id }}"
+                                style="color: #2563eb; margin-right: 1rem; text-decoration: none;">✏️ Изменить</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="padding: 2rem; text-align: center; color: #9ca3af;">
+                            Домов пока нет. Самое время создать первый!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

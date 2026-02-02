@@ -96,7 +96,7 @@ async def avito_webhook(request: Request):
     try:
         from app.avito.schemas import AvitoWebhookEvent, AvitoBookingPayload
         from app.database import AsyncSessionLocal
-        from app.services.booking_service import create_or_update_avito_booking
+        from app.services.booking_service import BookingService
         from app.telegram.notifier import notify_new_avito_event
         from app.models import Booking, BookingSource
         from sqlalchemy import select
@@ -127,7 +127,7 @@ async def avito_webhook(request: Request):
                 return {"status": "already_processed", "booking_id": existing.id}
 
             # Process booking (create or update)
-            booking = await create_or_update_avito_booking(session, booking_payload)
+            booking = await BookingService.create_or_update_avito_booking(session, booking_payload)
 
         # Notify about new event
         await notify_new_avito_event(event, request, booking)

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Управление бронированиями{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout" style="display: flex; min-height: 100vh;">
+    <!-- Sidebar -->
+    <div class="sidebar" style="width: 250px; background: white; border-right: 1px solid #e5e7eb; padding: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 2rem;">{{ project_name or "EasyCamp" }}</h2>
+        <nav>
+            <a href="/admin-web/" style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏠
+                Дашборд</a>
+            <a href="/admin-web/houses"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏡
+                Дома</a>
+            <a href="/admin-web/bookings"
+                style="display: block; padding: 0.75rem 0; color: #2563eb; font-weight: 500;">📅
+                Бронирования</a>
+            <a href="/admin-web/settings"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">⚙️ Настройки</a>
+            <a href="/admin-web/logout"
+                style="display: block; padding: 0.75rem 0; color: #dc2626; margin-top: 2rem; text-decoration: none;">Выход</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" style="flex: 1; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.875rem; font-weight: bold;">📅 Бронирования</h1>
+            <a href="/admin-web/bookings/new" class="btn"
+                style="width: auto; padding: 0.75rem 1.5rem; text-decoration: none;">+ Создать бронь</a>
+        </div>
+
+        <div class="auth-card" style="max-width: 1400px; padding: 0; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <tr>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #6b7280;">ID</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #6b7280;">Домик</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #6b7280;">Гость</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #6b7280;">Заезд</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #6b7280;">Выезд</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #6b7280;">Цена</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #6b7280;">Статус</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #6b7280;">Источник
+                        </th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #6b7280;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 0.75rem;">#{{ booking.id }}</td>
+                        <td style="padding: 0.75rem; font-weight: 500;">
+                            {{ booking.house.name if booking.house else 'Дом #' + booking.house_id|string }}
+                        </td>
+                        <td style="padding: 0.75rem;">
+                            <div style="font-weight: 500;">{{ booking.guest_name }}</div>
+                            <div style="font-size: 0.75rem; color: #6b7280;">{{ booking.guest_phone or '-' }}</div>
+                        </td>
+                        <td style="padding: 0.75rem;">{{ booking.check_in.strftime('%d.%m.%Y') }}</td>
+                        <td style="padding: 0.75rem;">{{ booking.check_out.strftime('%d.%m.%Y') }}</td>
+                        <td style="padding: 0.75rem; text-align: right; font-weight: 500;">{{ booking.total_price }}₽
+                        </td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            {% if booking.status.value == 'new' %}
+                            <span
+                                style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Новая</span>
+                            {% elif booking.status.value == 'confirmed' %}
+                            <span
+                                style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Подтверждена</span>
+                            {% elif booking.status.value == 'paid' %}
+                            <span
+                                style="background: #d1fae5; color: #065f46; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Оплачена</span>
+                            {% elif booking.status.value == 'cancelled' %}
+                            <span
+                                style="background: #fee2e2; color: #991b1b; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Отменена</span>
+                            {% elif booking.status.value == 'checking_in' %}
+                            <span
+                                style="background: #e0e7ff; color: #3730a3; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Заезд</span>
+                            {% elif booking.status.value == 'checked_in' %}
+                            <span
+                                style="background: #fce7f3; color: #831843; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Проживает</span>
+                            {% elif booking.status.value == 'completed' %}
+                            <span
+                                style="background: #f3f4f6; color: #374151; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">Завершена</span>
+                            {% else %}
+                            <span
+                                style="background: #f3f4f6; color: #6b7280; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem;">{{
+                                booking.status.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            {% if booking.source.value == 'avito' %}
+                            <span style="font-size: 0.75rem; color: #059669;">🟢 Avito</span>
+                            {% elif booking.source.value == 'telegram' %}
+                            <span style="font-size: 0.75rem; color: #2563eb;">✈️ Telegram</span>
+                            {% else %}
+                            <span style="font-size: 0.75rem; color: #6b7280;">{{ booking.source.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right;">
+                            <a href="/admin-web/bookings/{{ booking.id }}"
+                                style="color: #2563eb; margin-right: 0.5rem; text-decoration: none; font-size: 0.875rem;">👁️
+                                Открыть</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="padding: 2rem; text-align: center; color: #9ca3af;">
+                            Бронирований пока нет.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

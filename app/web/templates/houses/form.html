@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "components/help_tooltip.html" import help_icon %}
+
+{% block title %}{% if house %}Редактировать дом{% else %}Новый дом{% endif %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout" style="display: flex; min-height: 100vh;">
+    <!-- Sidebar -->
+    <div class="sidebar" style="width: 250px; background: white; border-right: 1px solid #e5e7eb; padding: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 2rem;">{{ project_name }}</h2>
+        <nav>
+            <a href="/admin-web/" style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏠
+                Дашборд</a>
+            <a href="/admin-web/houses" style="display: block; padding: 0.75rem 0; color: #2563eb; font-weight: 500;">🏡
+                Дома</a>
+            <a href="/admin-web/settings"
+                style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">⚙️ Настройки</a>
+            <a href="/admin-web/logout"
+                style="display: block; padding: 0.75rem 0; color: #dc2626; margin-top: 2rem; text-decoration: none;">Выход</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" style="flex: 1; padding: 2rem;">
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <a href="/admin-web/houses" style="text-decoration: none; color: #6b7280; margin-right: 1rem;">&larr;
+                Назад</a>
+            <h1 style="font-size: 1.875rem; font-weight: bold; margin: 0;">
+                {% if house %}Редактировать {{ house.name }}{% else %}Создание дома{% endif %}
+            </h1>
+        </div>
+
+        <div class="auth-card" style="max-width: 800px;">
+            <form action="/admin-web/houses{% if house %}/{{ house.id }}{% endif %}" method="post">
+
+                <!-- Basic Info -->
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🏠 Основное</h3>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="name">Название дома:</label>
+                    <input class="form-input" type="text" id="name" name="name" required
+                        value="{{ house.name if house else '' }}" placeholder="Например: А-Фрейм Большой">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label class="form-label" for="capacity">Вместимость (чел):</label>
+                        <input class="form-input" type="number" id="capacity" name="capacity" required
+                            value="{{ house.capacity if house else 2 }}" min="1">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="description">Описание (для бота):</label>
+                    <textarea class="form-input" id="description" name="description"
+                        rows="3">{{ house.description if house else '' }}</textarea>
+                </div>
+
+                <!-- Dynamic Content -->
+                <h3 style="margin: 2rem 0 1rem 0; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📄 Инфо для
+                    гостей</h3>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="wifi_info">Wi-Fi (SSID/Pass): {{ help_icon('wifi_info') }}</label>
+                    <textarea class="form-input" id="wifi_info" name="wifi_info" rows="2"
+                        placeholder="Сеть: EasyCamp&#10;Пароль: 12345678">{{ house.wifi_info if house else '' }}</textarea>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="checkin_instruction">Инструкция по заселению: {{
+                        help_icon('checkin_instruction') }}</label>
+                    <textarea class="form-input" id="checkin_instruction" name="checkin_instruction"
+                        rows="4">{{ house.checkin_instruction if house else '' }}</textarea>
+                </div>
+
+                <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="submit" class="btn" style="width: auto; padding-left: 2rem; padding-right: 2rem;">
+                        💾 {% if house %}Сохранить изменения{% else %}Создать дом{% endif %}
+                    </button>
+
+                    {% if house %}
+                    <button type="submit" form="delete-form" class="btn"
+                        style="width: auto; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;"
+                        onclick="return confirm('Вы уверены? Удаление дома необратимо.');">
+                        🗑 Удалить дом
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+
+            {% if house %}
+            <form id="delete-form" action="/admin-web/houses/{{ house.id }}/delete" method="post"
+                style="display: none;"></form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
