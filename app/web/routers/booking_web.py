@@ -15,6 +15,21 @@ from app.schemas.booking import BookingUpdate
 
 templates = Jinja2Templates(directory="app/web/templates")
 
+# Добавляем фильтр для форматирования телефона
+def format_phone(phone: str) -> str:
+    """Форматирует телефон в вид +7 (XXX) XXX-XX-XX"""
+    if not phone:
+        return ""
+    # Убираем все нечисловые символы
+    digits = ''.join(filter(str.isdigit, phone))
+    if len(digits) == 11 and digits.startswith('7'):
+        return f"+7 ({digits[1:4]}) {digits[4:7]}-{digits[7:9]}-{digits[9:11]}"
+    elif len(digits) == 10:
+        return f"+7 ({digits[0:3]}) {digits[3:6]}-{digits[6:8]}-{digits[8:10]}"
+    return phone
+
+templates.env.filters['format_phone'] = format_phone
+
 router = APIRouter(prefix="/admin-web/bookings", tags=["web-bookings"])
 
 
@@ -94,29 +109,37 @@ async def update_booking(
     """
     Обновление бронирования.
     """
-    update_data = BookingUpdate(
-        house_id=house_id,
-        guest_name=guest_name,
-        guest_phone=guest_phone,
-        check_in=check_in,
-        check_out=check_out,
-        guests_count=guests_count,
-        total_price=total_price,
-        advance_amount=advance_amount,
-        commission=commission,
-        prepayment_owner=prepayment_owner,
-        status=BookingStatus(status),
-    )
-    
-    success = await BookingService.update_booking(db, booking_id, update_data)
-    
-    if success:
-        return RedirectResponse(
-            url=f"/admin-web/bookings/{booking_id}",
-            status_code=status.HTTP_303_SEE_OTHER
+    try:
+        update_data = BookingUpdate(
+            house_id=house_id,
+            guest_name=guest_name,
+            guest_phone=guest_phone,
+            check_in=check_in,
+            check_out=check_out,
+            guests_count=guests_count,
+            total_price=total_price,
+            advance_amount=advance_amount,
+            commission=commission,
+            prepayment_owner=prepayment_owner,
+            status=BookingStatus(status),
         )
-    else:
+        
+        success = await BookingService.update_booking(db, booking_id, update_data)
+        
+        if success:
+            return RedirectResponse(
+                url=f"/admin-web/bookings/{booking_id}",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+        else:
+            return RedirectResponse(
+                url="/admin-web/bookings",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error updating booking {booking_id}: {e}", exc_info=True)
         return RedirectResponse(
-            url="/admin-web/bookings",
+            url=f"/admin-web/bookings/{booking_id}?error=update_failed",
             status_code=status.HTTP_303_SEE_OTHER
         )
