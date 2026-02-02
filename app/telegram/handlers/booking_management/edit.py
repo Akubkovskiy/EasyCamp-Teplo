@@ -83,6 +83,7 @@ async def start_editing_field(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="🆕 NEW", callback_data=f"booking:st:{booking_id}:new")],
             [InlineKeyboardButton(text="✅ CONFIRMED", callback_data=f"booking:st:{booking_id}:confirmed")],
             [InlineKeyboardButton(text="💰 PAID", callback_data=f"booking:st:{booking_id}:paid")],
+            [InlineKeyboardButton(text="🏠 CHECKED_IN (Проживает)", callback_data=f"booking:st:{booking_id}:checked_in")],
             [InlineKeyboardButton(text="🏁 COMPLETED", callback_data=f"booking:st:{booking_id}:completed")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data=f"booking:edit:{booking_id}")]
         ])
@@ -182,6 +183,7 @@ async def process_edit_status(callback: CallbackQuery):
         "new": BookingStatus.NEW,
         "confirmed": BookingStatus.CONFIRMED,
         "paid": BookingStatus.PAID,
+        "checked_in": BookingStatus.CHECKED_IN,
         "completed": BookingStatus.COMPLETED
     }
     await booking_service.update_booking(booking_id, status=status_map[parts[3]])

@@ -20,6 +20,7 @@ class BookingStatus(str, Enum):
     NEW = "new"
     CONFIRMED = "confirmed"
     PAID = "paid"
+    CHECKED_IN = "checked_in"  # Проживает
     CANCELLED = "cancelled"
     COMPLETED = "completed"
 
