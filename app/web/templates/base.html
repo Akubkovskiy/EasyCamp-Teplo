@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Панель управления{% endblock %} | EasyCamp</title>
+    <title>{% block title %}Панель управления{% endblock %} | {{ project_name|default('EasyCamp') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +18,7 @@
             --text-secondary: #6b7280;
             --border-color: #e5e7eb;
         }
-        
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -120,12 +121,15 @@
         }
     </style>
 </head>
+
 <body>
     {% block content %}
     {% endblock %}
-    
+
+
     <div class="footer">
-        Powered by EasyCamp SaaS
+        Powered by {{ project_name|default('EasyCamp SaaS') }}
     </div>
 </body>
+
 </html>

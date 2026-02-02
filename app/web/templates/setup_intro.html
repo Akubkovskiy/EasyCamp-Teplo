@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Настройка EasyCamp{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1 class="auth-title">🛠 Начало настройки</h1>
+
+    {% if error %}
+    <div class="error-msg">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="/admin-web/setup" method="post" class="auth-form">
+        <label for="secret">Введите SETUP_SECRET из .env:</label>
+        <input type="password" id="secret" name="secret" required placeholder="Секретный ключ">
+
+        <button type="submit" class="btn">Начать установку</button>
+    </form>
+
+    <div style="margin-top: 1rem; text-align: center; color: grey; font-size: 0.9rem;">
+        Этот экран видят только при первой установке.
+    </div>
+</div>
+{% endblock %}

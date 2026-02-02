@@ -70,6 +70,12 @@ class Settings(BaseModel):
     payment_receiver: str = "Сергей Иванович П."
     payment_methods: str = "Сбер/Тинькофф"
 
+    # Security
+    secret_key: str = "dev_secret"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+    setup_secret: str = "easycamp_secret"
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -126,4 +132,8 @@ settings = Settings(
     contact_website=os.environ.get("CONTACT_WEBSITE", ""),
     payment_receiver=os.environ.get("PAYMENT_RECEIVER", "Сергей Иванович П."),
     payment_methods=os.environ.get("PAYMENT_METHODS", "Сбер/Тинькофф"),
+    secret_key=os.environ.get("SECRET_KEY", "dev_secret_key_change_me"),
+    algorithm="HS256",
+    access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
+    setup_secret=os.environ.get("SETUP_SECRET", "easycamp_secret"),
 )
