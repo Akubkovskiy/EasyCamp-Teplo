@@ -21,10 +21,15 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         start_time = time.perf_counter()
         request_id = str(uuid.uuid4())
+        
+        # Store for internal usage (services, loggers)
+        request.state.request_id = request_id
 
         # Process request
         try:
             response = await call_next(request)
+            # Add to response headers for client/tracing
+            response.headers["X-Request-ID"] = request_id
             status_code = response.status_code
         except Exception:
             status_code = 500
