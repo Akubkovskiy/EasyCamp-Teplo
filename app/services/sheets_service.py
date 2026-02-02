@@ -94,7 +94,13 @@ class GoogleSheetsService:
             }
         ]
 
-        self.spreadsheet.batch_update({"requests": requests})
+        try:
+            self.spreadsheet.batch_update({"requests": requests})
+        except Exception as e:
+            # This can fail if 'Typed Columns' are enabled in the sheet
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"⚠️ Could not apply data validation to sheets (might be due to Typed Columns): {e}")
 
     def sync_bookings_to_sheet(self, bookings: List[Booking]):
         """Синхронизация броней в Google Sheets"""
