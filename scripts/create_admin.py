@@ -28,7 +28,7 @@ async def create_admin(username, password, telegram_id=None):
             hashed_password=hashed,
             role=UserRole.ADMIN,
             name="Super Admin",
-            telegram_id=telegram_id, # Optional
+            telegram_id=telegram_id or 0, # Dummy for web-only
             phone="+7000000000"
         )
         session.add(new_user)
