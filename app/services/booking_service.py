@@ -29,7 +29,7 @@ class BookingService:
             async with AsyncSessionLocal() as session:
                 query = select(Booking).where(
                     Booking.house_id == house_id,
-                    Booking.status != BookingStatus.CANCELLED,  # Исключаем только отмененные
+                    Booking.status != BookingStatus.CANCELLED,
                     and_(
                         Booking.check_in < check_out,
                         Booking.check_out > check_in
@@ -39,10 +39,11 @@ class BookingService:
                 if exclude_booking_id:
                     query = query.where(Booking.id != exclude_booking_id)
                 
-                result = await session.execute(query)
-                conflicts = result.scalars().all()
+                # Only fetch first conflict, no need to load all
+                result = await session.execute(query.limit(1))
+                conflict = result.scalars().first()
                 
-                return len(conflicts) == 0
+                return conflict is None
                 
         except Exception as e:
             logger.error(f"Error checking availability: {e}")
@@ -79,9 +80,27 @@ class BookingService:
 
     async def create_booking(self, data: dict) -> Optional[Booking]:
         """
-        Создание новой брони
+        Создание новой брони.
+        
+        Note: This method checks availability as a contract, but does NOT
+        guarantee atomicity. For strict double-booking prevention, use
+        database constraints (see tech debt: PR for locking/constraint).
         """
         try:
+            # Single contract point: check availability before creating
+            # (Does not prevent TOCTOU race, but ensures consistent logic)
+            is_available = await self.check_availability(
+                house_id=data['house_id'],
+                check_in=data['check_in'],
+                check_out=data['check_out']
+            )
+            if not is_available:
+                logger.warning(
+                    f"Cannot create booking: dates {data['check_in']} - {data['check_out']} "
+                    f"not available for house {data['house_id']}"
+                )
+                return None
+            
             async with AsyncSessionLocal() as session:
                 # User requested explicit fields for manual booking
                 advance_amount = data.get('advance_amount', 0)
