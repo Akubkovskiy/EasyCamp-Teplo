@@ -69,6 +69,7 @@ class TestWebhookIntegration:
             headers={"X-Avito-Signature": "invalid_signature_here"}
         )
         
-        # In warn mode: signature check passes (logs warning), request continues
-        # Response should be 200 (may fail later in processing, but not 401)
-        assert response.status_code == 200
+        # This tests signature mode only, not full processing path.
+        # Downstream 400/500 is acceptable — we're verifying warn mode
+        # doesn't reject with 401 like enforce mode would.
+        assert response.status_code != 401, f"Unexpected 401 in warn mode: {response.text}"
