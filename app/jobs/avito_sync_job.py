@@ -92,32 +92,28 @@ async def verify_local_bookings_in_avito(item_house_mapping: dict):
                 bookings_by_house[booking.house_id].append(booking)
             
             # Проверяем каждый дом
-            total_stats = {'checked': 0, 'missing': 0, 'blocked': 0, 'errors': 0}
+            stats = {'updated': 0, 'errors': 0}
             
             for item_id, house_id in item_house_mapping.items():
                 house_bookings = bookings_by_house.get(house_id, [])
                 
-                if not house_bookings:
-                    logger.info(f"No bookings to verify for house {house_id}")
-                    continue
+                logger.info(f"Syncing calendar for house {house_id} (item {item_id}) using {len(house_bookings)} bookings")
                 
-                logger.info(f"Verifying {len(house_bookings)} bookings for house {house_id} (item {item_id})")
-                
-                # Вызываем проверку синхронно через asyncio.to_thread
-                stats = await asyncio.to_thread(
-                    avito_api_service.verify_and_sync_bookings,
+                # Вызываем обновление синхронно через asyncio.to_thread
+                success = await asyncio.to_thread(
+                    avito_api_service.update_calendar_from_local,
                     item_id,
                     house_bookings
                 )
                 
-                # Суммируем статистику
-                for key in total_stats:
-                    total_stats[key] += stats.get(key, 0)
+                if success:
+                    stats['updated'] += 1
+                else:
+                    stats['errors'] += 1
             
             logger.info(
-                f"✅ Verification complete: "
-                f"checked={total_stats['checked']}, missing={total_stats['missing']}, "
-                f"blocked={total_stats['blocked']}, errors={total_stats['errors']}"
+                f"✅ Calendar sync complete: "
+                f"updated={stats['updated']}, errors={stats['errors']}"
             )
             
     except Exception as e:

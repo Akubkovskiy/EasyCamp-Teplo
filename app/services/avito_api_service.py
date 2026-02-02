@@ -482,106 +482,122 @@ class AvitoAPIService:
             logger.error(f"❌ Failed to update calendar intervals: {e}", exc_info=True)
             return False
     
-    def verify_and_sync_bookings(self, item_id: int, local_bookings: list) -> dict:
+    
+    def update_calendar_from_local(
+        self, 
+        item_id: int, 
+        local_bookings: list
+    ) -> bool:
         """
-        Проверить и синхронизировать брони из БД с Avito
-        
-        Получает текущие брони из Avito и сравнивает с локальными.
-        Блокирует в Avito те брони, которых там нет.
+        Обновить интервалы доступности в Avito на основе локальных броней
         
         Args:
             item_id: ID объявления на Avito
-            local_bookings: Список броней из локальной БД
+            local_bookings: Список объектов броней из БД
             
         Returns:
-            dict с результатами: {
-                'checked': int,
-                'missing': int,
-                'blocked': int,
-                'errors': int
-            }
+            True если обновление успешно, False в случае ошибки
         """
         self.ensure_token()
         
-        logger.info(f"Verifying bookings for item {item_id}")
+        logger.info(f"Updating calendar for item {item_id} from {len(local_bookings)} local bookings")
         
         try:
-            from datetime import datetime, timedelta
             from app.core.config import settings
+            from datetime import datetime, timedelta
             
-            # Получаем текущие брони из Avito
+            # Подготовка интервалов
             today = datetime.now().date()
             end_date = today + timedelta(days=settings.booking_window_days)
             
-            avito_bookings_data = self.get_bookings(
-                item_id=item_id,
-                date_start=today.isoformat(),
-                date_end=end_date.isoformat()
-            )
-            
-            avito_bookings = avito_bookings_data.get('bookings', [])
-            logger.info(f"Found {len(avito_bookings)} bookings in Avito")
-            
-            # Создаем множество дат из Avito броней для быстрой проверки
-            avito_date_ranges = set()
-            for booking in avito_bookings:
-                check_in = booking.get('check_in') or booking.get('date_start')
-                check_out = booking.get('check_out') or booking.get('date_end')
-                
-                if check_in and check_out:
-                    avito_date_ranges.add((check_in, check_out))
-            
-            # Проверяем локальные брони
-            stats = {
-                'checked': len(local_bookings),
-                'missing': 0,
-                'blocked': 0,
-                'errors': 0
-            }
-            
+            # Преобразуем брони в список словарей с date объектами
+            booking_intervals = []
             for booking in local_bookings:
-                check_in = booking.check_in.isoformat()
-                check_out = booking.check_out.isoformat()
+                # Пропускаем отмененные (на всякий случай)
+                if hasattr(booking, 'status') and booking.status == 'cancelled':
+                    continue
+                    
+                check_in = booking.check_in
+                check_out = booking.check_out
                 
-                # Проверяем, есть ли эта бронь в Avito
-                if (check_in, check_out) not in avito_date_ranges:
-                    logger.warning(
-                        f"Booking #{booking.id} ({check_in} to {check_out}) "
-                        f"not found in Avito, blocking..."
-                    )
-                    stats['missing'] += 1
+                # Если check_in/check_out уже date, используем как есть
+                # Если datetime, преобразуем
+                if isinstance(check_in, datetime):
+                    check_in = check_in.date()
+                if isinstance(check_out, datetime):
+                    check_out = check_out.date()
                     
-                    # Блокируем в Avito
-                    success = self.block_dates(
-                        item_id=item_id,
-                        check_in=check_in,
-                        check_out=check_out,
-                        comment=f"Бронь #{booking.id}: {booking.guest_name}"
-                    )
-                    
-                    if success:
-                        stats['blocked'] += 1
-                        logger.info(f"✅ Booking #{booking.id} blocked in Avito")
-                    else:
-                        stats['errors'] += 1
-                        logger.error(f"❌ Failed to block booking #{booking.id}")
+                booking_intervals.append({
+                    'start': check_in,
+                    'end': check_out
+                })
             
-            logger.info(
-                f"Verification complete: checked={stats['checked']}, "
-                f"missing={stats['missing']}, blocked={stats['blocked']}, "
-                f"errors={stats['errors']}"
+            # Сортируем брони по дате начала
+            booking_intervals.sort(key=lambda x: x['start'])
+            
+            # Вычисляем свободные интервалы
+            free_intervals = []
+            current_date = today
+            
+            for booking in booking_intervals:
+                # Если бронь в прошлом/заканчивается до сегодня, пропускаем
+                if booking['end'] <= current_date:
+                    continue
+                    
+                # Если начало брони после current_date, добавляем интервал
+                if current_date < booking['start']:
+                    # Обрезаем интервал концом окна, если нужно
+                    interval_end = min(booking['start'], end_date)
+                    
+                    if current_date < interval_end:
+                        free_intervals.append({
+                            'date_start': current_date.isoformat(),
+                            'date_end': interval_end.isoformat(),
+                            'open': 1
+                        })
+                
+                # Сдвигаем current_date на конец текущей брони (или оставляем, если она была в прошлом)
+                if booking['end'] > current_date:
+                    current_date = booking['end']
+            
+            # Добавляем последний интервал до конца окна бронирования
+            if current_date < end_date:
+                free_intervals.append({
+                    'date_start': current_date.isoformat(),
+                    'date_end': end_date.isoformat(),
+                    'open': 1
+                })
+            
+            logger.info(f"Calculated {len(free_intervals)} free intervals for item {item_id}")
+            
+            # Отправляем интвервалы
+            response = requests.post(
+                f"{self.BASE_URL}/realty/v1/items/intervals",
+                headers={
+                    "Authorization": f"Bearer {self.access_token}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "intervals": free_intervals,
+                    "item_id": item_id,
+                    "source": "EasyCamp"
+                },
+                timeout=10
             )
+            response.raise_for_status()
             
-            return stats
+            logger.info(f"✅ Calendar updated successfully for item {item_id}")
+            return True
             
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else None
+            logger.error(f"❌ HTTP error updating calendar (status {status_code}): {e}")
+            logger.error(f"Response: {e.response.text if e.response else 'No response'}")
+            return False
         except Exception as e:
-            logger.error(f"❌ Failed to verify bookings: {e}", exc_info=True)
-            return {
-                'checked': 0,
-                'missing': 0,
-                'blocked': 0,
-                'errors': 1
-            }
+            logger.error(f"❌ Failed to update calendar: {e}", exc_info=True)
+            return False
+
 
 
 # Глобальный экземпляр сервиса
