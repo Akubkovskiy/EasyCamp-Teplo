@@ -208,13 +208,21 @@ class GoogleSheetsService:
             )
 
         # Форматирование
-        self._format_bookings_sheet(worksheet)
+        try:
+            self._format_bookings_sheet(worksheet)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"⚠️ Could not format sheets: {e}")
 
         # Сортировка по дате заезда (колонка B)
-        if len(data) > 1:  # Если есть данные кроме заголовка
-            worksheet.sort(
-                (2, "asc"), range=f"A2:N{len(data)}"
-            )  # Колонка 2 = B (Дата заезда)
+        try:
+            if len(data) > 1:  # Если есть данные кроме заголовка
+                worksheet.sort(
+                    (2, "asc"), range=f"A2:N{len(data)}"
+                )  # Колонка 2 = B (Дата заезда)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"⚠️ Could not sort sheets: {e}")
 
     def create_dashboard(self, bookings: List[Booking]):
         """Создание Dashboard с общей статистикой"""
@@ -269,7 +277,11 @@ class GoogleSheetsService:
             ["Общий доход:", f"{total_revenue:,.0f} ₽"],
         ]
 
-        worksheet.batch_update([{"range": "A5:B7", "values": stats_data}])
+        try:
+            worksheet.batch_update([{"range": "A5:B7", "values": stats_data}])
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"⚠️ Could not update dashboard stats: {e}")
 
     async def sync_bookings_async(self, bookings: List[Booking]):
         """Async wrapper для синхронизации броней"""
