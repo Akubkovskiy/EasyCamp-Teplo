@@ -40,7 +40,10 @@ def verify_signature(body: bytes, signature: str) -> bool:
 @router.post("/webhook")
 async def avito_webhook(request: Request):
     """
-    Handle Avito webhook with optional signature verification and idempotency.
+    Handle Avito webhook with optional signature verification.
+    
+    Idempotency: Only blocks duplicate CREATE events. UPDATE events 
+    (status changes, payment updates) are allowed for existing bookings.
     
     Signature verification modes:
     - off: Accept all requests (default, backward compatible)
@@ -104,7 +107,6 @@ async def avito_webhook(request: Request):
         avito_id = str(booking_payload.avito_booking_id)
         
         async with AsyncSessionLocal() as session:
-            # === IDEMPOTENCY CHECK ===
             # Check if this Avito booking already exists
             stmt = select(Booking).where(
                 Booking.external_id == avito_id,
@@ -113,14 +115,18 @@ async def avito_webhook(request: Request):
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
             
-            if existing:
-                logger.info(f"Webhook already processed for Avito booking {avito_id} (DB ID: {existing.id})")
+            # === IDEMPOTENCY LOGIC ===
+            # Only block duplicate "create" events. Allow "update" events to pass through.
+            is_create_event = event_type in ("booking", "booking_created", "create")
+            
+            if existing and is_create_event:
+                logger.info(f"Duplicate CREATE event for Avito booking {avito_id} (DB ID: {existing.id}) - skipping")
                 return {
                     "status": "already_processed",
                     "booking_id": existing.id
                 }
             
-            # Create new booking
+            # Process booking (create or update)
             booking = await create_or_update_avito_booking(session, booking_payload)
         
         # Notify about new event
@@ -134,8 +140,5 @@ async def avito_webhook(request: Request):
     except Exception as e:
         logger.error("Error processing Avito webhook: %s", e, exc_info=True)
         # Return 200 to prevent infinite retries from Avito
-        # The error is logged for investigation
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        # Don't expose internal error details to external caller
+        return {"status": "error"}
