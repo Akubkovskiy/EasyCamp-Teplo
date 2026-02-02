@@ -99,6 +99,8 @@ class BookingService:
                     f"Cannot create booking: dates {data['check_in']} - {data['check_out']} "
                     f"not available for house {data['house_id']}"
                 )
+                # TODO: Consider raising BookingNotAvailableError instead of returning None
+                # when multiple handlers need to distinguish "unavailable" from "error"
                 return None
             
             async with AsyncSessionLocal() as session:
