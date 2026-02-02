@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
@@ -67,6 +68,12 @@ app.add_middleware(RequestLoggerMiddleware)
 # TEMPORARY DISABLED for debugging booking UI
 # from app.web.middleware.setup_middleware import SetupMiddleware
 # app.add_middleware(SetupMiddleware)
+
+from app.web.deps import AuthRedirectException
+
+@app.exception_handler(AuthRedirectException)
+async def auth_redirect_handler(request: Request, exc: AuthRedirectException):
+    return RedirectResponse(url="/admin-web/login")
 
 
 app.include_router(health_router)
