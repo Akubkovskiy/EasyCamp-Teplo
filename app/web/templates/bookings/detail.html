@@ -79,7 +79,8 @@
 
                     <div>
                         <label class="label">Телефон</label>
-                        <input type="text" name="guest_phone" class="input" value="{{ booking.guest_phone or '' }}">
+                        <input type="text" name="guest_phone" class="input"
+                            value="{{ booking.guest_phone|format_phone or '' }}">
                     </div>
 
                     <div>

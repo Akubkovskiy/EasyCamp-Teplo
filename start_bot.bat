@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
+set PYTHONUTF8=1
 
 echo [1/3] Cleaning up old processes...
 REM Kill processes by Window Title or Image Name if they are related
