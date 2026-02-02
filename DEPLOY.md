@@ -76,3 +76,30 @@ cp data/easycamp.db data/easycamp_backup_$(date +%Y%m%d).db
 ```bash
 sudo docker-compose restart
 ```
+
+## 5. Rate Limiting (Rate Limit)
+
+Webhook `/avito/webhook` защищён rate limiting (30 запросов/минута на IP по умолчанию).
+
+### ⚠️ Важно: Работа за reverse proxy (nginx/Cloudflare)
+
+Если бот работает за nginx или Cloudflare, все запросы могут приходить с одного IP прокси.
+Это приведёт к ложным блокировкам.
+
+**Решение:**
+1. Настройте forwarded headers в nginx:
+   ```nginx
+   proxy_set_header X-Real-IP $remote_addr;
+   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+   ```
+
+2. Или временно отключите rate limit:
+   ```bash
+   RATE_LIMIT_ENABLED=false
+   ```
+
+### Настройки
+```bash
+RATE_LIMIT_ENABLED=true      # Killswitch
+RATE_LIMIT_WEBHOOK=30/minute # Лимит (можно: 10/second, 100/hour и т.д.)
+```
