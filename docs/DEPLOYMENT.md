@@ -189,7 +189,7 @@ SYNC_CACHE_TTL_SECONDS=30
 
 1. В настройках Avito API укажите URL webhook:
    ```
-   https://ваш-домен.com/api/avito/webhook
+   https://ваш-домен.com/avito/webhook
    ```
 2. Выберите события для отправки (новые брони, изменения статуса)
 

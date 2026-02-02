@@ -40,18 +40,17 @@ app = FastAPI(
 # -------------------------------------------------
 # Rate Limiting (slowapi)
 # -------------------------------------------------
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 
-# Create limiter (used in endpoint decorators)
-limiter = Limiter(
-    key_func=get_remote_address,
-    enabled=settings.rate_limit_enabled,  # Killswitch via env
-)
+# Import limiter from separate module to avoid circular imports
+from app.core.rate_limiter import limiter
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 
 app.include_router(health_router)
 app.include_router(avito_router)

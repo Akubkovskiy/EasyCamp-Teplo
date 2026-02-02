@@ -36,13 +36,19 @@ def verify_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(signature, expected)
 
 
+# Import limiter for decorator use (from separate module to avoid circular imports)
+from app.core.rate_limiter import limiter
+
+
 @router.post("/webhook")
+@limiter.limit(settings.rate_limit_webhook)
 async def avito_webhook(request: Request):
     """
     Handle Avito webhook with optional signature verification and rate limiting.
 
     Rate limiting: Controlled by RATE_LIMIT_ENABLED and RATE_LIMIT_WEBHOOK env vars.
     Default: 30 requests per minute per IP (Avito may retry on transient errors).
+    Uses @limiter.limit decorator with SlowAPIMiddleware.
 
     Idempotency: Only blocks duplicate CREATE events. UPDATE events
     (status changes, payment updates) are allowed for existing bookings.
@@ -52,22 +58,6 @@ async def avito_webhook(request: Request):
     - warn: Log warning on invalid signature but accept
     - enforce: Reject invalid signature with 401
     """
-    # Rate limiting: use slowapi's limiter from app state
-    # When RATE_LIMIT_ENABLED=false, limiter.enabled=False and checks are skipped
-    limiter = getattr(request.app.state, "limiter", None)
-    if limiter and limiter.enabled:
-        from slowapi.util import get_remote_address
-        from slowapi.errors import RateLimitExceeded
-        from limits import parse
-
-        key = f"avito_webhook:{get_remote_address(request)}"
-        limit = parse(settings.rate_limit_webhook)
-        
-        # Check rate limit using limiter's storage
-        if not limiter._limiter.hit(limit, key):
-            logger.warning(f"Rate limit exceeded for {key}")
-            raise RateLimitExceeded(limit)
-
 
     # Get raw body for signature verification (before Pydantic parsing)
     body = await request.body()
