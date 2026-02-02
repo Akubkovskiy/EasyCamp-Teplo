@@ -59,12 +59,53 @@ async def sync_avito_bookings(item_id: int, house_id: int) -> dict:
         stats["total"] = len(bookings_data)
         
         async with AsyncSessionLocal() as session:
+            # 1. Обработка полученных броней
+            seen_external_ids = set()
             for booking_data in bookings_data:
                 try:
                     await process_avito_booking(session, booking_data, house_id, stats)
+                    seen_external_ids.add(str(booking_data.get('avito_booking_id')))
                 except Exception as e:
                     logger.error(f"Error processing booking {booking_data.get('avito_booking_id')}: {e}")
                     stats["errors"] += 1
+            
+            # 2. Сверка (Reconciliation) - поиск пропавших броней
+            from datetime import timedelta
+            from app.core.config import settings
+            
+            today = datetime.now().date()
+            end_date = today + timedelta(days=settings.booking_window_days)
+            
+            # Ищем активные локальные брони Avito, которых нет в ответе API
+            stmt = select(Booking).where(
+                Booking.source == BookingSource.AVITO,
+                Booking.house_id == house_id,
+                Booking.check_in >= today,
+                Booking.check_in <= end_date,
+                Booking.status.in_([
+                    BookingStatus.NEW, 
+                    BookingStatus.CONFIRMED, 
+                    BookingStatus.PAID, 
+                    BookingStatus.CHECKING_IN
+                ]),
+                Booking.external_id.notin_(seen_external_ids)
+            )
+            
+            result = await session.execute(stmt)
+            stale_bookings = result.scalars().all()
+            
+            for stale in stale_bookings:
+                if stale.status == BookingStatus.NEW:
+                    # Удаляем "мусор" (неподтвержденные заявки, исчезнувшие с Avito)
+                    logger.info(f"🗑 Deleting stale NEW booking {stale.id} (ext: {stale.external_id})")
+                    await session.delete(stale)
+                    # Можно добавить счетчик удаленных, если нужно
+                else:
+                    # Важные брони помечаем как отмененные
+                    logger.info(f"❌ Cancelling stale booking {stale.id} (ext: {stale.external_id}, status: {stale.status})")
+                    stale.status = BookingStatus.CANCELLED
+                    stale.updated_at = datetime.now()
+                    stats["updated_bookings"].append(stale) # Добавляем для уведомления
             
             await session.commit()
         

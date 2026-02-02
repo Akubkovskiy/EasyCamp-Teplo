@@ -147,8 +147,8 @@ async def show_bookings_menu(event: Message | CallbackQuery):
     """Главное меню броней"""
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📅 Заезды сегодня", callback_data="bookings:today")],
-        [InlineKeyboardButton(text="📆 Заезды на неделю", callback_data="bookings:week")],
+        [InlineKeyboardButton(text="🔔 Заезды сегодня", callback_data="bookings:today")],
+        [InlineKeyboardButton(text="📅 Заезды на неделю", callback_data="bookings:week")],
         [InlineKeyboardButton(text="📋 Все активные", callback_data="bookings:active")],
         [InlineKeyboardButton(text="📚 Все брони (включая старые)", callback_data="bookings:all")],
         [InlineKeyboardButton(text="🔄 Обновить и открыть таблицу", callback_data="bookings:sync_open")],
@@ -181,13 +181,50 @@ async def show_week_bookings(callback: CallbackQuery):
 async def show_active_bookings(callback: CallbackQuery):
     async with AsyncSessionLocal() as session:
         stmt = select(Booking).options(joinedload(Booking.house)).where(
-            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.NEW]),
-            Booking.check_in >= date.today()
+            Booking.status.in_([
+                BookingStatus.CONFIRMED, 
+                BookingStatus.PAID, 
+                BookingStatus.NEW,
+                BookingStatus.CHECKING_IN,
+                BookingStatus.CHECKED_IN
+            ]),
+            Booking.check_out >= date.today()
         ).order_by(Booking.check_in)
         result = await session.execute(stmt)
         bookings = result.scalars().all()
         
     await send_bookings_response(callback, bookings, "Все активные брони")
+
+
+@router.callback_query(F.data == "bookings:checked_in")
+async def show_checked_in_bookings(callback: CallbackQuery):
+    """Показать гостей, которые сейчас проживают"""
+    today = date.today()
+    async with AsyncSessionLocal() as session:
+        stmt = select(Booking).options(joinedload(Booking.house)).where(
+            Booking.status == BookingStatus.CHECKED_IN,
+            Booking.check_in <= today,
+            Booking.check_out > today
+        ).order_by(Booking.house_id, Booking.check_in)
+        result = await session.execute(stmt)
+        bookings = result.scalars().all()
+        
+    await send_bookings_response(callback, bookings, "🏠 Проживают сейчас")
+
+
+@router.callback_query(F.data == "bookings:checking_in")
+async def show_checking_in_bookings(callback: CallbackQuery):
+    """Показать гостей с заездом сегодня"""
+    today = date.today()
+    async with AsyncSessionLocal() as session:
+        stmt = select(Booking).options(joinedload(Booking.house)).where(
+            Booking.status == BookingStatus.CHECKING_IN,
+            Booking.check_in == today
+        ).order_by(Booking.house_id)
+        result = await session.execute(stmt)
+        bookings = result.scalars().all()
+        
+    await send_bookings_response(callback, bookings, "🔔 Заезд сегодня")
 
 
 @router.callback_query(F.data == "bookings:all")
@@ -237,6 +274,7 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
         BookingStatus.NEW: "🆕",
         BookingStatus.CONFIRMED: "✅",
         BookingStatus.PAID: "💰",
+        BookingStatus.CHECKING_IN: "🔔",
         BookingStatus.CHECKED_IN: "🏠",
         BookingStatus.CANCELLED: "❌",
         BookingStatus.COMPLETED: "🏁",

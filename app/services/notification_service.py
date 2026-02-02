@@ -44,7 +44,13 @@ class NotificationService:
 
             query = select(Booking).options(joinedload(Booking.house)).where(
                 and_(
-                    Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.COMPLETED]),
+                    Booking.status.in_([
+                        BookingStatus.CONFIRMED,
+                        BookingStatus.PAID,
+                        BookingStatus.CHECKING_IN,
+                        BookingStatus.CHECKED_IN,
+                        BookingStatus.COMPLETED
+                    ]),
                     field_attr == target_date
                 )
             )

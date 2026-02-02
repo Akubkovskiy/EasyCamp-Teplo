@@ -96,6 +96,17 @@ class SchedulerService:
                 replace_existing=True
             )
             logger.info("Registered guest notification job (at 10:00)")
+            
+            # Status updater - daily at 00:01
+            from app.jobs.status_updater_job import update_booking_statuses_job
+            self.scheduler.add_job(
+                update_booking_statuses_job,
+                CronTrigger(hour=0, minute=1),
+                id='status_updater',
+                name='Update booking statuses',
+                replace_existing=True
+            )
+            logger.info("Registered status updater job (at 00:01)")
                 
         except Exception as e:
             logger.error(f"Failed to register notification jobs: {e}")
