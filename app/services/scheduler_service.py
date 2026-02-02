@@ -107,6 +107,17 @@ class SchedulerService:
                 replace_existing=True
             )
             logger.info("Registered status updater job (at 00:01)")
+            
+            # Database Backup - daily at 03:00
+            from app.services.backup_service import backup_database_to_drive
+            self.scheduler.add_job(
+                backup_database_to_drive,
+                CronTrigger(hour=3, minute=0),
+                id='db_backup',
+                name='Backup database to Drive',
+                replace_existing=True
+            )
+            logger.info("Registered database backup job (at 03:00)")
                 
         except Exception as e:
             logger.error(f"Failed to register notification jobs: {e}")
