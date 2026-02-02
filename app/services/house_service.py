@@ -3,6 +3,7 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models import House
 
+
 class HouseService:
     async def get_all_houses(self) -> List[House]:
         async with AsyncSessionLocal() as session:
@@ -13,7 +14,9 @@ class HouseService:
         async with AsyncSessionLocal() as session:
             return await session.get(House, house_id)
 
-    async def create_house(self, name: str, description: str = None, capacity: int = 2) -> House:
+    async def create_house(
+        self, name: str, description: str = None, capacity: int = 2
+    ) -> House:
         async with AsyncSessionLocal() as session:
             house = House(name=name, description=description, capacity=capacity)
             session.add(house)
@@ -40,5 +43,6 @@ class HouseService:
             await session.delete(house)
             await session.commit()
             return True
+
 
 house_service = HouseService()

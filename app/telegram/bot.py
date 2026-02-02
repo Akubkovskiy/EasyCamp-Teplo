@@ -10,6 +10,7 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 
+
 def init_bot() -> Bot:
     """Legacy compatibility"""
     return bot

@@ -8,6 +8,7 @@ Modes (via AVITO_WEBHOOK_MODE env var):
 
 If AVITO_WEBHOOK_SECRET is empty, behaves as "off" regardless of mode.
 """
+
 import logging
 import hmac
 import hashlib
@@ -28,11 +29,9 @@ def verify_signature(body: bytes, signature: str) -> bool:
     """
     if not settings.avito_webhook_secret:
         return True  # No secret configured, skip verification
-    
+
     expected = hmac.new(
-        settings.avito_webhook_secret.encode(),
-        body,
-        hashlib.sha256
+        settings.avito_webhook_secret.encode(), body, hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(signature, expected)
 
@@ -41,10 +40,10 @@ def verify_signature(body: bytes, signature: str) -> bool:
 async def avito_webhook(request: Request):
     """
     Handle Avito webhook with optional signature verification.
-    
-    Idempotency: Only blocks duplicate CREATE events. UPDATE events 
+
+    Idempotency: Only blocks duplicate CREATE events. UPDATE events
     (status changes, payment updates) are allowed for existing bookings.
-    
+
     Signature verification modes:
     - off: Accept all requests (default, backward compatible)
     - warn: Log warning on invalid signature but accept
@@ -52,44 +51,40 @@ async def avito_webhook(request: Request):
     """
     # Get raw body for signature verification (before Pydantic parsing)
     body = await request.body()
-    
+
     # Signature verification based on mode
     mode = settings.avito_webhook_mode
     secret_configured = bool(settings.avito_webhook_secret)
-    
+
     if mode != "off" and secret_configured:
         signature = request.headers.get("X-Avito-Signature", "")
         is_valid = verify_signature(body, signature)
-        
+
         if not is_valid:
             if mode == "enforce":
                 logger.warning(
                     "Webhook signature verification FAILED (enforce mode) - rejecting request"
                 )
                 return JSONResponse(
-                    status_code=401,
-                    content={"error": "Invalid signature"}
+                    status_code=401, content={"error": "Invalid signature"}
                 )
             else:  # mode == "warn"
                 logger.warning(
                     "Webhook signature verification FAILED (warn mode) - allowing request"
                 )
-    
+
     # Parse event from raw body
     try:
         event_data = json.loads(body)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse webhook payload as JSON: {e}")
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Invalid JSON payload"}
-        )
-    
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON payload"})
+
     event_type = event_data.get("event_type", "unknown")
     payload = event_data.get("payload", {})
-    
+
     logger.info("Received Avito webhook: %s", event_type)
-    
+
     # Process booking webhook
     try:
         from app.avito.schemas import AvitoWebhookEvent, AvitoBookingPayload
@@ -98,45 +93,40 @@ async def avito_webhook(request: Request):
         from app.telegram.notifier import notify_new_avito_event
         from app.models import Booking, BookingSource
         from sqlalchemy import select
-        
+
         # Parse full event for notification
         event = AvitoWebhookEvent(**event_data)
-        
+
         # Parse booking payload
         booking_payload = AvitoBookingPayload(**payload)
         avito_id = str(booking_payload.avito_booking_id)
-        
+
         async with AsyncSessionLocal() as session:
             # Check if this Avito booking already exists
             stmt = select(Booking).where(
-                Booking.external_id == avito_id,
-                Booking.source == BookingSource.AVITO
+                Booking.external_id == avito_id, Booking.source == BookingSource.AVITO
             )
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
-            
+
             # === IDEMPOTENCY LOGIC ===
             # Only block duplicate "create" events. Allow "update" events to pass through.
             is_create_event = event_type in ("booking", "booking_created", "create")
-            
+
             if existing and is_create_event:
-                logger.info(f"Duplicate CREATE event for Avito booking {avito_id} (DB ID: {existing.id}) - skipping")
-                return {
-                    "status": "already_processed",
-                    "booking_id": existing.id
-                }
-            
+                logger.info(
+                    f"Duplicate CREATE event for Avito booking {avito_id} (DB ID: {existing.id}) - skipping"
+                )
+                return {"status": "already_processed", "booking_id": existing.id}
+
             # Process booking (create or update)
             booking = await create_or_update_avito_booking(session, booking_payload)
-        
+
         # Notify about new event
         await notify_new_avito_event(event, request, booking)
-        
-        return {
-            "status": "ok",
-            "booking_id": booking.id if booking else None
-        }
-        
+
+        return {"status": "ok", "booking_id": booking.id if booking else None}
+
     except Exception as e:
         logger.error("Error processing Avito webhook: %s", e, exc_info=True)
         # Return 200 to prevent infinite retries from Avito

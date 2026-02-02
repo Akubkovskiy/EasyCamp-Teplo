@@ -20,6 +20,7 @@ def format_welcome_message(bookings: List[Booking], recipient: Any) -> str:
         "Если у вас остались вопросы, мы всегда на связи!"
     )
 
+
 def format_checkin_message(bookings: List[Booking], recipient: Any) -> str:
     """Сообщение в день заезда"""
     b = bookings[0]
@@ -30,6 +31,7 @@ def format_checkin_message(bookings: List[Booking], recipient: Any) -> str:
         "Пароль от Wi-Fi: <code>teplo_mountains</code>\n\n"
         "Желаем вам отличного отдыха! 🌲"
     )
+
 
 def format_checkout_message(bookings: List[Booking], recipient: Any) -> str:
     """Сообщение в день выезда"""
@@ -44,30 +46,36 @@ def format_checkout_message(bookings: List[Booking], recipient: Any) -> str:
 async def check_and_notify_guests():
     """Запуск проверки уведомлений для гостей"""
     logger.info("Checking guest notifications...")
-    
+
     # 1. За 2 дня до заезда
-    await notification_service.process_rule(NotificationRule(
-        name="GuestWelcome",
-        reference_field="check_in",
-        days_offset=2,
-        recipient_type="guest",
-        message_func=format_welcome_message
-    ))
-    
+    await notification_service.process_rule(
+        NotificationRule(
+            name="GuestWelcome",
+            reference_field="check_in",
+            days_offset=2,
+            recipient_type="guest",
+            message_func=format_welcome_message,
+        )
+    )
+
     # 2. В день заезда (Сегодня, 0 смещение)
-    await notification_service.process_rule(NotificationRule(
-        name="GuestCheckIn",
-        reference_field="check_in",
-        days_offset=0,
-        recipient_type="guest",
-        message_func=format_checkin_message
-    ))
-    
+    await notification_service.process_rule(
+        NotificationRule(
+            name="GuestCheckIn",
+            reference_field="check_in",
+            days_offset=0,
+            recipient_type="guest",
+            message_func=format_checkin_message,
+        )
+    )
+
     # 3. В день выезда (Сегодня, 0 смещение)
-    await notification_service.process_rule(NotificationRule(
-        name="GuestCheckOut",
-        reference_field="check_out",
-        days_offset=0,
-        recipient_type="guest",
-        message_func=format_checkout_message
-    ))
+    await notification_service.process_rule(
+        NotificationRule(
+            name="GuestCheckOut",
+            reference_field="check_out",
+            days_offset=0,
+            recipient_type="guest",
+            message_func=format_checkout_message,
+        )
+    )

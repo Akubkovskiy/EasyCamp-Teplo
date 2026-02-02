@@ -93,36 +93,42 @@ for r in booking_routers:
 # Lifecycle
 # -------------------------------------------------
 
+
 @app.on_event("startup")
 async def on_startup():
     logger.info("FastAPI startup")
-    
+
     # 0. Smart Recovery (Restore from Drive if DB missing)
     try:
         from app.services.backup_service import restore_latest_backup
+
         await restore_latest_backup()
     except Exception as e:
         logger.error(f"❌ Smart Recovery failed: {e}", exc_info=True)
-    
+
     # Init DB
     from app.database import init_db
+
     await init_db()
-    
+
     # Start scheduler
     from app.services.scheduler_service import scheduler_service
+
     scheduler_service.start()
-    
+
     # Register auto-sync middleware if enabled
     if settings.sync_on_user_interaction:
         from app.telegram.middlewares import AutoSyncMiddleware
+
         dp.message.middleware(AutoSyncMiddleware())
         logger.info("✅ Auto-sync middleware registered")
-    
+
     # Initial sync on bot start if enabled
     if settings.sync_on_bot_start:
         logger.info("🔄 Performing initial sync on bot startup...")
         try:
             from app.services.sheets_service import sheets_service
+
             await sheets_service.sync_if_needed(force=True)
             logger.info("✅ Initial sync completed")
         except Exception as e:
@@ -130,9 +136,10 @@ async def on_startup():
 
     # Refresh user cache
     from app.telegram.auth.admin import refresh_users_cache
+
     await refresh_users_cache()
     logger.info("👥 User cache refreshed")
-    
+
     logger.info("Starting Telegram polling")
 
     asyncio.create_task(dp.start_polling(bot))
@@ -141,8 +148,9 @@ async def on_startup():
 @app.on_event("shutdown")
 async def on_shutdown():
     logger.info("FastAPI shutdown")
-    
+
     # Stop scheduler
     from app.services.scheduler_service import scheduler_service
+
     scheduler_service.shutdown()
     await bot.session.close()
