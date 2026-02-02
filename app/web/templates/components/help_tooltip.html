@@ -1,0 +1,24 @@
+{% macro help_icon(key) %}
+{% if help_texts and key in help_texts %}
+{% set item = help_texts[key] %}
+<details style="display: inline-block; margin-left: 5px; cursor: pointer; vertical-align: middle;">
+    <summary style="list-style: none; font-size: 1.1rem;" title="Подробнее">ℹ️</summary>
+    <div style="
+                position: absolute; 
+                background:white; 
+                border:1px solid #ccc; 
+                padding:10px; 
+                border-radius:4px; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+                max-width: 300px;
+                z-index: 100;
+                font-size: 0.9rem;
+                color: #333;
+                margin-top: 5px;
+            ">
+        <strong>{{ item.title }}</strong><br>
+        <div style="margin-top:5px;">{{ item.text|safe }}</div>
+    </div>
+</details>
+{% endif %}
+{% endmacro %}

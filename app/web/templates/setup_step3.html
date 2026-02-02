@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "components/help_tooltip.html" import help_icon %}
+
+{% block title %}Настройка - Шаг 3{% endblock %}
+
+{% block content %}
+<div class="auth-card" style="max-width: 600px;">
+    <h1 class="auth-title">👤 Администратор</h1>
+    <p style="color: grey; text-align: center; margin-bottom: 1.5rem;">Шаг 3 из 3: Создание владельца</p>
+
+    {% if error %}
+    <div class="error-msg">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="/admin-web/setup/step3" method="post" class="auth-form">
+        <div style="margin-bottom: 1rem;">
+            <label for="username">Логин (Username):</label>
+            <input type="text" id="username" name="username" required placeholder="admin" value="admin">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required placeholder="Надежный пароль">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="name">Имя владельца:</label>
+            <input type="text" id="name" name="name" required placeholder="Имя" value="Owner">
+        </div>
+
+        <button type="submit" class="btn">🚀 Запустить EasyCamp!</button>
+    </form>
+</div>
+{% endblock %}

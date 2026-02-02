@@ -63,6 +63,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(RequestLoggerMiddleware)
+# Custom Setup Middleware (redirects to /setup if needed)
+from app.web.middleware.setup_middleware import SetupMiddleware
+app.add_middleware(SetupMiddleware)
 
 
 app.include_router(health_router)
@@ -71,10 +74,15 @@ app.include_router(avito_oauth_router)
 
 # Web Admin
 from fastapi.staticfiles import StaticFiles
-from app.web.routers import auth_web
+# Web Admin
+from fastapi.staticfiles import StaticFiles
+from app.web.routers import auth_web, admin_web, setup_web, settings_web
 
-app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
+app.mount("/admin-web/static", StaticFiles(directory="app/web/static"), name="static")
+app.include_router(setup_web.router)
 app.include_router(auth_web.router)
+app.include_router(admin_web.router)
+app.include_router(settings_web.router)
 
 
 # -------------------------------------------------

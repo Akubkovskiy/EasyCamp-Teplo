@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "components/help_tooltip.html" import help_icon %}
+
+{% block title %}Настройки{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout" style="display: flex; min-height: 100vh;">
+    <!-- Sidebar (Simple) -->
+    <div class="sidebar" style="width: 250px; background: white; border-right: 1px solid #e5e7eb; padding: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 2rem;">{{ project_name }}</h2>
+        <nav>
+            <a href="/admin-web/" style="display: block; padding: 0.75rem 0; color: #4b5563; text-decoration: none;">🏠
+                Дашборд</a>
+            <a href="/admin-web/settings"
+                style="display: block; padding: 0.75rem 0; color: #2563eb; font-weight: 500;">⚙️ Настройки</a>
+            <a href="/admin-web/logout"
+                style="display: block; padding: 0.75rem 0; color: #dc2626; margin-top: 2rem; text-decoration: none;">Выход</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" style="flex: 1; padding: 2rem;">
+        <h1 style="font-size: 1.875rem; font-weight: bold; margin-bottom: 2rem;">⚙️ Настройки проекта</h1>
+
+        {% if success %}
+        <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            ✅ Настройки успешно сохранены!
+        </div>
+        {% endif %}
+
+        <div class="auth-card" style="max-width: 800px;">
+            <form action="/admin-web/settings" method="post">
+
+                <!-- Section 1: Basic Info -->
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🏭 Основная
+                    информация</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label class="form-label" for="project_name">Название проекта: {{ help_icon('project_name')
+                            }}</label>
+                        <input class="form-input" type="text" id="project_name" name="project_name" required
+                            value="{{ settings.project_name }}">
+                    </div>
+                    <div>
+                        <label class="form-label" for="project_location">Локация:</label>
+                        <input class="form-input" type="text" id="project_location" name="project_location" required
+                            value="{{ settings.project_location }}">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label class="form-label" for="contact_phone">Телефон администратора:</label>
+                        <input class="form-input" type="text" id="contact_phone" name="contact_phone" required
+                            value="{{ settings.contact_phone }}">
+                    </div>
+                    <div>
+                        <label class="form-label" for="contact_admin">Telegram Owner: {{ help_icon('telegram_admin')
+                            }}</label>
+                        <input class="form-input" type="text" id="contact_admin" name="contact_admin"
+                            value="{{ settings.contact_admin_username }}">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <label class="form-label" for="project_address">Адрес объекта:</label>
+                    <input class="form-input" type="text" id="project_address" name="project_address"
+                        value="{{ settings.project_address }}">
+                </div>
+
+                <!-- Section 2: AI & Integrations -->
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🤖 AI и
+                    Интеграции</h3>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="ai_enabled">Включить AI Ассистента? {{ help_icon('ai_enabled')
+                        }}</label>
+                    <select class="form-input" id="ai_enabled" name="ai_enabled">
+                        <option value="true" {% if settings.ai_enabled %}selected{% endif %}>Да</option>
+                        <option value="false" {% if not settings.ai_enabled %}selected{% endif %}>Нет</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="spreadsheet_id">Google Spreadsheet ID: {{ help_icon('spreadsheet_id')
+                        }}</label>
+                    <input class="form-input" type="text" id="spreadsheet_id" name="spreadsheet_id"
+                        value="{{ settings.google_sheets_spreadsheet_id }}">
+                </div>
+
+                <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
+                <button type="submit" class="btn" style="width: auto; padding-left: 2rem; padding-right: 2rem;">💾
+                    Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

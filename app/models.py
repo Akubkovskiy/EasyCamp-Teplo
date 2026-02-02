@@ -105,6 +105,7 @@ class Booking(Base):
 
 
 class UserRole(str, Enum):
+    OWNER = "owner"
     ADMIN = "admin"
     CLEANER = "cleaner"
     GUEST = "guest"
@@ -114,7 +115,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    telegram_id: Mapped[Optional[int]] = mapped_column(Integer, unique=True, index=True, nullable=True) # Now optional for pure web admins
+    username: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True, nullable=True) # Web login
+    hashed_password: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole))
     name: Mapped[str] = mapped_column(String)  # Имя для удобства (например "Анна")
     phone: Mapped[Optional[str]] = mapped_column(

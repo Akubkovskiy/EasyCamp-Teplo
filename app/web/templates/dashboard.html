@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1200px; margin: 0 auto; width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 700;">{{ project_name }}</h1>
+            <p style="color: grey;">Администратор: <b>{{ user.name }}</b></p>
+        </div>
+        <div>
+            <a href="/admin-web/logout" class="btn"
+                style="background-color: #ef4444; width: auto; display: inline-block;">Выйти</a>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <!-- Card 1 -->
+        <div class="auth-card" style="max-width: none;">
+            <h2 class="auth-title" style="font-size: 1.25rem;">🏠 Домики</h2>
+            <p style="color: grey; margin-bottom: 1rem;">Управление описанием и правилами.</p>
+            <a href="#" class="btn" style="background-color: #10b981;">Перейти</a>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="auth-card" style="max-width: none;">
+            <h2 class="auth-title" style="font-size: 1.25rem;">📅 Календарь</h2>
+            <p style="color: grey; margin-bottom: 1rem;">Просмотр броней и шахматки.</p>
+            <a href="#" class="btn" style="background-color: #8b5cf6;">Скоро</a>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="auth-card" style="max-width: none;">
+            <h2 class="auth-title" style="font-size: 1.25rem;">⚙️ Настройки</h2>
+            <p style="color: grey; margin-bottom: 1rem;">Контакты, Интеграции, Оплата.</p>
+            <a href="#" class="btn" style="background-color: #6b7280;">Смотреть</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

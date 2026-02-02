@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "components/help_tooltip.html" import help_icon %}
+
+{% block title %}Настройка - Шаг 2{% endblock %}
+
+{% block content %}
+<div class="auth-card" style="max-width: 600px;">
+    <h1 class="auth-title">🤖 Настройка AI</h1>
+    <p style="color: grey; text-align: center; margin-bottom: 1.5rem;">Шаг 2 из 3: База знаний</p>
+
+    {% if error %}
+    <div class="error-msg">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="/admin-web/setup/step2" method="post" class="auth-form">
+        <div style="margin-bottom: 1rem;">
+            <label for="ai_enabled">Включить AI Ассистента? {{ help_icon('ai_enabled') }}</label>
+            <select id="ai_enabled" name="ai_enabled">
+                <option value="true" {% if settings.ai_enabled %}selected{% endif %}>Да</option>
+                <option value="false" {% if not settings.ai_enabled %}selected{% endif %}>Нет (Позже)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="spreadsheet_id">Google Spreadsheet ID: {{ help_icon('spreadsheet_id') }}</label>
+            <input type="text" id="spreadsheet_id" name="spreadsheet_id" placeholder="1AbCdEfG..."
+                value="{{ settings.google_sheets_spreadsheet_id }}">
+            <small style="color: grey;">ID таблицы с листом "KB" (Knowledge Base)</small>
+        </div>
+
+        <button type="submit" class="btn">Завершить настройку &rarr;</button>
+    </form>
+</div>
+{% endblock %}
