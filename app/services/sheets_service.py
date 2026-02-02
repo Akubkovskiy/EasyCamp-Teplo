@@ -225,7 +225,8 @@ class GoogleSheetsService:
         worksheet.clear()
 
         # Заголовок
-        worksheet.update_acell("A1", "TEPLO АРХЫЗ - УПРАВЛЕНИЕ БРОНЯМИ")
+        title = f"{settings.project_name} {settings.project_location} - УПРАВЛЕНИЕ БРОНЯМИ".upper()
+        worksheet.update_acell("A1", title)
         worksheet.format(
             "A1",
             {

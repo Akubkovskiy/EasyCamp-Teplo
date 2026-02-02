@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">Вход в панель</h1>
+            <p class="auth-subtitle">Управление объектом <b>{{ project_name }}</b></p>
+        </div>
+
+        <form action="/admin-web/login" method="POST">
+            <div class="form-group">
+                <label for="username" class="form-label">Логин (Telegram ID или Email)</label>
+                <input type="text" id="username" name="username" class="form-input" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Пароль</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+            </div>
+
+            <button type="submit" class="btn">Войти</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ from aiogram.filters import Command
 import os
 
 from app.core.config import settings
+from app.core.messages import messages
 
 router = Router()
 
@@ -484,7 +485,7 @@ async def back_to_admin(callback: CallbackQuery):
     from app.telegram.menus.admin import admin_menu_keyboard
 
     await callback.message.edit_text(
-        "🏕 <b>Teplo · Архыз</b>\n\nАдминистративная панель",
+        messages.ADMIN_PANEL_TITLE,
         reply_markup=admin_menu_keyboard(),
         parse_mode="HTML",
     )

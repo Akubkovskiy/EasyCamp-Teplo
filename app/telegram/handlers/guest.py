@@ -15,6 +15,8 @@ from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, UserRole, User, GlobalSetting
 from app.telegram.auth.admin import add_user, is_guest
 from app.telegram.menus.guest import guest_menu_keyboard, request_contact_keyboard
+from app.core.messages import messages
+from app.core.config import settings
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -27,16 +29,14 @@ async def show_guest_menu(message: Message):
     # 1. Если авторизован -> Главное меню
     if is_guest(user_id):
         await message.answer(
-            "🏕 <b>Добро пожаловать домой!</b>\n\n"
-            "Вы в меню гостя. Здесь вся информация о вашем отдыхе.",
+            messages.GUEST_WELCOME,
             reply_markup=guest_menu_keyboard(),
             parse_mode="HTML",
         )
     # 2. Если нет -> Просим контакт
     else:
         await message.answer(
-            "👋 <b>Добрый день!</b>\n\n"
-            "Чтобы увидеть детали своего бронирования, пожалуйста, подтвердите номер телефона.",
+            messages.GUEST_LOGIN_PROMPT,
             reply_markup=request_contact_keyboard(),
             parse_mode="HTML",
         )
@@ -100,8 +100,7 @@ async def handle_contact(message: Message):
             )
 
             await message.answer(
-                "✅ <b>Бронь найдена!</b>\n"
-                f"Мы рады видеть вас, {message.from_user.first_name}!",
+                messages.welcome_success(message.from_user.first_name),
                 reply_markup=ReplyKeyboardRemove(),  # Убираем кнопку контакта
             )
             await show_guest_menu(message)
@@ -109,10 +108,7 @@ async def handle_contact(message: Message):
         else:
             # НЕ НАЙДЕНО
             await message.answer(
-                "❌ <b>Бронь не найдена.</b>\n\n"
-                "Мы не нашли активных бронирований на этот номер.\n"
-                "Если вы бронировали через Avito, возможно, там указан другой (подменный) номер.\n\n"
-                "Пожалуйста, свяжитесь с администратором.",
+                messages.BOOKING_NOT_FOUND,
                 reply_markup=ReplyKeyboardRemove(),
             )
 
@@ -166,15 +162,15 @@ async def my_booking(callback: CallbackQuery):
         remainder = b.total_price - b.advance_amount
         status_emoji = "✅" if b.status == BookingStatus.PAID else "⏳"
 
-        text = (
-            f"🏠 <b>Ваша бронь: {b.house.name}</b>\n\n"
-            f"📅 <b>Даты:</b> {b.check_in.strftime('%d.%m')} — {b.check_out.strftime('%d.%m')}\n"
-            f"👤 <b>Гости:</b> {b.guests_count}\n\n"
-            f"💰 <b>Финансы:</b>\n"
-            f"Всего: {int(b.total_price)}₽\n"
-            f"Оплачено: {int(b.advance_amount)}₽\n"
-            f"<b>К оплате: {int(remainder)}₽</b> {status_emoji}\n\n"
-            f"📍 <b>Адрес:</b> Архыз, Банковская 26д\n"
+        text = messages.booking_card(
+            house_name=b.house.name,
+            check_in=b.check_in.strftime("%d.%m"),
+            check_out=b.check_out.strftime("%d.%m"),
+            guests=b.guests_count,
+            total=int(b.total_price),
+            paid=int(b.advance_amount),
+            remainder=int(remainder),
+            status_emoji=status_emoji,
         )
 
         keyboard = InlineKeyboardMarkup(
@@ -272,7 +268,7 @@ async def guest_wifi(callback: CallbackQuery):
 
         wifi_info = booking.house.wifi_info or "Информация о Wi-Fi не задана."
 
-        text = f"📶 <b>Wi-Fi: {booking.house.name}</b>\n\n{wifi_info}\n"
+        text = messages.wifi_info(booking.house.name, wifi_info)
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -291,14 +287,9 @@ async def guest_directions(callback: CallbackQuery):
     async with AsyncSessionLocal() as session:
         # Получаем глобальные координаты
         setting = await session.get(GlobalSetting, "coords")
-        coords = setting.value if setting and setting.value else "43.560731, 41.284236"
+        coords = setting.value if setting and setting.value else settings.project_coords
 
-        text = (
-            f"🗺 <b>Как добраться</b>\n\n"
-            "📍 <b>Адрес:</b> с. Архыз, ул. Банковская, 26д\n\n"
-            "Мы находимся в живописном месте, окруженном горами.\n"
-            f"Координаты для навигатора:\n<code>{coords}</code>\n"
-        )
+        text = messages.directions(coords)
 
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -328,7 +319,7 @@ async def guest_rules(callback: CallbackQuery):
         )
         rules = setting.value if setting and setting.value else default_rules
 
-        text = f"ℹ️ <b>Правила проживания</b>\n\n{rules}\n"
+        text = messages.rules_content(rules)
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
@@ -340,13 +331,21 @@ async def guest_rules(callback: CallbackQuery):
 @router.callback_query(F.data == "guest:pay")
 async def guest_pay(callback: CallbackQuery):
     """Оплата"""
-    text = (
-        "💳 <b>Оплата бронирования</b>\n\n"
-        "Для оплаты остатка, пожалуйста, переведите сумму по номеру телефона:\n"
-        "<code>+7 928 000-00-00</code> (Сбер/Тинькофф)\n"
-        "Получатель: Сергей Иванович П.\n\n"
-        "После перевода отправьте чек администратору."
-    )
+    # Need to fetch booking or just show generic info?
+    # Original code showed generic info but we now need amount if we want to be cool.
+    # But messages.payment_instructions takes amount.
+    # Let's see if we can get active booking quickly or just pass 0/"(сумма)"
+    # For now, let's keep it simple as original didn't fetch booking here (it was static text).
+    # Wait, original text didn't have amount.
+    # I'll update messages.payment_instructions to accept optional amount
+    pass # Wait, I can't change messages.py in this call.
+    # I'll pass 0 or a placeholder. Or fetch booking.
+    
+    async with AsyncSessionLocal() as session:
+        booking = await get_active_booking(session, callback.from_user.id)
+        amount = int(booking.total_price - booking.advance_amount) if booking else 0
+
+    text = messages.payment_instructions(amount)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -365,8 +364,7 @@ async def contact_admin(callback: CallbackQuery):
 
     # Тут можно дать ссылку на админа
     await callback.message.answer(
-        "📞 <b>Связь с администратором</b>\n\n"
-        "Если у вас возникли вопросы, напишите нам @sergey_teplo (пример).",
+        messages.CONTACT_ADMIN,
         parse_mode="HTML",
     )
     await callback.answer()
@@ -376,8 +374,7 @@ async def contact_admin(callback: CallbackQuery):
 async def back_to_guest_menu(callback: CallbackQuery):
     """Возврат в главное меню"""
     await callback.message.edit_text(
-        "🏕 <b>Добро пожаловать домой!</b>\n\n"
-        "Вы в меню гостя. Здесь вся информация о вашем отдыхе.",
+        messages.GUEST_WELCOME,
         reply_markup=guest_menu_keyboard(),
         parse_mode="HTML",
     )

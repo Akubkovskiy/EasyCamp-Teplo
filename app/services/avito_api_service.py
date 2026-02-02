@@ -205,7 +205,7 @@ class AvitoAPIService:
                             "date_start": check_in,
                             "date_end": check_out,
                             "type": "manual",
-                            "comment": comment or "Забронировано через EasyCamp Bot",
+                            "comment": comment or f"Забронировано через {settings.project_name} Bot",
                         }
                     ],
                     "source": "EasyCamp",

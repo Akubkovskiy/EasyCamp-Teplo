@@ -2,6 +2,7 @@
 Обработчики для контактной информации
 """
 
+from app.core.messages import messages
 from aiogram import Router, F
 from aiogram.types import (
     Message,
@@ -19,22 +20,13 @@ async def show_contacts(callback: CallbackQuery):
     """Показать контактную информацию"""
 
     # Формируем контактную информацию
-    text = (
-        "📞 <b>Контакты администрации</b>\n\n"
-        "🏕 <b>База отдыха Teplo · Архыз</b>\n\n"
-        "📱 Телефон: +7 (925) 127-97-22\n"
-        "💬 Telegram: @Alexey_kubkovskiy\n"
-        "📧 Email: teploarkhyz@gmail.com\n\n"
-        "🕐 Режим работы: Круглосуточно\n"
-        "📍 Адрес: Карачаево-Черкесия, Архыз\n\n"
-        "Мы всегда рады помочь! 🤗"
-    )
+    text = messages.CONTACTS_INFO
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="💬 Написать в Telegram", url="https://t.me/Alexey_kubkovskiy"
+                    text="💬 Написать в Telegram", url=messages.CONTACT_ADMIN_URL
                 )
             ],
             [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="admin:menu")],
@@ -49,22 +41,13 @@ async def show_contacts(callback: CallbackQuery):
 async def show_contacts_message(message: Message):
     """Показать контакты по текстовой команде"""
 
-    text = (
-        "📞 <b>Контакты администрации</b>\n\n"
-        "🏕 <b>База отдыха Teplo · Архыз</b>\n\n"
-        "📱 Телефон: +7 (925) 127-97-22\n"
-        "💬 Telegram: @Alexey_kubkovskiy\n"
-        "📧 Email: teploarkhyz@gmail.com\n\n"
-        "🕐 Режим работы: Круглосуточно\n"
-        "📍 Адрес: Карачаево-Черкесия, Архыз\n\n"
-        "Мы всегда рады помочь! 🤗"
-    )
+    text = messages.CONTACTS_INFO
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="💬 Написать в Telegram", url="https://t.me/Alexey_kubkovskiy"
+                    text="💬 Написать в Telegram", url=messages.CONTACT_ADMIN_URL
                 )
             ],
         ]
