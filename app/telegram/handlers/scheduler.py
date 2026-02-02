@@ -2,7 +2,7 @@
 Команды управления планировщиком
 """
 
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
@@ -42,7 +42,7 @@ async def scheduler_status(message: Message):
         status_text += f"• <b>{job.name}</b>\n"
         status_text += f"  Следующий запуск: {next_run}\n\n"
 
-    status_text += f"<b>Настройки:</b>\n"
+    status_text += "<b>Настройки:</b>\n"
     status_text += f"• Avito: каждые {settings.avito_sync_interval_minutes} мин\n"
     status_text += f"• Sheets: каждые {settings.sheets_sync_interval_minutes} мин"
 

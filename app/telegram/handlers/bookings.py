@@ -8,14 +8,12 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus
 from app.core.config import settings
 from app.jobs.avito_sync_job import sync_avito_job
-from app.services.booking_service import booking_service
-from app.telegram.state.availability import availability_states
 
 router = Router()
 
@@ -291,7 +289,6 @@ async def show_all_bookings(callback: CallbackQuery):
     await send_bookings_response(callback, bookings, "Все брони (включая старые)")
 
 
-from sqlalchemy.orm import joinedload
 
 
 async def show_bookings_list(
@@ -404,7 +401,6 @@ async def sync_and_open_table(callback: CallbackQuery):
         "🔍 <b>Проверяем брони в Avito...</b>", parse_mode="HTML"
     )
     from app.jobs.avito_sync_job import verify_local_bookings_in_avito
-    from app.core.config import settings
 
     # Парсим маппинг item_id:house_id
     item_house_mapping = {}

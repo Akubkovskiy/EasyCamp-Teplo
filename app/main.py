@@ -2,19 +2,38 @@ import asyncio
 import logging
 
 from fastapi import FastAPI
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from aiogram import Dispatcher
 
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.rate_limiter import limiter
+from app.middleware.request_logger import RequestLoggerMiddleware
 
 from app.api.health import router as health_router
 from app.avito.webhook import router as avito_router
 from app.avito.oauth import router as avito_oauth_router
-from app.telegram.handlers.admin_menu import router as admin_router
-from app.telegram.handlers.availability import router as availability_router
+
+from app.telegram.bot import bot
+from app.telegram.handlers import (
+    admin_menu,
+    availability,
+    bookings,
+    contacts,
+    sync,
+    avito_fetch,
+    scheduler,
+    settings as settings_handler,
+    houses,
+    settings_users,
+    cleaner,
+    guest,
+    settings_content,
+)
+from app.telegram.handlers.booking_management import booking_routers
 
 
 # -------------------------------------------------
@@ -40,14 +59,6 @@ app = FastAPI(
 # -------------------------------------------------
 # Rate Limiting (slowapi)
 # -------------------------------------------------
-from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.middleware import SlowAPIMiddleware
-
-# Import limiter from separate module to avoid circular imports
-from app.core.rate_limiter import limiter
-from app.middleware.request_logger import RequestLoggerMiddleware
-
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)

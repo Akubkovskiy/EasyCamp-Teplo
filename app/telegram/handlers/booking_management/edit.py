@@ -16,7 +16,7 @@ from app.telegram.states.booking import BookingStates
 from app.services.booking_service import booking_service
 from app.models import BookingStatus
 from app.utils.validators import validate_phone, format_phone
-from app.telegram.ui.calendar import build_month_keyboard, build_year_keyboard
+from app.telegram.ui.calendar import build_month_keyboard
 
 router = Router()
 

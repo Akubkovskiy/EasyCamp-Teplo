@@ -2,7 +2,7 @@ import logging
 import asyncio
 from datetime import datetime, date, timezone
 from typing import List, Optional
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, BookingSource, House

@@ -9,7 +9,6 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery
 
 from app.services.sheets_service import sheets_service
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ class AutoSyncMiddleware(BaseMiddleware):
         но только если прошло достаточно времени с последней синхронизации
         """
 
-        from aiogram.types import Message, CallbackQuery
 
         # Trigger sync before handling the message (non-blocking)
         # sync_if_needed will check cache and skip if not needed

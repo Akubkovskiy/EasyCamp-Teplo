@@ -17,6 +17,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/avito", tags=["avito"])
 logger = logging.getLogger(__name__)
@@ -34,10 +35,6 @@ def verify_signature(body: bytes, signature: str) -> bool:
         settings.avito_webhook_secret.encode(), body, hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(signature, expected)
-
-
-# Import limiter for decorator use (from separate module to avoid circular imports)
-from app.core.rate_limiter import limiter
 
 
 @router.post("/webhook")

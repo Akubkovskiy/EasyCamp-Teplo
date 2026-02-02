@@ -2,7 +2,6 @@
 Сервис синхронизации броней из Avito API
 """
 
-from typing import List
 from datetime import datetime
 from decimal import Decimal
 import logging

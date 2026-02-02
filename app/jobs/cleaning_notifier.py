@@ -1,5 +1,4 @@
 import logging
-from datetime import date, timedelta
 from typing import List, Any
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton

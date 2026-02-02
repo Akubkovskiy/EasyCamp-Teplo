@@ -4,11 +4,10 @@
 
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import date
 from typing import List
 
 from app.core.config import settings
-from app.models import Booking, House
+from app.models import Booking
 
 
 class GoogleSheetsService:
@@ -297,9 +296,8 @@ class GoogleSheetsService:
         Returns:
             True если синхронизация выполнена, False если пропущена
         """
-        import asyncio
         import logging
-        from datetime import datetime, timedelta
+        from datetime import datetime
         from sqlalchemy import select
         from sqlalchemy.orm import joinedload
 

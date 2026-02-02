@@ -4,7 +4,6 @@
 
 from aiogram import Router, F
 from aiogram.types import (
-    Message,
     CallbackQuery,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -235,7 +234,7 @@ async def apply_booking_window(callback: CallbackQuery):
                 success_count += 1
             else:
                 error_count += 1
-        except Exception as e:
+        except Exception:
             error_count += 1
 
     # Показываем результат

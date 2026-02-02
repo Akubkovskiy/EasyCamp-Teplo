@@ -2,10 +2,9 @@
 Обработчики для синхронизации с Avito API
 """
 
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from sqlalchemy import select
 
 from app.services.avito_sync_service import sync_all_avito_items
 from app.core.config import settings
@@ -103,8 +102,8 @@ async def test_avito_connection(message: Message):
     try:
         from app.services.avito_api_service import avito_api_service
 
-        # Пытаемся получить токен
-        token = avito_api_service.get_access_token()
+        # Пытаемся получить токен (проверка авторизации)
+        avito_api_service.get_access_token()
 
         await message.answer(
             f"✅ <b>Подключение успешно!</b>\n\n"
