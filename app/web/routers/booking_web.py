@@ -116,7 +116,7 @@ async def create_booking(
             commission=commission,
             prepayment_owner=prepayment_owner,
             status=BookingStatus(booking_status),
-            source=BookingSource.MANUAL # По умолчанию для веба
+            source=BookingSource.DIRECT # По умолчанию для веба
         )
         
         booking = await BookingService.create_booking(db, booking_in)
