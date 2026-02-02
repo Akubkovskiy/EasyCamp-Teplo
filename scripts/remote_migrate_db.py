@@ -18,7 +18,8 @@ def migrate():
         cols = [info[1] for info in cursor.fetchall()]
         if 'username' not in cols:
             print("Adding 'username' to users...")
-            cursor.execute("ALTER TABLE users ADD COLUMN username TEXT UNIQUE")
+            cursor.execute("ALTER TABLE users ADD COLUMN username TEXT")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
         if 'hashed_password' not in cols:
             print("Adding 'hashed_password' to users...")
             cursor.execute("ALTER TABLE users ADD COLUMN hashed_password TEXT")
