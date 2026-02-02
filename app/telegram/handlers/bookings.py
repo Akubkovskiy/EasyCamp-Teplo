@@ -150,6 +150,7 @@ async def show_bookings_menu(event: Message | CallbackQuery):
         [InlineKeyboardButton(text="📅 Заезды сегодня", callback_data="bookings:today")],
         [InlineKeyboardButton(text="📆 Заезды на неделю", callback_data="bookings:week")],
         [InlineKeyboardButton(text="📋 Все активные", callback_data="bookings:active")],
+        [InlineKeyboardButton(text="📚 Все брони (включая старые)", callback_data="bookings:all")],
         [InlineKeyboardButton(text="🔄 Обновить и открыть таблицу", callback_data="bookings:sync_open")],
         [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="admin:menu")],
     ])
@@ -187,6 +188,18 @@ async def show_active_bookings(callback: CallbackQuery):
         bookings = result.scalars().all()
         
     await send_bookings_response(callback, bookings, "Все активные брони")
+
+
+@router.callback_query(F.data == "bookings:all")
+async def show_all_bookings(callback: CallbackQuery):
+    """Показать ВСЕ брони, включая старые и тестовые"""
+    async with AsyncSessionLocal() as session:
+        stmt = select(Booking).options(joinedload(Booking.house)).order_by(Booking.check_in.desc())
+        result = await session.execute(stmt)
+        bookings = result.scalars().all()
+        
+    await send_bookings_response(callback, bookings, "Все брони (включая старые)")
+
 
 
 from sqlalchemy.orm import joinedload
