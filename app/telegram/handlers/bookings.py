@@ -237,6 +237,7 @@ async def send_bookings_response(callback: CallbackQuery, bookings: list[Booking
         BookingStatus.NEW: "🆕",
         BookingStatus.CONFIRMED: "✅",
         BookingStatus.PAID: "💰",
+        BookingStatus.CHECKED_IN: "🏠",
         BookingStatus.CANCELLED: "❌",
         BookingStatus.COMPLETED: "🏁",
     }

@@ -30,6 +30,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         BookingStatus.NEW: "🆕",
         BookingStatus.CONFIRMED: "✅",
         BookingStatus.PAID: "💰",
+        BookingStatus.CHECKED_IN: "🏠",
         BookingStatus.CANCELLED: "❌",
         BookingStatus.COMPLETED: "🏁",
     }
@@ -46,6 +47,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         BookingStatus.NEW: "Ожидает",
         BookingStatus.CONFIRMED: "Подтверждено",
         BookingStatus.PAID: "Оплачено",
+        BookingStatus.CHECKED_IN: "Проживает",
         BookingStatus.CANCELLED: "Отменено",
         BookingStatus.COMPLETED: "Завершено",
     }
