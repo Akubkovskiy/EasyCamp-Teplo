@@ -76,13 +76,15 @@ app.include_router(avito_oauth_router)
 from fastapi.staticfiles import StaticFiles
 # Web Admin
 from fastapi.staticfiles import StaticFiles
-from app.web.routers import auth_web, admin_web, setup_web, settings_web
+from app.web.routers import auth_web, admin_web, setup_web, settings_web, house_web, booking_web
 
 app.mount("/admin-web/static", StaticFiles(directory="app/web/static"), name="static")
 app.include_router(setup_web.router)
 app.include_router(auth_web.router)
 app.include_router(admin_web.router)
 app.include_router(settings_web.router)
+app.include_router(house_web.router)
+app.include_router(booking_web.router)
 
 
 # -------------------------------------------------

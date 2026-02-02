@@ -9,7 +9,8 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from aiogram.filters import Command
-from app.services.booking_service import booking_service
+from app.services.booking_service import BookingService
+from app.database import AsyncSessionLocal
 from app.telegram.auth.admin import is_admin
 
 from app.telegram.ui.calendar import build_month_keyboard
@@ -210,9 +211,10 @@ async def select_checkout_date(callback: CallbackQuery):
     nights = (selected_date - state.check_in).days
 
     # Запрашиваем свободные дома
-    available_houses = await booking_service.get_available_houses(
-        state.check_in, state.check_out
-    )
+    async with AsyncSessionLocal() as db:
+        available_houses = await BookingService.get_available_houses(
+            db, state.check_in, state.check_out
+        )
 
     if not available_houses:
         back_callback = "admin:menu" if is_admin(user_id) else "guest:menu"

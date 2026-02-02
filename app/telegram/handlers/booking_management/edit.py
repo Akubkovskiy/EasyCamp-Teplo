@@ -12,8 +12,10 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 
+from app.database import AsyncSessionLocal
 from app.telegram.states.booking import BookingStates
-from app.services.booking_service import booking_service
+from app.services.booking_service import BookingService
+from app.schemas.booking import BookingUpdate
 from app.models import BookingStatus
 from app.utils.validators import validate_phone, format_phone
 from app.telegram.ui.calendar import build_month_keyboard
@@ -268,41 +270,44 @@ async def select_edit_checkout_date(callback: CallbackQuery, state: FSMContext):
     check_in = data.get("new_check_in")
     booking_id = data.get("editing_booking_id")
 
-    booking = await booking_service.get_booking(booking_id)
-    is_available = await booking_service.check_availability(
-        booking.house_id, check_in, check_out, exclude_booking_id=booking_id
-    )
-
-    if not is_available:
-        # UX FIX: Добавляем кнопку возврата к заезду
-        keyboard = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🔄 Выбрать заезд заново",
-                        callback_data=f"booking:edit_f:{booking_id}:dates",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="🔙 В меню редактирования",
-                        callback_data=f"booking:edit:{booking_id}",
-                    )
-                ],
-            ]
+    async with AsyncSessionLocal() as db:
+        booking = await BookingService.get_booking(db, booking_id)
+        # Check conflicts
+        is_available = await BookingService.check_availability(
+            db, booking.house_id, check_in, check_out, exclude_booking_id=booking_id
         )
-        await callback.message.edit_text(
-            f"❌ <b>Даты {check_in.strftime('%d.%m')} - {check_out.strftime('%d.%m')} ЗАНЯТЫ!</b>\n\n"
-            f"Попробуйте выбрать другой период.",
-            reply_markup=keyboard,
-            parse_mode="HTML",
-        )
-        await callback.answer("Даты заняты", show_alert=True)
-        return
 
-    success = await booking_service.update_booking(
-        booking_id, check_in=check_in, check_out=check_out
-    )
+        if not is_available:
+            # UX FIX: Добавляем кнопку возврата к заезду
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔄 Выбрать заезд заново",
+                            callback_data=f"booking:edit_f:{booking_id}:dates",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 В меню редактирования",
+                            callback_data=f"booking:edit:{booking_id}",
+                        )
+                    ],
+                ]
+            )
+            await callback.message.edit_text(
+                f"❌ <b>Даты {check_in.strftime('%d.%m')} - {check_out.strftime('%d.%m')} ЗАНЯТЫ!</b>\n\n"
+                f"Попробуйте выбрать другой период.",
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+            await callback.answer("Даты заняты", show_alert=True)
+            return
+
+        success = await BookingService.update_booking(
+            db, booking_id, BookingUpdate(check_in=check_in, check_out=check_out)
+        )
+        
     if success:
         await callback.message.answer(f"✅ Даты в брони #{booking_id} обновлены.")
     else:
@@ -328,7 +333,11 @@ async def process_edit_status(callback: CallbackQuery):
         "checked_in": BookingStatus.CHECKED_IN,
         "completed": BookingStatus.COMPLETED,
     }
-    await booking_service.update_booking(booking_id, status=status_map[parts[3]])
+    
+    async with AsyncSessionLocal() as db:
+        await BookingService.update_booking(
+            db, booking_id, BookingUpdate(status=status_map[parts[3]])
+        )
     await callback.answer("✅ Статус обновлен")
     await send_booking_details_refreshed(
         callback.message, booking_id, edit_instead=True
@@ -353,7 +362,12 @@ async def cancel_edit_booking(callback: CallbackQuery, state: FSMContext):
 async def process_edit_name(message: Message, state: FSMContext):
     data = await state.get_data()
     bid = data["editing_booking_id"]
-    await booking_service.update_booking(bid, guest_name=message.text)
+    
+    async with AsyncSessionLocal() as db:
+        await BookingService.update_booking(
+            db, bid, BookingUpdate(guest_name=message.text)
+        )
+        
     await message.answer(f"✅ Имя в брони #{bid} обновлено.")
     await state.clear()
     await send_booking_details_refreshed(message, bid)
@@ -366,7 +380,12 @@ async def process_edit_phone(message: Message, state: FSMContext):
         return
     data = await state.get_data()
     bid = data["editing_booking_id"]
-    await booking_service.update_booking(bid, guest_phone=format_phone(message.text))
+    
+    async with AsyncSessionLocal() as db:
+        await BookingService.update_booking(
+            db, bid, BookingUpdate(guest_phone=format_phone(message.text))
+        )
+        
     await message.answer(f"✅ Телефон в брони #{bid} обновлен.")
     await state.clear()
     await send_booking_details_refreshed(message, bid)
@@ -379,7 +398,12 @@ async def process_edit_count(message: Message, state: FSMContext):
         return
     data = await state.get_data()
     bid = data["editing_booking_id"]
-    await booking_service.update_booking(bid, guests_count=int(message.text))
+    
+    async with AsyncSessionLocal() as db:
+        await BookingService.update_booking(
+            db, bid, BookingUpdate(guests_count=int(message.text))
+        )
+        
     await message.answer(f"✅ Количество гостей в брони #{bid} обновлено.")
     await state.clear()
     await send_booking_details_refreshed(message, bid)
@@ -391,7 +415,12 @@ async def process_edit_price(message: Message, state: FSMContext):
         price = float(message.text)
         data = await state.get_data()
         bid = data["editing_booking_id"]
-        await booking_service.update_booking(bid, total_price=price)
+        
+        async with AsyncSessionLocal() as db:
+            await BookingService.update_booking(
+                db, bid, BookingUpdate(total_price=price)
+            )
+            
         await message.answer(f"✅ Цена в брони #{bid} обновлена.")
         await state.clear()
         await send_booking_details_refreshed(message, bid)

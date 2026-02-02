@@ -8,7 +8,9 @@ from aiogram.types import (
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
-from app.services.house_service import house_service
+from app.database import AsyncSessionLocal
+from app.services.house_service import HouseService
+from app.schemas.house import HouseCreate, HouseUpdate
 from app.core.config import settings
 
 router = Router()
@@ -23,7 +25,8 @@ class HouseStates(StatesGroup):
 @router.callback_query(F.data == "admin:houses")
 async def list_houses(callback: CallbackQuery):
     """Список домиков"""
-    houses = await house_service.get_all_houses()
+    async with AsyncSessionLocal() as db:
+        houses = await HouseService.get_all_houses(db)
 
     text = "🏠 <b>Управление домиками</b>\n\nСписок доступных объектов:"
 
@@ -53,7 +56,9 @@ async def list_houses(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("house:view:"))
 async def view_house(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
-    house = await house_service.get_house(house_id)
+    
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
 
     if not house:
         await callback.answer("Домик не найден")
@@ -121,9 +126,15 @@ async def process_house_capacity(message: Message, state: FSMContext):
     data = await state.get_data()
     capacity = int(message.text)
 
-    house = await house_service.create_house(
-        name=data["name"], description=data["description"], capacity=capacity
+    # Use Schema
+    house_in = HouseCreate(
+        name=data["name"], 
+        description=data["description"], 
+        capacity=capacity
     )
+
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.create_house(db, house_in)
 
     await message.answer(
         f"✅ <b>Домик {house.name} успешно добавлен!</b>\n"
@@ -145,7 +156,13 @@ async def process_house_capacity(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("house:delete:"))
 async def confirm_delete_house(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
-    house = await house_service.get_house(house_id)
+    
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
+
+    if not house:
+        await callback.answer("House not found")
+        return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -172,7 +189,10 @@ async def confirm_delete_house(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("house:del_conf:"))
 async def execute_delete_house(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
-    await house_service.delete_house(house_id)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.delete_house(db, house_id)
+        
     await callback.message.edit_text(
         "✅ Домик удален.",
         reply_markup=InlineKeyboardMarkup(
@@ -182,9 +202,6 @@ async def execute_delete_house(callback: CallbackQuery):
         ),
     )
     await callback.answer()
-
-
-# --- Редактирование домика (Edit) ---
 
 
 # --- Редактирование домика (Edit) ---
@@ -202,7 +219,9 @@ class EditHouseStates(StatesGroup):
 @router.callback_query(F.data.startswith("house:edit:"))
 async def edit_house_menu(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
-    house = await house_service.get_house(house_id)
+    
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
 
     if not house:
         await callback.answer("❌ Домик не найден")
@@ -290,7 +309,10 @@ async def start_edit_field(callback: CallbackQuery, state: FSMContext):
 async def process_edit_name(message: Message, state: FSMContext):
     data = await state.get_data()
     house_id = data["editing_house_id"]
-    await house_service.update_house(house_id, name=message.text)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(name=message.text))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -298,7 +320,10 @@ async def process_edit_name(message: Message, state: FSMContext):
 async def process_edit_desc(message: Message, state: FSMContext):
     data = await state.get_data()
     house_id = data["editing_house_id"]
-    await house_service.update_house(house_id, description=message.text)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(description=message.text))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -310,7 +335,10 @@ async def process_edit_capacity(message: Message, state: FSMContext):
 
     data = await state.get_data()
     house_id = data["editing_house_id"]
-    await house_service.update_house(house_id, capacity=int(message.text))
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(capacity=int(message.text)))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -318,7 +346,10 @@ async def process_edit_capacity(message: Message, state: FSMContext):
 async def process_edit_wifi(message: Message, state: FSMContext):
     data = await state.get_data()
     house_id = data["editing_house_id"]
-    await house_service.update_house(house_id, wifi_info=message.text)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(wifi_info=message.text))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -326,7 +357,10 @@ async def process_edit_wifi(message: Message, state: FSMContext):
 async def process_edit_instr(message: Message, state: FSMContext):
     data = await state.get_data()
     house_id = data["editing_house_id"]
-    await house_service.update_house(house_id, checkin_instruction=message.text)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(checkin_instruction=message.text))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -338,8 +372,10 @@ async def process_edit_photo(message: Message, state: FSMContext):
     # Берем самое большое фото
     photo = message.photo[-1]
     file_id = photo.file_id
-
-    await house_service.update_house(house_id, promo_image_id=file_id)
+    
+    async with AsyncSessionLocal() as db:
+        await HouseService.update_house(db, house_id, HouseUpdate(promo_image_id=file_id))
+        
     await finish_editing(message, house_id, state)
 
 
@@ -347,7 +383,9 @@ async def finish_editing(message: Message, house_id: int, state: FSMContext):
     await state.clear()
     await message.answer("✅ Изменения сохранены.")
 
-    house = await house_service.get_house(house_id)
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
+        
     text = (
         f"🏠 <b>{house.name}</b>\n\n"
         f"📝 <b>Описание:</b> {house.description or 'Нет'}\n"

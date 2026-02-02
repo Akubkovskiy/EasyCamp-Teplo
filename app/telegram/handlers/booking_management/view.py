@@ -10,7 +10,8 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 
-from app.services.booking_service import booking_service
+from app.database import AsyncSessionLocal
+from app.services.booking_service import BookingService
 from app.models import BookingStatus
 
 router = Router()
@@ -25,7 +26,8 @@ async def view_booking_details(callback: CallbackQuery):
 
 async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
     """Отрисовка карточки брони (общая логика)"""
-    booking = await booking_service.get_booking(booking_id)
+    async with AsyncSessionLocal() as db:
+        booking = await BookingService.get_booking(db, booking_id)
 
     if not booking:
         if isinstance(event, CallbackQuery):
@@ -147,7 +149,8 @@ async def execute_cancel(callback: CallbackQuery):
     # Сразу даем обратную связь
     await callback.message.edit_text("⏳ Отменяем бронь...", reply_markup=None)
 
-    success = await booking_service.cancel_booking(booking_id)
+    async with AsyncSessionLocal() as db:
+        success = await BookingService.cancel_booking(db, booking_id)
 
     if success:
         await callback.message.edit_text(
@@ -185,7 +188,9 @@ async def request_delete_confirmation(callback: CallbackQuery):
     booking_id = int(callback.data.split(":")[2])
 
     # Получаем информацию о брони для отображения
-    booking = await booking_service.get_booking(booking_id)
+    async with AsyncSessionLocal() as db:
+        booking = await BookingService.get_booking(db, booking_id)
+        
     if not booking:
         await callback.answer("❌ Бронь не найдена", show_alert=True)
         return
@@ -230,7 +235,8 @@ async def execute_delete(callback: CallbackQuery):
         "⏳ Удаляем бронь из базы данных...", reply_markup=None
     )
 
-    success = await booking_service.delete_booking(booking_id)
+    async with AsyncSessionLocal() as db:
+        success = await BookingService.delete_booking(db, booking_id)
 
     if success:
         await callback.message.edit_text(
