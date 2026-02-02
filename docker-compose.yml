@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       - TZ=Europe/Moscow
-      - DATABASE_URL=sqlite+aiosqlite:///data/easycamp.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/easycamp.db
     env_file:
       - .env
     volumes:

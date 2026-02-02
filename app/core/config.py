@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-# Загружаем переменные из .env
+# Загрузка переменных из .env
 load_dotenv()
 
 
@@ -18,9 +18,9 @@ class Settings(BaseModel):
     # Avito API
     avito_client_id: str = ""
     avito_client_secret: str = ""
-    avito_user_id: int = 75878034  # Ваш user_id из документации
-    avito_item_ids: str = ""  # Comma-separated list of item IDs
-    avito_redirect_uri: str = "http://localhost:8000/avito/callback"  # Изменить на ngrok URL
+    avito_user_id: int = 75878034
+    avito_item_ids: str = ""
+    avito_redirect_uri: str = "http://localhost:8000/avito/callback"
     
     # Scheduler settings
     enable_auto_sync: bool = True
@@ -30,18 +30,29 @@ class Settings(BaseModel):
     # Sync behavior settings
     sync_on_bot_start: bool = True
     sync_on_user_interaction: bool = True
-    sync_cache_ttl_seconds: int = 30  # Minimum time between syncs
+    sync_cache_ttl_seconds: int = 30
     
     # Avito calendar settings
-    booking_window_days: int = 180  # На сколько дней вперед открыты брони
+    booking_window_days: int = 180
     
     # Cleaner settings
     cleaning_notification_time: str = "20:00"
 
 
+# Resolve database URL with preference for Docker volume path
+env_db_url = os.environ.get("DATABASE_URL")
+if not env_db_url or "./easycamp.db" in env_db_url:
+    if os.path.exists("/app/data/easycamp.db"):
+        final_db_url = "sqlite+aiosqlite:////app/data/easycamp.db"
+    else:
+        final_db_url = "sqlite+aiosqlite:///./easycamp.db"
+else:
+    final_db_url = env_db_url
+
 settings = Settings(
     telegram_bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
     telegram_chat_id=int(os.environ["TELEGRAM_CHAT_ID"]),
+    database_url=final_db_url,
     google_sheets_spreadsheet_id=os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", ""),
     google_sheets_credentials_file=os.environ.get("GOOGLE_SHEETS_CREDENTIALS_FILE", "google-credentials.json"),
     avito_client_id=os.environ.get("AVITO_CLIENT_ID", ""),

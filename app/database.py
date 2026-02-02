@@ -8,6 +8,7 @@ engine = create_async_engine(
     echo=True,  # Log SQL queries for debugging
 )
 
+
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
