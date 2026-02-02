@@ -2,7 +2,12 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 from app.telegram.auth.admin import is_admin
 from app.telegram.menus.admin import admin_menu_keyboard
@@ -31,16 +36,19 @@ async def start_handler(message: Message):
             reply_markup=admin_menu_keyboard(),
         )
         return
-        
+
     # 2. Проверяем уборщицу
     from app.telegram.auth.admin import is_cleaner
+
     if is_cleaner(message.from_user.id):
         from app.telegram.handlers.cleaner import show_cleaner_menu
+
         await show_cleaner_menu(message, message.from_user.id)
         return
 
     # 3. Иначе - гость (авторизованный или нет)
     from app.telegram.handlers.guest import show_guest_menu
+
     await show_guest_menu(message)
 
 
@@ -59,7 +67,7 @@ async def back_to_menu(callback: CallbackQuery):
 @router.callback_query(lambda c: c.data == "guest:menu")
 async def back_to_guest_menu(callback: CallbackQuery):
     logger.info("Back to guest menu")
-    
+
     if callback.message:
         await callback.message.edit_text(
             "🏕 <b>Teplo · Архыз</b>\n\nГлавное меню",
@@ -69,6 +77,3 @@ async def back_to_guest_menu(callback: CallbackQuery):
 
 
 # Обработчик admin:houses теперь в handlers/houses.py
-
-
-

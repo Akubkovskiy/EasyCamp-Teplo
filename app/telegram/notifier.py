@@ -6,6 +6,7 @@ from fastapi import Request
 from typing import Optional
 from app.models import Booking
 
+
 async def notify_new_avito_event(
     event: AvitoWebhookEvent,
     request: Request,

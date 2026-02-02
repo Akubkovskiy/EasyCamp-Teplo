@@ -23,11 +23,11 @@ def get_env_admins() -> set[int]:
 async def refresh_users_cache():
     """Обновляет кеш пользователей из БД"""
     global _db_admins, _db_cleaners, _db_guests
-    
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User))
         users = result.scalars().all()
-        
+
         _db_admins = {u.telegram_id for u in users if u.role == UserRole.ADMIN}
         _db_cleaners = {u.telegram_id for u in users if u.role == UserRole.CLEANER}
         _db_guests = {u.telegram_id for u in users if u.role == UserRole.GUEST}
@@ -48,18 +48,22 @@ def is_guest(user_id: int) -> bool:
     return user_id in _db_guests
 
 
-async def add_user(telegram_id: int, role: UserRole, name: str, phone: str = None) -> bool:
+async def add_user(
+    telegram_id: int, role: UserRole, name: str, phone: str = None
+) -> bool:
     """Добавляет пользователя в БД и обновляет кеш"""
     async with AsyncSessionLocal() as session:
         # Проверяем, существует ли уже
-        existing = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        existing = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
         if existing.scalar_one_or_none():
             return False
-            
+
         user = User(telegram_id=telegram_id, role=role, name=name, phone=phone)
         session.add(user)
         await session.commit()
-    
+
     await refresh_users_cache()
     return True
 
@@ -67,15 +71,17 @@ async def add_user(telegram_id: int, role: UserRole, name: str, phone: str = Non
 async def remove_user(telegram_id: int) -> bool:
     """Удаляет пользователя из БД и обновляет кеш"""
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
         user = result.scalar_one_or_none()
-        
+
         if not user:
             return False
-            
+
         await session.delete(user)
         await session.commit()
-    
+
     await refresh_users_cache()
     return True
 

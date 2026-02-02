@@ -2,7 +2,12 @@ import datetime
 import logging
 
 from aiogram import Router
-from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    CallbackQuery,
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from aiogram.filters import Command
 from app.services.booking_service import booking_service
 
@@ -17,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 from app.telegram.auth.admin import is_admin
+
 
 @router.message(Command("availability"))
 async def availability_command(message: Message):
@@ -38,6 +44,7 @@ async def availability_command(message: Message):
             min_date=today,
         ),
     )
+
 
 @router.callback_query(lambda c: c.data in ["admin:availability", "guest:availability"])
 async def start_availability(callback: CallbackQuery):
@@ -84,10 +91,10 @@ async def change_checkin_month(callback: CallbackQuery):
 async def start_pick_month(callback: CallbackQuery):
     if callback.data is None or callback.message is None:
         return
-        
+
     _, year = callback.data.split(":")
     from app.telegram.ui.calendar import build_year_keyboard
-    
+
     await callback.message.edit_text(
         f"📅 <b>Выберите месяц ({year})</b>",
         reply_markup=build_year_keyboard(int(year), prefix="checkin"),
@@ -99,10 +106,10 @@ async def start_pick_month(callback: CallbackQuery):
 async def change_pick_year(callback: CallbackQuery):
     if callback.data is None or callback.message is None:
         return
-        
+
     _, year = callback.data.split(":")
     from app.telegram.ui.calendar import build_year_keyboard
-    
+
     await callback.message.edit_text(
         f"📅 <b>Выберите месяц ({year})</b>",
         reply_markup=build_year_keyboard(int(year), prefix="checkin"),
@@ -121,17 +128,17 @@ async def select_checkin_date(callback: CallbackQuery):
     """Обработчик выбора даты заезда"""
     if callback.from_user is None or callback.message is None or callback.data is None:
         return
-    
+
     user_id = callback.from_user.id
     _, date_str = callback.data.split(":")
     selected_date = datetime.date.fromisoformat(date_str)
-    
+
     # Сохраняем дату заезда
     if user_id not in availability_states:
         availability_states[user_id] = AvailabilityState()
-    
+
     availability_states[user_id].check_in = selected_date
-    
+
     # Показываем календарь для выбора даты выезда
     await callback.message.edit_text(
         f"📅 <b>Выберите дату выезда</b>\n\n"
@@ -140,7 +147,8 @@ async def select_checkin_date(callback: CallbackQuery):
             selected_date.year,
             selected_date.month,
             prefix="checkout",
-            min_date=selected_date + datetime.timedelta(days=1),  # Минимум на следующий день
+            min_date=selected_date
+            + datetime.timedelta(days=1),  # Минимум на следующий день
         ),
     )
     await callback.answer()
@@ -154,7 +162,7 @@ async def change_checkout_month(callback: CallbackQuery):
 
     user_id = callback.from_user.id
     state = availability_states.get(user_id)
-    
+
     if not state or not state.check_in:
         await callback.answer("Сначала выберите дату заезда")
         return
@@ -180,42 +188,58 @@ async def select_checkout_date(callback: CallbackQuery):
     """Обработчик выбора даты выезда"""
     if callback.from_user is None or callback.message is None or callback.data is None:
         return
-    
+
     user_id = callback.from_user.id
     state = availability_states.get(user_id)
-    
+
     if not state or not state.check_in:
         await callback.answer("Сначала выберите дату заезда")
         return
-    
+
     _, date_str = callback.data.split(":")
     selected_date = datetime.date.fromisoformat(date_str)
-    
+
     # Проверка что дата выезда после заезда
     if selected_date <= state.check_in:
-        await callback.answer("Дата выезда должна быть позже даты заезда", show_alert=True)
+        await callback.answer(
+            "Дата выезда должна быть позже даты заезда", show_alert=True
+        )
         return
-    
+
     state.check_out = selected_date
-    
+
     # Вычисляем количество ночей
     nights = (selected_date - state.check_in).days
-    
+
     # Запрашиваем свободные дома
-    available_houses = await booking_service.get_available_houses(state.check_in, state.check_out)
+    available_houses = await booking_service.get_available_houses(
+        state.check_in, state.check_out
+    )
 
     if not available_houses:
         back_callback = "admin:menu" if is_admin(user_id) else "guest:menu"
-        retry_callback = "admin:availability" if is_admin(user_id) else "guest:availability"
+        retry_callback = (
+            "admin:availability" if is_admin(user_id) else "guest:availability"
+        )
 
         await callback.message.edit_text(
             f"🚫 <b>Нет свободных домиков</b>\n\n"
             f"📅 Даты: {state.check_in.strftime('%d.%m.%Y')} - {state.check_out.strftime('%d.%m.%Y')}\n"
             f"Попробуйте выбрать другие даты.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Выбрать другие даты", callback_data=retry_callback)],
-                [InlineKeyboardButton(text="🔙 В меню", callback_data=back_callback)]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔄 Выбрать другие даты", callback_data=retry_callback
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 В меню", callback_data=back_callback
+                        )
+                    ],
+                ]
+            ),
         )
         await callback.answer()
         return
@@ -227,28 +251,46 @@ async def select_checkout_date(callback: CallbackQuery):
         f"🌙 Ночей: {nights}\n"
         f"──────────────────\n"
     )
-    
+
     buttons = []
     for house in available_houses:
         text += f"🏠 <b>{house.name}</b>\n"
         if house.description:
             text += f"ℹ️ {house.description}\n"
         text += f"👥 До {house.capacity} гостей\n\n"
-        
+
         # Кнопка бронирования
-        buttons.append([
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Забронировать {house.name}",
+                    callback_data=f"booking:create:{house.id}",
+                )
+            ]
+        )
+
+    buttons.append(
+        [
             InlineKeyboardButton(
-                text=f"✅ Забронировать {house.name}", 
-                callback_data=f"booking:create:{house.id}"
+                text="🔄 Выбрать другие даты",
+                callback_data="admin:availability"
+                if is_admin(user_id)
+                else "guest:availability",
             )
-        ])
-        
-    buttons.append([InlineKeyboardButton(text="🔄 Выбрать другие даты", callback_data="admin:availability" if is_admin(user_id) else "guest:availability")])
-    buttons.append([InlineKeyboardButton(text="🔙 В меню", callback_data="admin:menu" if is_admin(user_id) else "guest:menu")])
-    
+        ]
+    )
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text="🔙 В меню",
+                callback_data="admin:menu" if is_admin(user_id) else "guest:menu",
+            )
+        ]
+    )
+
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
     await callback.answer()
