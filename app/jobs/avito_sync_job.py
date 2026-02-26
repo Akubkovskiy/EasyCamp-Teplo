@@ -92,11 +92,25 @@ async def verify_local_bookings_in_avito(item_house_mapping: dict):
             )
             local_bookings = result.scalars().all()
 
-            logger.info(f"Found {len(local_bookings)} active local bookings to verify")
+            # ВАЖНО: для обновления интервалов доступности в Avito используем ТОЛЬКО
+            # брони НЕ из Avito (ручные блоки). Avito сам управляет датами своих броней
+            # внутри. Если мы отправим в /intervals Авито-бронь с pending-статусом,
+            # Avito интерпретирует это как конфликт и может отменить заявку гостя.
+            # Авито-брони со статусом NEW соответствуют pending на стороне Авито.
+            from app.models import BookingSource
+            manual_bookings = [
+                b for b in local_bookings
+                if b.source != BookingSource.AVITO
+            ]
 
-            # Группируем брони по домам
+            logger.info(
+                f"Found {len(local_bookings)} active local bookings to verify "
+                f"({len(manual_bookings)} non-Avito for calendar sync)"
+            )
+
+            # Группируем брони по домам (только ручные — не Авито)
             bookings_by_house = {}
-            for booking in local_bookings:
+            for booking in manual_bookings:
                 if booking.house_id not in bookings_by_house:
                     bookings_by_house[booking.house_id] = []
                 bookings_by_house[booking.house_id].append(booking)

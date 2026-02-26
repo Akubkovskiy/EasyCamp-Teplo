@@ -519,8 +519,11 @@ class AvitoAPIService:
             # Преобразуем брони в список словарей с date объектами
             booking_intervals = []
             for booking in local_bookings:
-                # Пропускаем отмененные (на всякий случай)
-                if hasattr(booking, "status") and booking.status == "cancelled":
+                # Пропускаем отменённые и завершённые
+                from app.models import BookingStatus as _BS
+                if hasattr(booking, "status") and booking.status in (
+                    _BS.CANCELLED, _BS.COMPLETED
+                ):
                     continue
 
                 check_in = booking.check_in
