@@ -2,8 +2,9 @@ import re
 from datetime import date, datetime, timezone
 
 from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import select
+from sqlalchemy import and_, select
 
 from app.core.config import settings
 from app.database import AsyncSessionLocal
@@ -140,3 +141,42 @@ async def approve_claim(callback: CallbackQuery):
 async def reject_claim(callback: CallbackQuery):
     claim_id = int(callback.data.split(":")[3])
     await _review_claim(callback, claim_id, approve=False)
+
+
+@router.message(Command("cleaner_payout"))
+async def cleaner_payout_report(message: Message):
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+
+    parts = (message.text or "").split(maxsplit=1)
+    period = parts[1].strip() if len(parts) > 1 else date.today().strftime("%Y-%m")
+
+    async with AsyncSessionLocal() as session:
+        q = await session.execute(
+            select(CleaningPaymentLedger).where(
+                and_(
+                    CleaningPaymentLedger.period_key == period,
+                    CleaningPaymentLedger.status.in_([PaymentStatus.ACCRUED, PaymentStatus.APPROVED]),
+                )
+            )
+        )
+        rows = list(q.scalars().all())
+
+    if not rows:
+        await message.answer(f"За период {period} начислений нет")
+        return
+
+    totals: dict[int, float] = {}
+    details = []
+    for r in rows:
+        totals[r.cleaner_user_id] = totals.get(r.cleaner_user_id, 0.0) + float(r.amount)
+        details.append(
+            f"• cleaner={r.cleaner_user_id} | task={r.task_id or '-'} | {r.entry_type.value} | {float(r.amount):.2f} ₽"
+        )
+
+    head = [f"💵 <b>Выплаты уборщицам за {period}</b>"]
+    for cleaner_id, amount in totals.items():
+        head.append(f"Итого cleaner {cleaner_id}: <b>{amount:.2f} ₽</b>")
+
+    text = "\n".join(head) + "\n\n" + "\n".join(details[:50])
+    await message.answer(text, parse_mode="HTML")
