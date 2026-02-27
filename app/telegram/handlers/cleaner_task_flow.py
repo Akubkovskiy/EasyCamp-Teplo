@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 
 from app.database import AsyncSessionLocal
 from app.models import CleaningTask, CleaningTaskCheck, CleaningTaskStatus
@@ -50,7 +50,13 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
         )
         stmt = select(CleaningTask).where(
             and_(
-                CleaningTask.assigned_to_user_id == user_id,
+                or_(
+                    CleaningTask.assigned_to_user_id == user_id,
+                    and_(
+                        CleaningTask.assigned_to_user_id.is_(None),
+                        CleaningTask.status == CleaningTaskStatus.PENDING,
+                    ),
+                ),
                 date_filter,
                 CleaningTask.status.in_(
                     [

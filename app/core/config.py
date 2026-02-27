@@ -37,6 +37,8 @@ class Settings(BaseModel):
 
     # Cleaner settings
     cleaning_notification_time: str = "20:00"
+    cleaning_confirm_window_min: int = 30
+    cleaning_sla_check_interval_minutes: int = 5
 
     # Webhook security settings
     # Mode: "off" = no verification, "warn" = log warning but allow, "enforce" = reject invalid
@@ -112,6 +114,8 @@ settings = Settings(
     sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
     booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "180")),
     cleaning_notification_time=os.environ.get("CLEANING_NOTIFICATION_TIME", "20:00"),
+    cleaning_confirm_window_min=int(os.environ.get("CLEANING_CONFIRM_WINDOW_MIN", "30")),
+    cleaning_sla_check_interval_minutes=int(os.environ.get("CLEANING_SLA_CHECK_INTERVAL_MINUTES", "5")),
     avito_webhook_mode=os.environ.get("AVITO_WEBHOOK_MODE", "warn"),
     avito_webhook_secret=os.environ.get("AVITO_WEBHOOK_SECRET", ""),
     rate_limit_enabled=os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true",

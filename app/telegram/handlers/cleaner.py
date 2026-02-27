@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import (
     Message,
     CallbackQuery,
@@ -11,8 +12,9 @@ from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, CleaningTask, CleaningTaskStatus
-from app.telegram.auth.admin import get_user_name
+from app.telegram.auth.admin import get_user_name, is_admin
 from app.services.cleaning_task_service import CleaningTaskService
+from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
 
 router = Router()
 
@@ -358,3 +360,11 @@ async def decline_cleaning(callback: CallbackQuery):
             pass
 
     await callback.answer("Администратор оповещен", show_alert=True)
+
+
+@router.message(Command("cleaner_tasks_sync"))
+async def cleaner_tasks_sync_now(message: Message):
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    await run_cleaning_tasks_cycle()
+    await message.answer("✅ Генерация задач уборки и рассылка выполнены")

@@ -79,8 +79,10 @@ class SchedulerService:
                     "Sheets sync job not registered - missing spreadsheet ID"
                 )
 
-        # Cleaner notifications (Cron)
+        # Cleaner notifications/tasks (Cron + interval)
         from app.jobs.cleaning_notifier import check_and_notify_cleaners
+        from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
+        from app.jobs.cleaning_sla_monitor import run_cleaning_sla_monitor
         from apscheduler.triggers.cron import CronTrigger
 
         try:
@@ -98,6 +100,26 @@ class SchedulerService:
                     replace_existing=True,
                 )
                 logger.info(f"Registered cleaner notification job (at {time_str})")
+
+                self.scheduler.add_job(
+                    run_cleaning_tasks_cycle,
+                    CronTrigger(hour=hour, minute=minute),
+                    id="cleaner_tasks_cycle",
+                    name="Generate and notify cleaner tasks",
+                    replace_existing=True,
+                )
+                logger.info(f"Registered cleaner task generation job (at {time_str})")
+
+                self.scheduler.add_job(
+                    run_cleaning_sla_monitor,
+                    IntervalTrigger(minutes=max(1, settings.cleaning_sla_check_interval_minutes)),
+                    id="cleaner_sla_monitor",
+                    name="Monitor cleaner SLA",
+                    replace_existing=True,
+                )
+                logger.info(
+                    f"Registered cleaner SLA monitor job (every {settings.cleaning_sla_check_interval_minutes} minutes)"
+                )
             else:
                 logger.error(f"Invalid cleaning_notification_time format: {time_str}")
 
