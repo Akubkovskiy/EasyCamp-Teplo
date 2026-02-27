@@ -10,8 +10,9 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus
+from app.models import Booking, BookingStatus, CleaningTask, CleaningTaskStatus
 from app.telegram.auth.admin import get_user_name
+from app.services.cleaning_task_service import CleaningTaskService
 
 router = Router()
 
@@ -106,6 +107,14 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
                 ),
                 InlineKeyboardButton(
                     text="📅 Завтра", callback_data="cleaner:schedule:tomorrow"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📌 Мои задачи", callback_data="cleaner:tasks:today"
+                ),
+                InlineKeyboardButton(
+                    text="🗓 Мои задачи/7д", callback_data="cleaner:tasks:week"
                 ),
             ],
             [
