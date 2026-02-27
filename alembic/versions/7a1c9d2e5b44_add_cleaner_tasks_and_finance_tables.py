@@ -30,175 +30,233 @@ payment_status = sa.Enum('ACCRUED', 'APPROVED', 'PAID', 'CANCELLED', name='payme
 supply_claim_status = sa.Enum('SUBMITTED', 'APPROVED', 'REJECTED', 'PAID', name='supplyclaimstatus')
 
 
+def _has_table(insp, name: str) -> bool:
+    return name in insp.get_table_names()
+
+
+def _has_index(insp, table: str, name: str) -> bool:
+    return any(i.get('name') == name for i in insp.get_indexes(table))
+
+
 def upgrade() -> None:
-    op.create_table(
-        'cleaning_tasks',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('booking_id', sa.Integer(), nullable=False),
-        sa.Column('house_id', sa.Integer(), nullable=False),
-        sa.Column('assigned_to_user_id', sa.Integer(), nullable=True),
-        sa.Column('scheduled_date', sa.Date(), nullable=False),
-        sa.Column('status', cleaning_task_status, nullable=False),
-        sa.Column('confirm_deadline_at', sa.DateTime(), nullable=True),
-        sa.Column('accepted_at', sa.DateTime(), nullable=True),
-        sa.Column('started_at', sa.DateTime(), nullable=True),
-        sa.Column('completed_at', sa.DateTime(), nullable=True),
-        sa.Column('decline_reason', sa.String(), nullable=True),
-        sa.Column('escalated_at', sa.DateTime(), nullable=True),
-        sa.Column('notes', sa.String(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['assigned_to_user_id'], ['users.id']),
-        sa.ForeignKeyConstraint(['booking_id'], ['bookings.id']),
-        sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('booking_id', name='uq_cleaning_tasks_booking_id'),
-    )
-    op.create_index('ix_cleaning_tasks_scheduled_date', 'cleaning_tasks', ['scheduled_date'])
-    op.create_index('ix_cleaning_tasks_status', 'cleaning_tasks', ['status'])
-    op.create_index('ix_cleaning_tasks_assigned_to_user_id', 'cleaning_tasks', ['assigned_to_user_id'])
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
 
-    op.create_table(
-        'cleaning_task_checks',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.Integer(), nullable=False),
-        sa.Column('code', sa.String(), nullable=False),
-        sa.Column('label', sa.String(), nullable=False),
-        sa.Column('is_required', sa.Boolean(), nullable=False),
-        sa.Column('is_checked', sa.Boolean(), nullable=False),
-        sa.Column('checked_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('task_id', 'code', name='uq_cleaning_task_checks_task_code'),
-    )
-    op.create_index('ix_cleaning_task_checks_task_id', 'cleaning_task_checks', ['task_id'])
+    if not _has_table(insp, 'cleaning_tasks'):
+        op.create_table(
+            'cleaning_tasks',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('booking_id', sa.Integer(), nullable=False),
+            sa.Column('house_id', sa.Integer(), nullable=False),
+            sa.Column('assigned_to_user_id', sa.Integer(), nullable=True),
+            sa.Column('scheduled_date', sa.Date(), nullable=False),
+            sa.Column('status', cleaning_task_status, nullable=False),
+            sa.Column('confirm_deadline_at', sa.DateTime(), nullable=True),
+            sa.Column('accepted_at', sa.DateTime(), nullable=True),
+            sa.Column('started_at', sa.DateTime(), nullable=True),
+            sa.Column('completed_at', sa.DateTime(), nullable=True),
+            sa.Column('decline_reason', sa.String(), nullable=True),
+            sa.Column('escalated_at', sa.DateTime(), nullable=True),
+            sa.Column('notes', sa.String(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('updated_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['assigned_to_user_id'], ['users.id']),
+            sa.ForeignKeyConstraint(['booking_id'], ['bookings.id']),
+            sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('booking_id', name='uq_cleaning_tasks_booking_id'),
+        )
 
-    op.create_table(
-        'cleaning_task_media',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.Integer(), nullable=False),
-        sa.Column('telegram_file_id', sa.String(), nullable=False),
-        sa.Column('media_type', sa.String(), nullable=False),
-        sa.Column('uploaded_by_user_id', sa.Integer(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
-        sa.ForeignKeyConstraint(['uploaded_by_user_id'], ['users.id']),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_cleaning_task_media_task_id', 'cleaning_task_media', ['task_id'])
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'cleaning_tasks', 'ix_cleaning_tasks_scheduled_date'):
+        op.create_index('ix_cleaning_tasks_scheduled_date', 'cleaning_tasks', ['scheduled_date'])
+    if not _has_index(insp, 'cleaning_tasks', 'ix_cleaning_tasks_status'):
+        op.create_index('ix_cleaning_tasks_status', 'cleaning_tasks', ['status'])
+    if not _has_index(insp, 'cleaning_tasks', 'ix_cleaning_tasks_assigned_to_user_id'):
+        op.create_index('ix_cleaning_tasks_assigned_to_user_id', 'cleaning_tasks', ['assigned_to_user_id'])
 
-    op.create_table(
-        'supply_alerts',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.Integer(), nullable=True),
-        sa.Column('house_id', sa.Integer(), nullable=True),
-        sa.Column('reported_by_user_id', sa.Integer(), nullable=True),
-        sa.Column('items_json', sa.String(), nullable=True),
-        sa.Column('status', supply_alert_status, nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('resolved_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
-        sa.ForeignKeyConstraint(['reported_by_user_id'], ['users.id']),
-        sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
-        sa.PrimaryKeyConstraint('id')
-    )
+    if not _has_table(insp, 'cleaning_task_checks'):
+        op.create_table(
+            'cleaning_task_checks',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('task_id', sa.Integer(), nullable=False),
+            sa.Column('code', sa.String(), nullable=False),
+            sa.Column('label', sa.String(), nullable=False),
+            sa.Column('is_required', sa.Boolean(), nullable=False),
+            sa.Column('is_checked', sa.Boolean(), nullable=False),
+            sa.Column('checked_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('task_id', 'code', name='uq_cleaning_task_checks_task_code'),
+        )
 
-    op.create_table(
-        'cleaning_rates',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('house_id', sa.Integer(), nullable=False),
-        sa.Column('base_amount', sa.Numeric(10, 2), nullable=False),
-        sa.Column('active_from', sa.Date(), nullable=False),
-        sa.Column('active_to', sa.Date(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_cleaning_rates_house_id', 'cleaning_rates', ['house_id'])
-    op.create_index('ix_cleaning_rates_is_active', 'cleaning_rates', ['is_active'])
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'cleaning_task_checks', 'ix_cleaning_task_checks_task_id'):
+        op.create_index('ix_cleaning_task_checks_task_id', 'cleaning_task_checks', ['task_id'])
 
-    op.create_table(
-        'cleaning_payments_ledger',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.Integer(), nullable=True),
-        sa.Column('cleaner_user_id', sa.Integer(), nullable=False),
-        sa.Column('entry_type', payment_entry_type, nullable=False),
-        sa.Column('amount', sa.Numeric(10, 2), nullable=False),
-        sa.Column('currency', sa.String(), nullable=False),
-        sa.Column('period_key', sa.String(), nullable=False),
-        sa.Column('status', payment_status, nullable=False),
-        sa.Column('comment', sa.String(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('approved_at', sa.DateTime(), nullable=True),
-        sa.Column('paid_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['cleaner_user_id'], ['users.id']),
-        sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_cleaning_payments_ledger_cleaner_user_id', 'cleaning_payments_ledger', ['cleaner_user_id'])
-    op.create_index('ix_cleaning_payments_ledger_period_key', 'cleaning_payments_ledger', ['period_key'])
-    op.create_index('ix_cleaning_payments_ledger_status', 'cleaning_payments_ledger', ['status'])
-    op.create_unique_constraint(
-        'uq_cleaning_fee_per_task',
-        'cleaning_payments_ledger',
-        ['task_id', 'entry_type']
-    )
+    if not _has_table(insp, 'cleaning_task_media'):
+        op.create_table(
+            'cleaning_task_media',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('task_id', sa.Integer(), nullable=False),
+            sa.Column('telegram_file_id', sa.String(), nullable=False),
+            sa.Column('media_type', sa.String(), nullable=False),
+            sa.Column('uploaded_by_user_id', sa.Integer(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
+            sa.ForeignKeyConstraint(['uploaded_by_user_id'], ['users.id']),
+            sa.PrimaryKeyConstraint('id')
+        )
 
-    op.create_table(
-        'supply_expense_claims',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.Integer(), nullable=True),
-        sa.Column('house_id', sa.Integer(), nullable=True),
-        sa.Column('cleaner_user_id', sa.Integer(), nullable=False),
-        sa.Column('purchase_date', sa.Date(), nullable=False),
-        sa.Column('amount_total', sa.Numeric(10, 2), nullable=False),
-        sa.Column('items_json', sa.String(), nullable=True),
-        sa.Column('receipt_photo_file_id', sa.String(), nullable=False),
-        sa.Column('status', supply_claim_status, nullable=False),
-        sa.Column('admin_comment', sa.String(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('reviewed_at', sa.DateTime(), nullable=True),
-        sa.Column('paid_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['cleaner_user_id'], ['users.id']),
-        sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
-        sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_supply_expense_claims_cleaner_user_id', 'supply_expense_claims', ['cleaner_user_id'])
-    op.create_index('ix_supply_expense_claims_task_id', 'supply_expense_claims', ['task_id'])
-    op.create_index('ix_supply_expense_claims_status', 'supply_expense_claims', ['status'])
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'cleaning_task_media', 'ix_cleaning_task_media_task_id'):
+        op.create_index('ix_cleaning_task_media_task_id', 'cleaning_task_media', ['task_id'])
+
+    if not _has_table(insp, 'supply_alerts'):
+        op.create_table(
+            'supply_alerts',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('task_id', sa.Integer(), nullable=True),
+            sa.Column('house_id', sa.Integer(), nullable=True),
+            sa.Column('reported_by_user_id', sa.Integer(), nullable=True),
+            sa.Column('items_json', sa.String(), nullable=True),
+            sa.Column('status', supply_alert_status, nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('resolved_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
+            sa.ForeignKeyConstraint(['reported_by_user_id'], ['users.id']),
+            sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
+            sa.PrimaryKeyConstraint('id')
+        )
+
+    if not _has_table(insp, 'cleaning_rates'):
+        op.create_table(
+            'cleaning_rates',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('house_id', sa.Integer(), nullable=False),
+            sa.Column('base_amount', sa.Numeric(10, 2), nullable=False),
+            sa.Column('active_from', sa.Date(), nullable=False),
+            sa.Column('active_to', sa.Date(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('updated_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
+            sa.PrimaryKeyConstraint('id'),
+        )
+
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'cleaning_rates', 'ix_cleaning_rates_house_id'):
+        op.create_index('ix_cleaning_rates_house_id', 'cleaning_rates', ['house_id'])
+    if not _has_index(insp, 'cleaning_rates', 'ix_cleaning_rates_is_active'):
+        op.create_index('ix_cleaning_rates_is_active', 'cleaning_rates', ['is_active'])
+
+    if not _has_table(insp, 'cleaning_payments_ledger'):
+        op.create_table(
+            'cleaning_payments_ledger',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('task_id', sa.Integer(), nullable=True),
+            sa.Column('cleaner_user_id', sa.Integer(), nullable=False),
+            sa.Column('entry_type', payment_entry_type, nullable=False),
+            sa.Column('amount', sa.Numeric(10, 2), nullable=False),
+            sa.Column('currency', sa.String(), nullable=False),
+            sa.Column('period_key', sa.String(), nullable=False),
+            sa.Column('status', payment_status, nullable=False),
+            sa.Column('comment', sa.String(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('approved_at', sa.DateTime(), nullable=True),
+            sa.Column('paid_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['cleaner_user_id'], ['users.id']),
+            sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
+            sa.PrimaryKeyConstraint('id')
+        )
+
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'cleaning_payments_ledger', 'ix_cleaning_payments_ledger_cleaner_user_id'):
+        op.create_index('ix_cleaning_payments_ledger_cleaner_user_id', 'cleaning_payments_ledger', ['cleaner_user_id'])
+    if not _has_index(insp, 'cleaning_payments_ledger', 'ix_cleaning_payments_ledger_period_key'):
+        op.create_index('ix_cleaning_payments_ledger_period_key', 'cleaning_payments_ledger', ['period_key'])
+    if not _has_index(insp, 'cleaning_payments_ledger', 'ix_cleaning_payments_ledger_status'):
+        op.create_index('ix_cleaning_payments_ledger_status', 'cleaning_payments_ledger', ['status'])
+    # SQLite-safe unique protection for task+entry_type
+    if not _has_index(insp, 'cleaning_payments_ledger', 'ux_cleaning_fee_per_task_entry_type'):
+        op.create_index(
+            'ux_cleaning_fee_per_task_entry_type',
+            'cleaning_payments_ledger',
+            ['task_id', 'entry_type'],
+            unique=True,
+        )
+
+    if not _has_table(insp, 'supply_expense_claims'):
+        op.create_table(
+            'supply_expense_claims',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('task_id', sa.Integer(), nullable=True),
+            sa.Column('house_id', sa.Integer(), nullable=True),
+            sa.Column('cleaner_user_id', sa.Integer(), nullable=False),
+            sa.Column('purchase_date', sa.Date(), nullable=False),
+            sa.Column('amount_total', sa.Numeric(10, 2), nullable=False),
+            sa.Column('items_json', sa.String(), nullable=True),
+            sa.Column('receipt_photo_file_id', sa.String(), nullable=False),
+            sa.Column('status', supply_claim_status, nullable=False),
+            sa.Column('admin_comment', sa.String(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('reviewed_at', sa.DateTime(), nullable=True),
+            sa.Column('paid_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['cleaner_user_id'], ['users.id']),
+            sa.ForeignKeyConstraint(['house_id'], ['houses.id']),
+            sa.ForeignKeyConstraint(['task_id'], ['cleaning_tasks.id']),
+            sa.PrimaryKeyConstraint('id')
+        )
+
+    insp = sa.inspect(bind)
+    if not _has_index(insp, 'supply_expense_claims', 'ix_supply_expense_claims_cleaner_user_id'):
+        op.create_index('ix_supply_expense_claims_cleaner_user_id', 'supply_expense_claims', ['cleaner_user_id'])
+    if not _has_index(insp, 'supply_expense_claims', 'ix_supply_expense_claims_task_id'):
+        op.create_index('ix_supply_expense_claims_task_id', 'supply_expense_claims', ['task_id'])
+    if not _has_index(insp, 'supply_expense_claims', 'ix_supply_expense_claims_status'):
+        op.create_index('ix_supply_expense_claims_status', 'supply_expense_claims', ['status'])
 
 
 def downgrade() -> None:
-    op.drop_index('ix_supply_expense_claims_status', table_name='supply_expense_claims')
-    op.drop_index('ix_supply_expense_claims_task_id', table_name='supply_expense_claims')
-    op.drop_index('ix_supply_expense_claims_cleaner_user_id', table_name='supply_expense_claims')
-    op.drop_table('supply_expense_claims')
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
 
-    op.drop_constraint('uq_cleaning_fee_per_task', 'cleaning_payments_ledger', type_='unique')
-    op.drop_index('ix_cleaning_payments_ledger_status', table_name='cleaning_payments_ledger')
-    op.drop_index('ix_cleaning_payments_ledger_period_key', table_name='cleaning_payments_ledger')
-    op.drop_index('ix_cleaning_payments_ledger_cleaner_user_id', table_name='cleaning_payments_ledger')
-    op.drop_table('cleaning_payments_ledger')
+    if _has_table(insp, 'supply_expense_claims'):
+        for idx in ['ix_supply_expense_claims_status', 'ix_supply_expense_claims_task_id', 'ix_supply_expense_claims_cleaner_user_id']:
+            if _has_index(insp, 'supply_expense_claims', idx):
+                op.drop_index(idx, table_name='supply_expense_claims')
+        op.drop_table('supply_expense_claims')
 
-    op.drop_index('ix_cleaning_rates_is_active', table_name='cleaning_rates')
-    op.drop_index('ix_cleaning_rates_house_id', table_name='cleaning_rates')
-    op.drop_table('cleaning_rates')
+    if _has_table(insp, 'cleaning_payments_ledger'):
+        for idx in ['ux_cleaning_fee_per_task_entry_type', 'ix_cleaning_payments_ledger_status', 'ix_cleaning_payments_ledger_period_key', 'ix_cleaning_payments_ledger_cleaner_user_id']:
+            if _has_index(insp, 'cleaning_payments_ledger', idx):
+                op.drop_index(idx, table_name='cleaning_payments_ledger')
+        op.drop_table('cleaning_payments_ledger')
 
-    op.drop_table('supply_alerts')
+    if _has_table(insp, 'cleaning_rates'):
+        for idx in ['ix_cleaning_rates_is_active', 'ix_cleaning_rates_house_id']:
+            if _has_index(insp, 'cleaning_rates', idx):
+                op.drop_index(idx, table_name='cleaning_rates')
+        op.drop_table('cleaning_rates')
 
-    op.drop_index('ix_cleaning_task_media_task_id', table_name='cleaning_task_media')
-    op.drop_table('cleaning_task_media')
+    if _has_table(insp, 'supply_alerts'):
+        op.drop_table('supply_alerts')
 
-    op.drop_index('ix_cleaning_task_checks_task_id', table_name='cleaning_task_checks')
-    op.drop_table('cleaning_task_checks')
+    if _has_table(insp, 'cleaning_task_media'):
+        if _has_index(insp, 'cleaning_task_media', 'ix_cleaning_task_media_task_id'):
+            op.drop_index('ix_cleaning_task_media_task_id', table_name='cleaning_task_media')
+        op.drop_table('cleaning_task_media')
 
-    op.drop_index('ix_cleaning_tasks_assigned_to_user_id', table_name='cleaning_tasks')
-    op.drop_index('ix_cleaning_tasks_status', table_name='cleaning_tasks')
-    op.drop_index('ix_cleaning_tasks_scheduled_date', table_name='cleaning_tasks')
-    op.drop_table('cleaning_tasks')
+    if _has_table(insp, 'cleaning_task_checks'):
+        if _has_index(insp, 'cleaning_task_checks', 'ix_cleaning_task_checks_task_id'):
+            op.drop_index('ix_cleaning_task_checks_task_id', table_name='cleaning_task_checks')
+        op.drop_table('cleaning_task_checks')
+
+    if _has_table(insp, 'cleaning_tasks'):
+        for idx in ['ix_cleaning_tasks_assigned_to_user_id', 'ix_cleaning_tasks_status', 'ix_cleaning_tasks_scheduled_date']:
+            if _has_index(insp, 'cleaning_tasks', idx):
+                op.drop_index(idx, table_name='cleaning_tasks')
+        op.drop_table('cleaning_tasks')
 
     supply_claim_status.drop(op.get_bind(), checkfirst=True)
     payment_status.drop(op.get_bind(), checkfirst=True)
