@@ -31,6 +31,7 @@ from app.telegram.handlers import (
     houses,
     settings_users,
     cleaner,
+    cleaner_admin,
     cleaner_expenses,
     cleaner_task_flow,
     guest,
@@ -121,6 +122,7 @@ dp.include_router(scheduler.router)
 dp.include_router(settings_handler.router)
 dp.include_router(settings_users.router)
 dp.include_router(cleaner.router)
+dp.include_router(cleaner_admin.router)
 dp.include_router(cleaner_expenses.router)
 dp.include_router(cleaner_task_flow.router)
 dp.include_router(guest.router)
