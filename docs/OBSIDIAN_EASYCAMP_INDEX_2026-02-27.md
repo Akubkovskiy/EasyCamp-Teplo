@@ -201,4 +201,47 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 
 ---
 
+## 12) Журнал изменений (2026-02-27) — Cleaner v2
+
+Что уже реализовано:
+- Добавлены доменные сущности и миграции для cleaner-задач и финансов:
+  - `cleaning_tasks`, `cleaning_task_checks`, `cleaning_task_media`, `supply_alerts`
+  - `cleaning_rates`, `cleaning_payments_ledger`, `supply_expense_claims`
+- Реализован `CleaningTaskService`:
+  - idempotent создание задач
+  - машина статусов
+  - блокировка `done` без обязательного чеклиста и фото
+  - автоначисление `cleaning_fee` при завершении
+- Добавлен Telegram flow уборщицы:
+  - список задач / карточка задачи
+  - принять / отказаться / начать / завершить
+  - чеклист и загрузка фото
+- Добавлен flow чеков расходников:
+  - уборщица отправляет чек (фото + сумма + позиции)
+  - админ approve/reject
+  - при approve создаётся компенсация в ledger
+- Добавлены админ-команды:
+  - `/cleaner_tasks_sync`
+  - `/cleaner_tasks_overdue`
+  - `/cleaner_task_assign`
+  - `/cleaner_task_close`
+  - `/cleaner_claims_open`
+  - `/cleaner_payout`, `/cleaner_payout_details`, `/cleaner_payout_mark_paid`
+- Добавлены job’ы:
+  - генерация cleaner-задач
+  - SLA-монитор эскалаций
+- Прогнаны авто-проверки:
+  - `pytest` (all green)
+  - smoke `verify_cleaner_v2_flow.py` (green)
+  - миграции `alembic upgrade head` (green)
+
+### TODO (ручная приёмка в UI)
+- [ ] Прогнать в Telegram полный сценарий роли уборщицы (happy path).
+- [ ] Проверить блокировку завершения без чеклиста/фото.
+- [ ] Проверить отказ от задачи и эскалацию админам.
+- [ ] Проверить чек расходников: submit → approve/reject.
+- [ ] Проверить отчёт выплат и отметку `paid` после подтверждения.
+
+---
+
 _Заметка подготовлена в формате Obsidian-friendly Markdown._
