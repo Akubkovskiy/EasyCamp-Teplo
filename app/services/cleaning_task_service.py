@@ -12,6 +12,8 @@ from app.models import (
     CleaningPaymentLedger,
     CleaningRate,
     CleaningTask,
+    CleaningTaskCheck,
+    CleaningTaskMedia,
     CleaningTaskStatus,
     PaymentStatus,
 )
@@ -21,6 +23,20 @@ logger = logging.getLogger(__name__)
 
 class CleaningTaskService:
     """Сервис задач уборки + первичный расчёт начислений."""
+
+    REQUIRED_CHECKS = [
+        ("beds_made", "Заправила все кровати", True),
+        ("linen_changed", "Заменила постельное бельё", True),
+        ("bathroom_clean", "Санузел вымыт", True),
+        ("dishes_cleaned", "Посуда вымыта", True),
+        ("floors_washed", "Полы вымыты", True),
+        ("windows_doors_checked", "Окна/двери проверены", True),
+    ]
+
+    OPTIONAL_CHECKS = [
+        ("supplies_refilled", "Обновила расходники", False),
+        ("need_purchase", "Нужно докупить расходники", False),
+    ]
 
     ALLOWED_TRANSITIONS = {
         CleaningTaskStatus.PENDING: {
@@ -71,6 +87,7 @@ class CleaningTaskService:
         )
         db.add(task)
         await db.flush()
+        await CleaningTaskService.ensure_default_checklist(db, task)
         return task
 
     @classmethod
@@ -93,6 +110,8 @@ class CleaningTaskService:
             logger.warning("Invalid task transition %s -> %s (task=%s)", task.status, target, task.id)
             return False
 
+        await cls.ensure_default_checklist(db, task)
+
         now = datetime.now(timezone.utc)
         task.status = target
         task.updated_at = now
@@ -104,6 +123,10 @@ class CleaningTaskService:
         elif target == CleaningTaskStatus.IN_PROGRESS:
             task.started_at = now
         elif target == CleaningTaskStatus.DONE:
+            ok, reason = await cls.completion_requirements_ok(db, task.id)
+            if not ok:
+                logger.warning("Task %s cannot be completed: %s", task.id, reason)
+                return False
             task.completed_at = now
         elif target == CleaningTaskStatus.DECLINED:
             task.decline_reason = decline_reason
@@ -115,6 +138,84 @@ class CleaningTaskService:
 
         await db.flush()
         return True
+
+    @classmethod
+    async def ensure_default_checklist(cls, db: AsyncSession, task: CleaningTask) -> None:
+        existing_q = await db.execute(
+            select(CleaningTaskCheck).where(CleaningTaskCheck.task_id == task.id)
+        )
+        if existing_q.scalars().first():
+            return
+
+        for code, label, required in cls.REQUIRED_CHECKS + cls.OPTIONAL_CHECKS:
+            db.add(
+                CleaningTaskCheck(
+                    task_id=task.id,
+                    code=code,
+                    label=label,
+                    is_required=required,
+                    is_checked=False,
+                )
+            )
+        await db.flush()
+
+    @staticmethod
+    async def toggle_check(db: AsyncSession, task_id: int, code: str, checked: bool) -> bool:
+        q = await db.execute(
+            select(CleaningTaskCheck).where(
+                CleaningTaskCheck.task_id == task_id,
+                CleaningTaskCheck.code == code,
+            )
+        )
+        item = q.scalar_one_or_none()
+        if not item:
+            return False
+
+        item.is_checked = checked
+        item.checked_at = datetime.now(timezone.utc) if checked else None
+        await db.flush()
+        return True
+
+    @staticmethod
+    async def add_photo(db: AsyncSession, task_id: int, file_id: str, user_id: int | None = None) -> None:
+        db.add(
+            CleaningTaskMedia(
+                task_id=task_id,
+                telegram_file_id=file_id,
+                media_type="photo",
+                uploaded_by_user_id=user_id,
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        await db.flush()
+
+    @staticmethod
+    async def completion_requirements_ok(db: AsyncSession, task_id: int, min_photos: int = 3) -> tuple[bool, str]:
+        checks_q = await db.execute(
+            select(CleaningTaskCheck).where(
+                CleaningTaskCheck.task_id == task_id,
+                CleaningTaskCheck.is_required.is_(True),
+            )
+        )
+        checks = list(checks_q.scalars().all())
+        if not checks:
+            return False, "Чеклист ещё не инициализирован"
+
+        unchecked = [c.label for c in checks if not c.is_checked]
+        if unchecked:
+            return False, f"Не отмечены обязательные пункты: {', '.join(unchecked[:3])}"
+
+        photos_q = await db.execute(
+            select(CleaningTaskMedia).where(
+                CleaningTaskMedia.task_id == task_id,
+                CleaningTaskMedia.media_type == "photo",
+            )
+        )
+        photos_count = len(list(photos_q.scalars().all()))
+        if photos_count < min_photos:
+            return False, f"Нужно минимум {min_photos} фото, сейчас: {photos_count}"
+
+        return True, "ok"
 
     @staticmethod
     async def _accrue_cleaning_fee(db: AsyncSession, task: CleaningTask) -> None:
