@@ -127,6 +127,9 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
                     text="📋 Все брони", callback_data="cleaner:schedule:all"
                 )
             ],
+            [
+                InlineKeyboardButton(text="🧾 Чек расходников", callback_data="cleaner:expense:new")
+            ],
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="cleaner:menu")],
         ]
     )
