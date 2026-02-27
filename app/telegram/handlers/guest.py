@@ -14,7 +14,11 @@ from sqlalchemy.orm import joinedload
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, UserRole, User, GlobalSetting
 from app.telegram.auth.admin import add_user, is_guest
-from app.telegram.menus.guest import guest_menu_keyboard, request_contact_keyboard
+from app.telegram.menus.guest import (
+    guest_menu_keyboard,
+    guest_showcase_menu_keyboard,
+    request_contact_keyboard,
+)
 from app.core.messages import messages
 from app.core.config import settings
 
@@ -23,21 +27,20 @@ logger = logging.getLogger(__name__)
 
 
 async def show_guest_menu(message: Message):
-    """Показывает меню гостя (или запрос контакта)"""
+    """Показывает меню гостя: витрина (unauth) или кабинет (auth)."""
     user_id = message.from_user.id
 
-    # 1. Если авторизован -> Главное меню
     if is_guest(user_id):
         await message.answer(
             messages.GUEST_WELCOME,
             reply_markup=guest_menu_keyboard(),
             parse_mode="HTML",
         )
-    # 2. Если нет -> Просим контакт
     else:
         await message.answer(
-            messages.GUEST_LOGIN_PROMPT,
-            reply_markup=request_contact_keyboard(),
+            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            "Выберите, что хотите посмотреть:",
+            reply_markup=guest_showcase_menu_keyboard(),
             parse_mode="HTML",
         )
 
@@ -111,6 +114,86 @@ async def handle_contact(message: Message):
                 messages.BOOKING_NOT_FOUND,
                 reply_markup=ReplyKeyboardRemove(),
             )
+
+
+@router.callback_query(F.data == "guest:auth")
+async def guest_auth_prompt(callback: CallbackQuery):
+    """Попросить контакт для авторизации по брони."""
+    await callback.message.answer(
+        messages.GUEST_LOGIN_PROMPT,
+        reply_markup=request_contact_keyboard(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "guest:showcase:about")
+async def guest_showcase_about(callback: CallbackQuery):
+    text = (
+        f"🏕 <b>{settings.project_name}</b>\n\n"
+        f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
+        "Выберите следующий раздел, чтобы посмотреть домики, даты и условия."
+    )
+    await callback.message.edit_text(text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "guest:showcase:houses")
+async def guest_showcase_houses(callback: CallbackQuery):
+    text = (
+        "🏠 <b>Домики и фото</b>\n\n"
+        "Раздел в доработке: скоро здесь будет галерея по каждому домику с фото и описанием.\n"
+        "Пока можно проверить даты и перейти к бронированию."
+    )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+        ]
+    )
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "guest:showcase:faq")
+async def guest_showcase_faq(callback: CallbackQuery):
+    text = (
+        "❓ <b>Популярные вопросы</b>\n\n"
+        "• Как забронировать? — Нажмите «Проверить даты и забронировать».\n"
+        "• Когда заезд/выезд? — Обычно заезд после 14:00, выезд до 12:00.\n"
+        "• Можно с детьми? — Да, условия зависят от домика.\n"
+        "• Где уточнить детали? — Через кнопку «Связаться с нами»."
+    )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📞 Задать свой вопрос", callback_data="guest:contact_admin")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+        ]
+    )
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "guest:showcase:location")
+async def guest_showcase_location(callback: CallbackQuery):
+    async with AsyncSessionLocal() as session:
+        setting = await session.get(GlobalSetting, "coords")
+        coords = setting.value if setting and setting.value else settings.project_coords
+
+    text = (
+        f"📍 <b>Где мы находимся</b>\n\n"
+        f"{settings.project_name} находится в {settings.project_location}.\n"
+        f"Координаты: <code>{coords}</code>\n\n"
+        "После авторизации будет доступен детальный маршрут до объекта."
+    )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+        ]
+    )
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
 
 
 @router.callback_query(F.data == "guest:my_booking")
@@ -331,16 +414,6 @@ async def guest_rules(callback: CallbackQuery):
 @router.callback_query(F.data == "guest:pay")
 async def guest_pay(callback: CallbackQuery):
     """Оплата"""
-    # Need to fetch booking or just show generic info?
-    # Original code showed generic info but we now need amount if we want to be cool.
-    # But messages.payment_instructions takes amount.
-    # Let's see if we can get active booking quickly or just pass 0/"(сумма)"
-    # For now, let's keep it simple as original didn't fetch booking here (it was static text).
-    # Wait, original text didn't have amount.
-    # I'll update messages.payment_instructions to accept optional amount
-    pass # Wait, I can't change messages.py in this call.
-    # I'll pass 0 or a placeholder. Or fetch booking.
-    
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
         amount = int(booking.total_price - booking.advance_amount) if booking else 0
@@ -359,6 +432,23 @@ async def guest_pay(callback: CallbackQuery):
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
+@router.callback_query(F.data == "guest:partners")
+async def guest_partners(callback: CallbackQuery):
+    text = (
+        "🤝 <b>Партнёры</b>\n\n"
+        "Скоро здесь появятся проверенные партнёры: инструкторы, квадроциклы и активности.\n"
+        "Пока можно оставить запрос через администратора."
+    )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📞 Запросить через администратора", callback_data="guest:contact_admin")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+        ]
+    )
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
 @router.callback_query(F.data == "guest:contact_admin")
 async def contact_admin(callback: CallbackQuery):
 
@@ -372,9 +462,18 @@ async def contact_admin(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:menu")
 async def back_to_guest_menu(callback: CallbackQuery):
-    """Возврат в главное меню"""
-    await callback.message.edit_text(
-        messages.GUEST_WELCOME,
-        reply_markup=guest_menu_keyboard(),
-        parse_mode="HTML",
-    )
+    """Возврат в главное меню (витрина или кабинет)."""
+    if is_guest(callback.from_user.id):
+        await callback.message.edit_text(
+            messages.GUEST_WELCOME,
+            reply_markup=guest_menu_keyboard(),
+            parse_mode="HTML",
+        )
+    else:
+        await callback.message.edit_text(
+            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            "Выберите, что хотите посмотреть:",
+            reply_markup=guest_showcase_menu_keyboard(),
+            parse_mode="HTML",
+        )
+    await callback.answer()
