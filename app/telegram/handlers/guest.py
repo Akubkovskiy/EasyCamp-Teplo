@@ -162,7 +162,22 @@ async def guest_showcase_about(callback: CallbackQuery):
             f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
             "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
         )
-    await safe_edit(callback, about_text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
+    rows = []
+    if settings.guest_feature_showcase_houses:
+        rows.append([InlineKeyboardButton(text="🏠 Домики и фото", callback_data="guest:showcase:houses")])
+    rows.append([InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")])
+    if settings.guest_feature_faq:
+        rows.append([InlineKeyboardButton(text="❓ Популярные вопросы", callback_data="guest:showcase:faq")])
+    rows.extend(
+        [
+            [InlineKeyboardButton(text="📍 Где мы находимся", callback_data="guest:showcase:location")],
+            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
+            [InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
+        ]
+    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
+    await safe_edit(callback, about_text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
 
