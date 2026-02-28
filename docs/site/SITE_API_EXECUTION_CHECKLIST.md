@@ -5,8 +5,9 @@
 - [x] E1 — Front/API/DB scaffold в отдельном docker-compose
 - [x] E2 — API models + booking request endpoint (MVP)
 - [x] T-plan — Testing stack roadmap создан
-- [ ] E3 — Front booking flow + форма заявки
+- [x] E3 — Front booking flow + форма заявки (MVP)
 - [x] T1 — API smoke (manual curl) выполнен
+- [x] T2 (часть) — UI smoke (frontend доступен + отправка заявки через API)
 - [ ] E4 — Безопасный reverse-proxy subdomain через vpnbot override
 - [ ] E5 — Admin MVP
 - [ ] E6 — Hardening
