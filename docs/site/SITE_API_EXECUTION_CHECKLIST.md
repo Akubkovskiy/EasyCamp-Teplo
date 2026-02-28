@@ -3,9 +3,10 @@
 ## Этапы
 - [x] E0 — Infra baseline + backup vpnbot config
 - [x] E1 — Front/API/DB scaffold в отдельном docker-compose
-- [ ] E2 — API models + migrations + booking request endpoint
+- [x] E2 — API models + booking request endpoint (MVP)
 - [x] T-plan — Testing stack roadmap создан
 - [ ] E3 — Front booking flow + форма заявки
+- [x] T1 — API smoke (manual curl) выполнен
 - [ ] E4 — Безопасный reverse-proxy subdomain через vpnbot override
 - [ ] E5 — Admin MVP
 - [ ] E6 — Hardening
@@ -13,6 +14,11 @@
 
 ## Текущий статус
 - Создан `site-stack/` (frontend/api/db)
+- API (MVP) реализован:
+  - `GET /health`
+  - `GET /houses`
+  - `POST /booking-requests`
+  - `GET /booking-requests/{id}`
 - Локально поднято на loopback:
   - frontend: `127.0.0.1:3000`
   - api: `127.0.0.1:8001`
