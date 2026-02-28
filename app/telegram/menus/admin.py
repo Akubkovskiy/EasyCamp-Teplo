@@ -1,4 +1,5 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from app.core.config import settings
 
 
 def admin_menu_keyboard() -> InlineKeyboardMarkup:
@@ -38,6 +39,12 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="📞 Контакты",
                     callback_data="contacts",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🌐 Открыть админку",
+                    url=settings.admin_web_url,
                 )
             ],
         ]

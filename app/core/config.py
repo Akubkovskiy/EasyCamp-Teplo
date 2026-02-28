@@ -63,6 +63,7 @@ class Settings(BaseModel):
 
     # Contacts
     contact_phone: str = "+7 928 000-00-00"
+    admin_web_url: str = "https://teplo-v-arkhyze.ru/admin-web"
     contact_admin_username: str = "@sergey_teplo"
     contact_email: str = "info@easycamp.ru"
     contact_work_hours: str = "Круглосуточно"
@@ -135,6 +136,7 @@ settings = Settings(
     project_address=os.environ.get("PROJECT_ADDRESS", "с. Архыз, ул. Банковская, 26д"),
     project_coords=os.environ.get("PROJECT_COORDS", "43.560731, 41.284236"),
     contact_phone=os.environ.get("CONTACT_PHONE", "+7 928 000-00-00"),
+    admin_web_url=os.environ.get("ADMIN_WEB_URL", "https://teplo-v-arkhyze.ru/admin-web"),
     contact_admin_username=os.environ.get("CONTACT_ADMIN_USERNAME", "@sergey_teplo"),
     contact_email=os.environ.get("CONTACT_EMAIL", "info@easycamp.ru"),
     contact_work_hours=os.environ.get("CONTACT_WORK_HOURS", "Круглосуточно"),
