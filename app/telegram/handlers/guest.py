@@ -167,6 +167,9 @@ async def guest_showcase_houses(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:faq")
 async def guest_showcase_faq(callback: CallbackQuery):
+    if not settings.guest_feature_faq:
+        await callback.answer("Раздел FAQ временно недоступен", show_alert=True)
+        return
     async with AsyncSessionLocal() as session:
         text = await get_setting_value(
             session,
@@ -623,6 +626,9 @@ async def guest_pay_reject(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:partners")
 async def guest_partners(callback: CallbackQuery):
+    if not settings.guest_feature_partners:
+        await callback.answer("Раздел партнёров временно недоступен", show_alert=True)
+        return
     async with AsyncSessionLocal() as session:
         partners_text = await get_setting_value(
             session,

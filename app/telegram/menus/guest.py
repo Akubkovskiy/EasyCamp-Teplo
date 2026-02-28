@@ -5,36 +5,50 @@ from aiogram.types import (
     KeyboardButton,
 )
 
+from app.core.config import settings
+
 
 def guest_menu_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура главного меню для АВТОРИЗОВАННОГО гостя"""
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔑 Инструкция по заселению", callback_data="guest:instruction")],
-            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-            [InlineKeyboardButton(text="🛣 Как добраться", callback_data="guest:directions")],
-            [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
-            [InlineKeyboardButton(text="💳 Оплата", callback_data="guest:pay")],
-            [InlineKeyboardButton(text="📶 Wi‑Fi", callback_data="guest:wifi")],
-            [InlineKeyboardButton(text="ℹ️ Правила", callback_data="guest:rules")],
-            [InlineKeyboardButton(text="🤝 Партнёры", callback_data="guest:partners")],
-        ]
-    )
+    rows = [
+        [InlineKeyboardButton(text="🔑 Инструкция по заселению", callback_data="guest:instruction")],
+        [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
+        [InlineKeyboardButton(text="🛣 Как добраться", callback_data="guest:directions")],
+        [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
+        [InlineKeyboardButton(text="💳 Оплата", callback_data="guest:pay")],
+        [InlineKeyboardButton(text="📶 Wi‑Fi", callback_data="guest:wifi")],
+        [InlineKeyboardButton(text="ℹ️ Правила", callback_data="guest:rules")],
+    ]
+
+    if settings.guest_feature_partners:
+        rows.append([InlineKeyboardButton(text="🤝 Партнёры", callback_data="guest:partners")])
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def guest_showcase_menu_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура витрины для НЕавторизованного гостя"""
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🏕 О базе", callback_data="guest:showcase:about")],
-            [InlineKeyboardButton(text="🏠 Домики и фото", callback_data="guest:showcase:houses")],
-            [InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")],
-            [InlineKeyboardButton(text="❓ Популярные вопросы", callback_data="guest:showcase:faq")],
+    rows = [
+        [InlineKeyboardButton(text="🏕 О базе", callback_data="guest:showcase:about")],
+    ]
+
+    if settings.guest_feature_showcase_houses:
+        rows.append([InlineKeyboardButton(text="🏠 Домики и фото", callback_data="guest:showcase:houses")])
+
+    rows.append([InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")])
+
+    if settings.guest_feature_faq:
+        rows.append([InlineKeyboardButton(text="❓ Популярные вопросы", callback_data="guest:showcase:faq")])
+
+    rows.extend(
+        [
             [InlineKeyboardButton(text="📍 Где мы находимся", callback_data="guest:showcase:location")],
             [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
             [InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")],
         ]
     )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def request_contact_keyboard() -> ReplyKeyboardMarkup:

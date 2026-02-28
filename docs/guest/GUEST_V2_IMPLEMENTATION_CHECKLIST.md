@@ -13,7 +13,7 @@
 - [x] G5 — Инструкция/доступ по времени (MVP)
 - [x] G6 — FAQ + обратная связь (MVP)
 - [x] G7 — Партнёры (v1 текстовый каталог)
-- [ ] G8 — SaaS-hardening (конфиги/feature flags)
+- [x] G8 — SaaS-hardening (MVP feature flags)
 - [ ] G9 — QA + приёмка
 
 ---
@@ -81,6 +81,18 @@
 - [x] Перевести с «заглушки» на v1-текстовый каталог
 - [x] Вынести контент в настраиваемый `GlobalSetting` ключ `guest_partners_v1` (с fallback)
 - [ ] Добавить структуры карточек (категории/цены/контакты) в БД
+
+---
+
+## G8 — SaaS-hardening (MVP feature flags)
+
+- [x] Добавлены guest feature flags в конфиг:
+  - `GUEST_FEATURE_FAQ`
+  - `GUEST_FEATURE_PARTNERS`
+  - `GUEST_FEATURE_SHOWCASE_HOUSES`
+- [x] Меню гостя теперь собирается с учётом feature flags
+- [x] Добавлены guard-проверки в handlers для отключённых модулей
+- [ ] Следующий шаг: вынести порядок меню/тексты кнопок в DB-конфиг
 
 ---
 
