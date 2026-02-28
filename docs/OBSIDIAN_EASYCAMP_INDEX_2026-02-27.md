@@ -290,6 +290,7 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - Прогресс: E0/E1/E2 выполнены, добавлен `site-stack` и execution-checklist `docs/site/SITE_API_EXECUTION_CHECKLIST.md`.
 - В API реализованы MVP endpoints заявок на бронирование (`/houses`, `/booking-requests`).
 - E3 выполнен: frontend визитка подключена к API, форма заявки отправляет бронирование end-to-end.
+- E5 выполнен: добавлен Admin MVP (API + страница `/admin`) для просмотра и смены статусов заявок.
 - Добавлен testing roadmap: `docs/site/TESTING_STACK_ROADMAP.md`.
 - Установлены testing skills: `playwright-mcp`, `playwright`, `cypress`.
 - Планируемый стек:

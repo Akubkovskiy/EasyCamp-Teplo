@@ -9,8 +9,9 @@
 - [x] T1 — API smoke (manual curl) выполнен
 - [x] T2 (часть) — UI smoke (frontend доступен + отправка заявки через API)
 - [~] E4 — Безопасный reverse-proxy subdomain через vpnbot override (template+rollback готовы)
-- [ ] E5 — Admin MVP
+- [x] E5 — Admin MVP (web page + API status updates)
 - [ ] E6 — Hardening
+- [x] T2 (MVP) — admin UI smoke (просмотр и смена статуса заявки)
 - [ ] E7 — UAT + launch
 
 ## Текущий статус

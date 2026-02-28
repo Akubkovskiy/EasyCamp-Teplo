@@ -5,8 +5,10 @@ from sqlalchemy import select
 from .database import Base, engine, get_db
 from .models import House, BookingRequest
 from .schemas import HouseOut, BookingRequestCreate, BookingRequestOut
+from .admin import router as admin_router
 
-app = FastAPI(title="Teplo API", version="0.2.0")
+app = FastAPI(title="Teplo API", version="0.3.0")
+app.include_router(admin_router)
 
 
 @app.on_event("startup")
