@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, UserRole, User, GlobalSetting
-from app.telegram.auth.admin import add_user, is_guest
+from app.telegram.auth.admin import add_user, is_guest, get_all_users, UserRole
 from app.telegram.menus.guest import (
     guest_menu_keyboard,
     guest_showcase_menu_keyboard,
@@ -24,6 +24,13 @@ from app.utils.phone import normalize_phone, phones_match
 
 router = Router()
 logger = logging.getLogger(__name__)
+
+_feedback_waiting_users: set[int] = set()
+
+
+async def get_setting_value(session, key: str, default: str = "") -> str:
+    setting = await session.get(GlobalSetting, key)
+    return setting.value if setting and setting.value else default
 
 
 async def show_guest_menu(message: Message):
@@ -120,12 +127,15 @@ async def guest_auth_prompt(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:about")
 async def guest_showcase_about(callback: CallbackQuery):
-    text = (
-        f"🏕 <b>{settings.project_name}</b>\n\n"
-        f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
-        "Выберите следующий раздел, чтобы посмотреть домики, даты и условия."
-    )
-    await callback.message.edit_text(text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
+    async with AsyncSessionLocal() as session:
+        about_text = await get_setting_value(
+            session,
+            "guest_showcase_about",
+            f"🏕 <b>{settings.project_name}</b>\n\n"
+            f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
+            "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
+        )
+    await callback.message.edit_text(about_text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
     await callback.answer()
 
 
@@ -148,16 +158,21 @@ async def guest_showcase_houses(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:faq")
 async def guest_showcase_faq(callback: CallbackQuery):
-    text = (
-        "❓ <b>Популярные вопросы</b>\n\n"
-        "• Как забронировать? — Нажмите «Проверить даты и забронировать».\n"
-        "• Когда заезд/выезд? — Обычно заезд после 14:00, выезд до 12:00.\n"
-        "• Можно с детьми? — Да, условия зависят от домика.\n"
-        "• Где уточнить детали? — Через кнопку «Связаться с нами»."
-    )
+    async with AsyncSessionLocal() as session:
+        text = await get_setting_value(
+            session,
+            "guest_showcase_faq",
+            "❓ <b>Популярные вопросы</b>\n\n"
+            "• Как забронировать? — Нажмите «Проверить даты и забронировать».\n"
+            "• Когда заезд/выезд? — Обычно заезд после 14:00, выезд до 12:00.\n"
+            "• Можно с детьми? — Да, условия зависят от домика.\n"
+            "• Где уточнить детали? — Через кнопку «Связаться с нами».",
+        )
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📞 Задать свой вопрос", callback_data="guest:contact_admin")],
+            [InlineKeyboardButton(text="✍️ Задать свой вопрос", callback_data="guest:feedback:start")],
+            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
         ]
     )
@@ -171,12 +186,17 @@ async def guest_showcase_location(callback: CallbackQuery):
         setting = await session.get(GlobalSetting, "coords")
         coords = setting.value if setting and setting.value else settings.project_coords
 
-    text = (
-        f"📍 <b>Где мы находимся</b>\n\n"
-        f"{settings.project_name} находится в {settings.project_location}.\n"
-        f"Координаты: <code>{coords}</code>\n\n"
-        "После авторизации будет доступен детальный маршрут до объекта."
-    )
+    async with AsyncSessionLocal() as session:
+        location_text = await get_setting_value(
+            session,
+            "guest_showcase_location",
+            f"📍 <b>Где мы находимся</b>\n\n"
+            f"{settings.project_name} находится в {settings.project_location}.\n"
+            f"Координаты: <code>{coords}</code>\n\n"
+            "После авторизации будет доступен детальный маршрут до объекта.",
+        )
+
+    text = location_text
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")],
@@ -185,6 +205,42 @@ async def guest_showcase_location(callback: CallbackQuery):
     )
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
+
+
+@router.callback_query(F.data == "guest:feedback:start")
+async def guest_feedback_start(callback: CallbackQuery):
+    _feedback_waiting_users.add(callback.from_user.id)
+    await callback.message.answer(
+        "✍️ Напишите ваш вопрос одним сообщением — я передам его администратору."
+    )
+    await callback.answer()
+
+
+@router.message(F.text)
+async def guest_feedback_message(message: Message):
+    if not message.from_user or message.from_user.id not in _feedback_waiting_users:
+        return
+
+    _feedback_waiting_users.discard(message.from_user.id)
+
+    users = await get_all_users()
+    admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
+    admin_ids.add(settings.telegram_chat_id)
+
+    text = (
+        "📩 <b>Новый вопрос от гостя</b>\n\n"
+        f"От: {message.from_user.full_name} (@{message.from_user.username or '-'})\n"
+        f"User ID: <code>{message.from_user.id}</code>\n\n"
+        f"{message.text}"
+    )
+
+    for aid in admin_ids:
+        try:
+            await message.bot.send_message(aid, text, parse_mode="HTML")
+        except Exception:
+            pass
+
+    await message.answer("✅ Спасибо! Передали вопрос администрации. Ответим как можно быстрее.")
 
 
 @router.callback_query(F.data == "guest:my_booking")
