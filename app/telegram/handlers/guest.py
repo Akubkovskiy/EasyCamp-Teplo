@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.types import (
     Message,
@@ -354,7 +355,20 @@ async def guest_instruction(callback: CallbackQuery):
             await callback.answer("❌ Бронь не найдена", show_alert=True)
             return
 
-        # TODO: Проверка времени (за 24ч до заезда)
+        # Time-gate: инструкция доступна за 24 часа до заезда
+        now = datetime.now().date()
+        days_to_checkin = (booking.check_in - now).days
+        if days_to_checkin > 1:
+            await callback.message.edit_text(
+                "🔒 <b>Инструкция будет доступна за 24 часа до заезда.</b>\n\n"
+                f"До заезда осталось: <b>{days_to_checkin} дн.</b>",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="guest:my_booking")]]
+                ),
+                parse_mode="HTML",
+            )
+            await callback.answer()
+            return
 
         instruction = (
             booking.house.checkin_instruction
