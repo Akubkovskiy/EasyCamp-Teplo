@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, UserRole, User, GlobalSetting
-from app.telegram.auth.admin import add_user, is_guest, get_all_users, UserRole
+from app.telegram.auth.admin import add_user, is_guest, is_admin, get_all_users, UserRole
 from app.telegram.menus.guest import (
     guest_menu_keyboard,
     guest_showcase_menu_keyboard,
@@ -26,6 +26,7 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 _feedback_waiting_users: set[int] = set()
+_pay_receipt_waiting_users: dict[int, int] = {}
 
 
 async def get_setting_value(session, key: str, default: str = "") -> str:
@@ -462,13 +463,118 @@ async def guest_pay(callback: CallbackQuery):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📞 Отправить чек админу", callback_data="guest:contact_admin"
+                    text="📸 Отправить чек оплаты", callback_data="guest:pay:receipt"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📞 Связаться с нами", callback_data="guest:contact_admin"
                 )
             ],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:my_booking")],
         ]
     )
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.callback_query(F.data == "guest:pay:receipt")
+async def guest_pay_receipt_start(callback: CallbackQuery):
+    async with AsyncSessionLocal() as session:
+        booking = await get_active_booking(session, callback.from_user.id)
+        if not booking:
+            await callback.answer("❌ Активная бронь не найдена", show_alert=True)
+            return
+
+    _pay_receipt_waiting_users[callback.from_user.id] = booking.id
+    await callback.message.answer(
+        "📸 Отправьте фото чека одним сообщением.\n"
+        "Можно добавить подпись (например: сумма/время оплаты)."
+    )
+    await callback.answer()
+
+
+@router.message(F.photo)
+async def guest_pay_receipt_photo(message: Message):
+    if not message.from_user:
+        return
+    booking_id = _pay_receipt_waiting_users.get(message.from_user.id)
+    if not booking_id:
+        return
+
+    _pay_receipt_waiting_users.pop(message.from_user.id, None)
+    file_id = message.photo[-1].file_id
+    caption = message.caption or "(без комментария)"
+
+    users = await get_all_users()
+    admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
+    admin_ids.add(settings.telegram_chat_id)
+
+    text = (
+        f"💳 <b>Чек оплаты от гостя</b>\n\n"
+        f"Гость: {message.from_user.full_name} (@{message.from_user.username or '-'})\n"
+        f"Booking ID: <code>{booking_id}</code>\n"
+        f"Комментарий: {caption}"
+    )
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data=f"guest:pay:approve:{booking_id}:{message.from_user.id}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"guest:pay:reject:{booking_id}:{message.from_user.id}"),
+        ]]
+    )
+
+    for aid in admin_ids:
+        try:
+            await message.bot.send_photo(aid, file_id, caption=text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            pass
+
+    await message.answer("✅ Чек отправлен администратору на проверку.")
+
+
+@router.callback_query(F.data.startswith("guest:pay:approve:"))
+async def guest_pay_approve(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+
+    _, _, _, booking_id_str, guest_tg_str = callback.data.split(":")
+    booking_id = int(booking_id_str)
+    guest_tg = int(guest_tg_str)
+
+    async with AsyncSessionLocal() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking:
+            await callback.answer("Бронь не найдена", show_alert=True)
+            return
+        booking.status = BookingStatus.PAID
+        booking.advance_amount = booking.total_price
+        await session.commit()
+
+    try:
+        await callback.bot.send_message(guest_tg, "✅ Оплата подтверждена. Спасибо!")
+    except Exception:
+        pass
+    await callback.answer("Оплата подтверждена")
+
+
+@router.callback_query(F.data.startswith("guest:pay:reject:"))
+async def guest_pay_reject(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+
+    _, _, _, booking_id_str, guest_tg_str = callback.data.split(":")
+    booking_id = int(booking_id_str)
+    guest_tg = int(guest_tg_str)
+
+    try:
+        await callback.bot.send_message(
+            guest_tg,
+            f"⚠️ Чек по брони #{booking_id} отклонён. Пожалуйста, свяжитесь с администратором.",
+        )
+    except Exception:
+        pass
+    await callback.answer("Чек отклонён")
 
 
 @router.callback_query(F.data == "guest:partners")
