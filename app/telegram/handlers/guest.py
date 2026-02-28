@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 _feedback_waiting_users: dict[int, str] = {}
 _pay_receipt_waiting_users: dict[int, int] = {}
+_guest_auth_state: dict[int, bool] = {}
 
 FEEDBACK_CATEGORIES = {
     "booking": "Бронирование",
@@ -77,6 +78,30 @@ def build_showcase_section_rows(current: str) -> list[list[InlineKeyboardButton]
     return rows
 
 
+def is_guest_authorized(user_id: int) -> bool:
+    # state-first + fallback to DB role cache
+    return _guest_auth_state.get(user_id, False) or is_guest(user_id)
+
+
+def set_guest_auth(user_id: int, value: bool):
+    _guest_auth_state[user_id] = value
+
+
+async def ensure_guest_auth(callback: CallbackQuery) -> bool:
+    if callback.from_user and is_guest_authorized(callback.from_user.id):
+        return True
+
+    await safe_edit(
+        callback,
+        f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+        "Сначала авторизуйтесь, чтобы открыть личный кабинет.",
+        reply_markup=guest_showcase_menu_keyboard(),
+        parse_mode="HTML",
+    )
+    await callback.answer("Сначала авторизуйтесь")
+    return False
+
+
 async def get_setting_value(session, key: str, default: str = "") -> str:
     setting = await session.get(GlobalSetting, key)
     return setting.value if setting and setting.value else default
@@ -96,7 +121,7 @@ async def show_guest_menu(message: Message):
     """Показывает меню гостя: витрина (unauth) или кабинет (auth)."""
     user_id = message.from_user.id
 
-    if is_guest(user_id):
+    if is_guest_authorized(user_id):
         await message.answer(
             messages.GUEST_WELCOME,
             reply_markup=guest_menu_keyboard(),
@@ -158,6 +183,7 @@ async def handle_contact(message: Message):
                 name=contact.first_name or "Гость",
                 phone=clean_phone,
             )
+            set_guest_auth(message.from_user.id, True)
 
             await message.answer(
                 messages.welcome_success(message.from_user.first_name),
@@ -167,6 +193,7 @@ async def handle_contact(message: Message):
 
         else:
             # НЕ НАЙДЕНО
+            set_guest_auth(message.from_user.id, False)
             await message.answer(
                 messages.BOOKING_NOT_FOUND,
                 reply_markup=ReplyKeyboardRemove(),
@@ -319,6 +346,8 @@ async def guest_feedback_message(message: Message):
 
 @router.callback_query(F.data == "guest:my_booking")
 async def my_booking(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Показать детали брони"""
     user_id = callback.from_user.id
 
@@ -440,6 +469,8 @@ async def get_active_booking(session, user_id: int):
 
 @router.callback_query(F.data == "guest:instruction")
 async def guest_instruction(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Инструкция по заселению"""
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
@@ -488,6 +519,8 @@ async def guest_instruction(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:wifi")
 async def guest_wifi(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Wi-Fi"""
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
@@ -513,6 +546,8 @@ async def guest_wifi(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:directions")
 async def guest_directions(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Как добраться"""
     async with AsyncSessionLocal() as session:
         # Получаем глобальные координаты
@@ -537,6 +572,8 @@ async def guest_directions(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:rules")
 async def guest_rules(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Правила проживания"""
     async with AsyncSessionLocal() as session:
         # Получаем глобальные правила
@@ -560,6 +597,8 @@ async def guest_rules(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:pay")
 async def guest_pay(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     """Оплата"""
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
@@ -586,6 +625,8 @@ async def guest_pay(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:pay:receipt")
 async def guest_pay_receipt_start(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
         if not booking:
@@ -687,6 +728,8 @@ async def guest_pay_reject(callback: CallbackQuery):
 @router.callback_query(F.data == "guest:logout")
 async def guest_logout(callback: CallbackQuery):
     removed = await remove_guest_user(callback.from_user.id)
+    if callback.from_user:
+        set_guest_auth(callback.from_user.id, False)
 
     text = (
         "✅ Вы вышли из гостевого кабинета."
@@ -706,6 +749,8 @@ async def guest_logout(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:partners")
 async def guest_partners(callback: CallbackQuery):
+    if not await ensure_guest_auth(callback):
+        return
     if not settings.guest_feature_partners:
         await callback.answer("Раздел партнёров временно недоступен", show_alert=True)
         return
@@ -757,7 +802,7 @@ async def back_to_showcase_menu(callback: CallbackQuery):
 @router.callback_query(F.data == "guest:menu")
 async def back_to_guest_menu(callback: CallbackQuery):
     """Возврат в главное меню (витрина или кабинет)."""
-    if is_guest(callback.from_user.id):
+    if is_guest_authorized(callback.from_user.id):
         await safe_edit(
             callback,
             messages.GUEST_WELCOME,
