@@ -1,5 +1,4 @@
 import logging
-import re
 from aiogram import Router, F
 from aiogram.types import (
     Message,
@@ -21,6 +20,7 @@ from app.telegram.menus.guest import (
 )
 from app.core.messages import messages
 from app.core.config import settings
+from app.utils.phone import normalize_phone, phones_match
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -55,12 +55,8 @@ async def handle_contact(message: Message):
         await message.answer("⚠️ Пожалуйста, отправьте СВОЙ контакт через кнопку внизу.")
         return
 
-    # Нормализация телефона (удаляем лишнее, приводим к виду 79...)
-    phone = contact.phone_number
-    clean_phone = re.sub(r"[\+\(\)\-\s]", "", phone)
-
-    if clean_phone.startswith("8"):
-        clean_phone = "7" + clean_phone[1:]
+    # Нормализация телефона
+    clean_phone = normalize_phone(contact.phone_number)
 
     logger.info(f"Guest login attempt: {clean_phone} (user_id={message.from_user.id})")
 
@@ -84,12 +80,7 @@ async def handle_contact(message: Message):
 
         found_booking = None
         for booking in bookings:
-            b_phone = re.sub(r"[\+\(\)\-\s]", "", booking.guest_phone)
-            if b_phone.startswith("8"):
-                b_phone = "7" + b_phone[1:]
-
-            # Сравниваем (учитываем что clean_phone может быть без 7 или +7)
-            if clean_phone in b_phone or b_phone in clean_phone:
+            if phones_match(clean_phone, booking.guest_phone):
                 found_booking = booking
                 break
 
@@ -228,11 +219,7 @@ async def my_booking(callback: CallbackQuery):
 
         found_booking = None
         for b in bookings:
-            b_phone = re.sub(r"[\+\(\)\-\s]", "", b.guest_phone)
-            if b_phone.startswith("8"):
-                b_phone = "7" + b_phone[1:]
-
-            if clean_user_phone in b_phone or b_phone in clean_user_phone:
+            if phones_match(clean_user_phone, b.guest_phone):
                 found_booking = b
                 break
 
@@ -295,11 +282,7 @@ async def get_active_booking(session, user_id: int):
     bookings = result.scalars().all()
 
     for b in bookings:
-        b_phone = re.sub(r"[\+\(\)\-\s]", "", b.guest_phone)
-        if b_phone.startswith("8"):
-            b_phone = "7" + b_phone[1:]
-
-        if clean_user_phone in b_phone or b_phone in clean_user_phone:
+        if phones_match(clean_user_phone, b.guest_phone):
             return b
     return None
 
