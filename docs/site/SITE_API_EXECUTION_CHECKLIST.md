@@ -8,7 +8,7 @@
 - [x] E3 — Front booking flow + форма заявки (MVP)
 - [x] T1 — API smoke (manual curl) выполнен
 - [x] T2 (часть) — UI smoke (frontend доступен + отправка заявки через API)
-- [ ] E4 — Безопасный reverse-proxy subdomain через vpnbot override
+- [~] E4 — Безопасный reverse-proxy subdomain через vpnbot override (template+rollback готовы)
 - [ ] E5 — Admin MVP
 - [ ] E6 — Hardening
 - [ ] E7 — UAT + launch
