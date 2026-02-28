@@ -282,4 +282,13 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - G8 (MVP) завершён: добавлены guest feature flags и условная сборка меню.
 - G9 (тех) завершён: финальный прогон тестов и подготовка UAT чеклиста.
 
+## 14) Site + API roadmap (новый трек)
+
+- Добавлен документ: `docs/site/SITE_API_ROADMAP_TEPLO.md`
+- Зафиксировано: 80/443 уже заняты VPN-стеком (`vpnbot`), правки только безопасным путём через отдельные `server_name` в `override.conf`.
+- Подход: отдельные subdomain для сайта/API + отдельный compose проект.
+- Планируемый стек:
+  - Front: Next.js + Tailwind v4 + shadcn/ui
+  - API: FastAPI + PostgreSQL + Alembic
+
 _Заметка подготовлена в формате Obsidian-friendly Markdown._
