@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     Message,
     CallbackQuery,
@@ -47,6 +48,16 @@ FEEDBACK_CATEGORIES = {
 async def get_setting_value(session, key: str, default: str = "") -> str:
     setting = await session.get(GlobalSetting, key)
     return setting.value if setting and setting.value else default
+
+
+async def safe_edit(callback: CallbackQuery, text: str, reply_markup=None, parse_mode: str | None = None):
+    try:
+        await callback.message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e):
+            await callback.answer("Уже открыт")
+            return
+        raise
 
 
 async def show_guest_menu(message: Message):
@@ -151,7 +162,7 @@ async def guest_showcase_about(callback: CallbackQuery):
             f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
             "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
         )
-    await callback.message.edit_text(about_text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
+    await safe_edit(callback, about_text, reply_markup=guest_showcase_menu_keyboard(), parse_mode="HTML")
     await callback.answer()
 
 
@@ -168,7 +179,7 @@ async def guest_showcase_houses(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
 
@@ -195,7 +206,7 @@ async def guest_showcase_faq(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
 
@@ -222,7 +233,7 @@ async def guest_showcase_location(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
 
@@ -358,7 +369,7 @@ async def my_booking(callback: CallbackQuery):
             ]
         )
 
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def get_active_booking(session, user_id: int):
@@ -451,7 +462,7 @@ async def guest_instruction(callback: CallbackQuery):
                 ],
             ]
         )
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guest:wifi")
@@ -476,7 +487,7 @@ async def guest_wifi(callback: CallbackQuery):
                 ],
             ]
         )
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guest:directions")
@@ -500,7 +511,7 @@ async def guest_directions(callback: CallbackQuery):
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
             ]
         )
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guest:rules")
@@ -523,7 +534,7 @@ async def guest_rules(callback: CallbackQuery):
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
             ]
         )
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guest:pay")
@@ -549,7 +560,7 @@ async def guest_pay(callback: CallbackQuery):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:my_booking")],
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guest:pay:receipt")
