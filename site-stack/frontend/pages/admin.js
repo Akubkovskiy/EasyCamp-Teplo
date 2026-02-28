@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AdminNav from "../components/AdminNav";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
 const statuses = ["new", "in_progress", "confirmed", "cancelled"];
@@ -45,9 +46,7 @@ export default function AdminPage() {
   return (
     <main style={{ fontFamily: "Inter,sans-serif", padding: 24, background: "#f7fafc", minHeight: "100vh" }}>
       <h1 style={{ marginTop: 0 }}>Admin V2 · Booking Requests</h1>
-      <p style={{ marginTop: -8, color: '#64748b' }}>
-        Разделы: <a href="/admin" style={{marginRight:8}}>Заявки</a> · <a href="/admin/houses" style={{marginRight:8}}>Домики</a> · <a href="/admin/bookings">Бронирования</a>
-      </p>
+      <AdminNav />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
         <Stat label="Новые" value={stats.new} />

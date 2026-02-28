@@ -5,8 +5,8 @@
 - [x] A3 New admin frontend scaffold
 - [x] B1 Unified admin API layer (booking requests + houses + bookings)
 - [x] B2 Audit log (MVP)
-- [ ] C1 Dashboard
-- [ ] C2 Requests table + filters
+- [x] C1 Dashboard (KPI cards on requests/bookings)
+- [x] C2 Requests table + filters
 - [ ] C3 Booking detail page
 - [ ] D1 Role-based auth hardening
 - [ ] D2 E2E + perf checks

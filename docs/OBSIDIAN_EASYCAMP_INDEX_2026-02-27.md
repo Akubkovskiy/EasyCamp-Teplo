@@ -291,6 +291,7 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - A3 выполнен: обновлён admin frontend (`/admin`) с фильтрами и KPI-карточками.
 - B1 выполнен: unified admin API покрывает заявки/бронирования/домики (`/admin/booking-requests`, `/admin/bookings`, `/admin/houses`).
 - B2 (MVP) выполнен: включён audit log действий админа (`/admin/audit`).
+- C1/C2 выполнены: dashboard KPI + фильтры в admin UI, добавлен экран аудита.
 
 ## 14) Site + API roadmap (новый трек)
 

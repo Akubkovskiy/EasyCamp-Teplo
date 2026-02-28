@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AdminNav from "../../components/AdminNav";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
 
@@ -27,6 +28,7 @@ export default function AdminHousesPage() {
   return (
     <main style={{ fontFamily: "Inter,sans-serif", padding: 24 }}>
       <h1>Admin · Houses</h1>
+      <AdminNav />
 
       <form onSubmit={createHouse} style={{ display: "grid", gap: 8, maxWidth: 520, marginBottom: 20 }}>
         <input required placeholder="Название" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
