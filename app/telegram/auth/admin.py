@@ -86,6 +86,27 @@ async def remove_user(telegram_id: int) -> bool:
     return True
 
 
+async def remove_guest_user(telegram_id: int) -> bool:
+    """Удаляет ТОЛЬКО гостя (без риска снести админа/уборщицу)."""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(
+                User.telegram_id == telegram_id,
+                User.role == UserRole.GUEST,
+            )
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            return False
+
+        await session.delete(user)
+        await session.commit()
+
+    await refresh_users_cache()
+    return True
+
+
 async def get_all_users() -> list[User]:
     """Возвращает всех пользователей из БД"""
     async with AsyncSessionLocal() as session:

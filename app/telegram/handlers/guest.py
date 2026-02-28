@@ -12,8 +12,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus, UserRole, User, GlobalSetting
-from app.telegram.auth.admin import add_user, is_guest, is_admin, get_all_users, UserRole
+from app.models import Booking, BookingStatus, User, GlobalSetting
+from app.telegram.auth.admin import (
+    add_user,
+    is_guest,
+    is_admin,
+    get_all_users,
+    UserRole,
+    remove_guest_user,
+)
 from app.telegram.menus.guest import (
     guest_menu_keyboard,
     guest_showcase_menu_keyboard,
@@ -622,6 +629,26 @@ async def guest_pay_reject(callback: CallbackQuery):
     except Exception:
         pass
     await callback.answer("Чек отклонён")
+
+
+@router.callback_query(F.data == "guest:logout")
+async def guest_logout(callback: CallbackQuery):
+    removed = await remove_guest_user(callback.from_user.id)
+
+    text = (
+        "✅ Вы вышли из гостевого кабинета."
+        if removed
+        else "ℹ️ Вы уже не авторизованы как гость."
+    )
+
+    await callback.message.edit_text(
+        f"{text}\n\n"
+        f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n"
+        "Выберите, что хотите посмотреть:",
+        reply_markup=guest_showcase_menu_keyboard(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data == "guest:partners")

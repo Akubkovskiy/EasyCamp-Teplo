@@ -23,6 +23,8 @@ def guest_menu_keyboard() -> InlineKeyboardMarkup:
     if settings.guest_feature_partners:
         rows.append([InlineKeyboardButton(text="🤝 Партнёры", callback_data="guest:partners")])
 
+    rows.append([InlineKeyboardButton(text="🚪 Выйти", callback_data="guest:logout")])
+
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
