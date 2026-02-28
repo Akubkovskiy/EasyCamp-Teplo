@@ -7,10 +7,14 @@ from .models import House, BookingRequest
 from .schemas import HouseOut, BookingRequestCreate, BookingRequestOut
 from .admin import router as admin_router
 from .admin_houses import router as admin_houses_router
+from .admin_bookings import router as admin_bookings_router
+from .admin_audit import router as admin_audit_router
 
 app = FastAPI(title="Teplo API", version="0.3.0")
 app.include_router(admin_router)
 app.include_router(admin_houses_router)
+app.include_router(admin_bookings_router)
+app.include_router(admin_audit_router)
 
 
 @app.on_event("startup")

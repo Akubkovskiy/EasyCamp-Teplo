@@ -3,8 +3,8 @@
 - [x] A1 Audit legacy admin (`app/web/*`)
 - [x] A2 Function map + gap list
 - [x] A3 New admin frontend scaffold
-- [~] B1 Unified admin API layer (booking requests + houses done)
-- [ ] B2 Audit log
+- [x] B1 Unified admin API layer (booking requests + houses + bookings)
+- [x] B2 Audit log (MVP)
 - [ ] C1 Dashboard
 - [ ] C2 Requests table + filters
 - [ ] C3 Booking detail page

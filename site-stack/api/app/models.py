@@ -33,3 +33,14 @@ class BookingRequest(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="website")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    entity: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
