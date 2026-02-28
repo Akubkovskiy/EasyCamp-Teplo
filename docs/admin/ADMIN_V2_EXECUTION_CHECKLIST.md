@@ -2,8 +2,8 @@
 
 - [x] A1 Audit legacy admin (`app/web/*`)
 - [x] A2 Function map + gap list
-- [ ] A3 New admin frontend scaffold
-- [ ] B1 Unified admin API layer
+- [x] A3 New admin frontend scaffold
+- [~] B1 Unified admin API layer (booking requests done)
 - [ ] B2 Audit log
 - [ ] C1 Dashboard
 - [ ] C2 Requests table + filters

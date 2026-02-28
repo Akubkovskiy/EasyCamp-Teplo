@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
 from .database import get_db
@@ -18,8 +18,26 @@ ALLOWED_STATUSES = {"new", "in_progress", "confirmed", "cancelled"}
 
 
 @router.get("/booking-requests", response_model=list[BookingRequestOut])
-def admin_list_booking_requests(db: Session = Depends(get_db)):
-    stmt = select(BookingRequest).order_by(BookingRequest.created_at.desc())
+def admin_list_booking_requests(
+    status: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    stmt = select(BookingRequest)
+
+    if status:
+        stmt = stmt.where(BookingRequest.status == status)
+
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            or_(
+                BookingRequest.guest_name.ilike(like),
+                BookingRequest.guest_phone.ilike(like),
+            )
+        )
+
+    stmt = stmt.order_by(BookingRequest.created_at.desc())
     return list(db.execute(stmt).scalars().all())
 
 

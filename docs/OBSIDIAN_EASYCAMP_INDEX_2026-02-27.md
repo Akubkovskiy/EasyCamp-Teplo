@@ -288,6 +288,8 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - Добавлен execution checklist: `docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md`
 - Подход: не удалять legacy admin сразу, а безопасно мигрировать на новый UI/API поэтапно.
 - Выполнен аудит legacy admin: `docs/admin/ADMIN_V2_AUDIT_LEGACY.md` (роуты/шаблоны/gap list).
+- A3 выполнен: обновлён admin frontend (`/admin`) с фильтрами и KPI-карточками.
+- B1 частично выполнен: admin API поддерживает фильтры `status` и `q` для заявок.
 
 ## 14) Site + API roadmap (новый трек)
 
