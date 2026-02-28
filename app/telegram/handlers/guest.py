@@ -45,6 +45,38 @@ FEEDBACK_CATEGORIES = {
 }
 
 
+def build_showcase_section_rows(current: str) -> list[list[InlineKeyboardButton]]:
+    rows: list[list[InlineKeyboardButton]] = []
+
+    sections: list[tuple[str, str, bool]] = [
+        ("about", "🏕 О базе", True),
+        ("houses", "🏠 Домики и фото", settings.guest_feature_showcase_houses),
+        ("availability", "📅 Проверить даты и забронировать", True),
+        ("faq", "❓ Популярные вопросы", settings.guest_feature_faq),
+        ("location", "📍 Где мы находимся", True),
+        ("contact", "📞 Связаться с нами", True),
+        ("auth", "🔐 Авторизоваться", True),
+    ]
+
+    callback_map = {
+        "about": "guest:showcase:about",
+        "houses": "guest:showcase:houses",
+        "availability": "guest:availability",
+        "faq": "guest:showcase:faq",
+        "location": "guest:showcase:location",
+        "contact": "guest:contact_admin",
+        "auth": "guest:auth",
+    }
+
+    for key, label, enabled in sections:
+        if not enabled or key == current:
+            continue
+        rows.append([InlineKeyboardButton(text=label, callback_data=callback_map[key])])
+
+    rows.append([InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")])
+    return rows
+
+
 async def get_setting_value(session, key: str, default: str = "") -> str:
     setting = await session.get(GlobalSetting, key)
     return setting.value if setting and setting.value else default
@@ -162,21 +194,7 @@ async def guest_showcase_about(callback: CallbackQuery):
             f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
             "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
         )
-    rows = []
-    if settings.guest_feature_showcase_houses:
-        rows.append([InlineKeyboardButton(text="🏠 Домики и фото", callback_data="guest:showcase:houses")])
-    rows.append([InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")])
-    if settings.guest_feature_faq:
-        rows.append([InlineKeyboardButton(text="❓ Популярные вопросы", callback_data="guest:showcase:faq")])
-    rows.extend(
-        [
-            [InlineKeyboardButton(text="📍 Где мы находимся", callback_data="guest:showcase:location")],
-            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-            [InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
-        ]
-    )
-    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=build_showcase_section_rows("about"))
     await safe_edit(callback, about_text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
@@ -188,12 +206,7 @@ async def guest_showcase_houses(callback: CallbackQuery):
         "Раздел в доработке: скоро здесь будет галерея по каждому домику с фото и описанием.\n"
         "Пока можно проверить даты и перейти к бронированию."
     )
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
-        ]
-    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=build_showcase_section_rows("houses"))
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
@@ -214,13 +227,9 @@ async def guest_showcase_faq(callback: CallbackQuery):
             "• Где уточнить детали? — Через кнопку «Связаться с нами».",
         )
 
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✍️ Задать свой вопрос", callback_data="guest:feedback:start")],
-            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
-        ]
-    )
+    rows = [[InlineKeyboardButton(text="✍️ Задать свой вопрос", callback_data="guest:feedback:start")]]
+    rows.extend(build_showcase_section_rows("faq"))
+    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
@@ -242,12 +251,9 @@ async def guest_showcase_location(callback: CallbackQuery):
         )
 
     text = location_text
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
-        ]
-    )
+    rows = [[InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")]]
+    rows.extend(build_showcase_section_rows("location"))
+    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
