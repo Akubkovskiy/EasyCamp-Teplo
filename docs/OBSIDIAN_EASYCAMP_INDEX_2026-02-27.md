@@ -287,6 +287,7 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - Добавлен roadmap: `docs/admin/ADMIN_V2_ROADMAP.md`
 - Добавлен execution checklist: `docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md`
 - Подход: не удалять legacy admin сразу, а безопасно мигрировать на новый UI/API поэтапно.
+- Выполнен аудит legacy admin: `docs/admin/ADMIN_V2_AUDIT_LEGACY.md` (роуты/шаблоны/gap list).
 
 ## 14) Site + API roadmap (новый трек)
 
