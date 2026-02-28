@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 _feedback_waiting_users: dict[int, str] = {}
 _pay_receipt_waiting_users: dict[int, int] = {}
 _guest_auth_state: dict[int, bool] = {}
+_guest_context_state: dict[int, str] = {}  # showcase | guest_cabinet
 
 FEEDBACK_CATEGORIES = {
     "booking": "Бронирование",
@@ -87,8 +88,49 @@ def set_guest_auth(user_id: int, value: bool):
     _guest_auth_state[user_id] = value
 
 
+def get_guest_context(user_id: int) -> str:
+    ctx = _guest_context_state.get(user_id)
+    if ctx:
+        return ctx
+    return "guest_cabinet" if is_guest_authorized(user_id) else "showcase"
+
+
+def set_guest_context(user_id: int, context: str):
+    _guest_context_state[user_id] = context
+
+
+async def ensure_guest_context(callback: CallbackQuery, expected: str) -> bool:
+    if not callback.from_user:
+        return False
+
+    current = get_guest_context(callback.from_user.id)
+    if current == expected:
+        return True
+
+    # мягкий редирект в актуальный контекст
+    if current == "guest_cabinet" and is_guest_authorized(callback.from_user.id):
+        await safe_edit(
+            callback,
+            messages.GUEST_WELCOME,
+            reply_markup=guest_menu_keyboard(),
+            parse_mode="HTML",
+        )
+    else:
+        set_guest_context(callback.from_user.id, "showcase")
+        await safe_edit(
+            callback,
+            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            "Выберите, что хотите посмотреть:",
+            reply_markup=guest_showcase_menu_keyboard(),
+            parse_mode="HTML",
+        )
+    await callback.answer("Обновил меню по текущему режиму")
+    return False
+
+
 async def ensure_guest_auth(callback: CallbackQuery) -> bool:
     if callback.from_user and is_guest_authorized(callback.from_user.id):
+        set_guest_context(callback.from_user.id, "guest_cabinet")
         return True
 
     await safe_edit(
@@ -122,12 +164,14 @@ async def show_guest_menu(message: Message):
     user_id = message.from_user.id
 
     if is_guest_authorized(user_id):
+        set_guest_context(user_id, "guest_cabinet")
         await message.answer(
             messages.GUEST_WELCOME,
             reply_markup=guest_menu_keyboard(),
             parse_mode="HTML",
         )
     else:
+        set_guest_context(user_id, "showcase")
         await message.answer(
             f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
             "Выберите, что хотите посмотреть:",
@@ -184,6 +228,7 @@ async def handle_contact(message: Message):
                 phone=clean_phone,
             )
             set_guest_auth(message.from_user.id, True)
+            set_guest_context(message.from_user.id, "guest_cabinet")
 
             await message.answer(
                 messages.welcome_success(message.from_user.first_name),
@@ -194,6 +239,7 @@ async def handle_contact(message: Message):
         else:
             # НЕ НАЙДЕНО
             set_guest_auth(message.from_user.id, False)
+            set_guest_context(message.from_user.id, "showcase")
             await message.answer(
                 messages.BOOKING_NOT_FOUND,
                 reply_markup=ReplyKeyboardRemove(),
@@ -202,6 +248,8 @@ async def handle_contact(message: Message):
 
 @router.callback_query(F.data == "guest:auth")
 async def guest_auth_prompt(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     """Попросить контакт для авторизации по брони."""
     await callback.message.answer(
         messages.GUEST_LOGIN_PROMPT,
@@ -213,6 +261,8 @@ async def guest_auth_prompt(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:about")
 async def guest_showcase_about(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     async with AsyncSessionLocal() as session:
         about_text = await get_setting_value(
             session,
@@ -228,6 +278,8 @@ async def guest_showcase_about(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:houses")
 async def guest_showcase_houses(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     text = (
         "🏠 <b>Домики и фото</b>\n\n"
         "Раздел в доработке: скоро здесь будет галерея по каждому домику с фото и описанием.\n"
@@ -240,6 +292,8 @@ async def guest_showcase_houses(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:faq")
 async def guest_showcase_faq(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     if not settings.guest_feature_faq:
         await callback.answer("Раздел FAQ временно недоступен", show_alert=True)
         return
@@ -263,6 +317,8 @@ async def guest_showcase_faq(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:location")
 async def guest_showcase_location(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     async with AsyncSessionLocal() as session:
         setting = await session.get(GlobalSetting, "coords")
         coords = setting.value if setting and setting.value else settings.project_coords
@@ -287,6 +343,8 @@ async def guest_showcase_location(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:feedback:start")
 async def guest_feedback_start(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🗓 Бронирование", callback_data="guest:feedback:cat:booking")],
@@ -730,6 +788,7 @@ async def guest_logout(callback: CallbackQuery):
     removed = await remove_guest_user(callback.from_user.id)
     if callback.from_user:
         set_guest_auth(callback.from_user.id, False)
+        set_guest_context(callback.from_user.id, "showcase")
 
     text = (
         "✅ Вы вышли из гостевого кабинета."
@@ -788,7 +847,11 @@ async def contact_admin(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:showcase:menu")
 async def back_to_showcase_menu(callback: CallbackQuery):
+    if not await ensure_guest_context(callback, "showcase"):
+        return
     """Гарантированный возврат в витрину (для unauth flow)."""
+    if callback.from_user:
+        set_guest_context(callback.from_user.id, "showcase")
     await safe_edit(
         callback,
         f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
@@ -803,6 +866,7 @@ async def back_to_showcase_menu(callback: CallbackQuery):
 async def back_to_guest_menu(callback: CallbackQuery):
     """Возврат в главное меню (витрина или кабинет)."""
     if is_guest_authorized(callback.from_user.id):
+        set_guest_context(callback.from_user.id, "guest_cabinet")
         await safe_edit(
             callback,
             messages.GUEST_WELCOME,
@@ -810,6 +874,7 @@ async def back_to_guest_menu(callback: CallbackQuery):
             parse_mode="HTML",
         )
     else:
+        set_guest_context(callback.from_user.id, "showcase")
         await safe_edit(
             callback,
             f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
