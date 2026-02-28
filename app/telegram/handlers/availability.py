@@ -217,7 +217,7 @@ async def select_checkout_date(callback: CallbackQuery):
         )
 
     if not available_houses:
-        back_callback = "admin:menu" if is_admin(user_id) else "guest:menu"
+        back_callback = "admin:menu" if is_admin(user_id) else "guest:showcase:menu"
         retry_callback = (
             "admin:availability" if is_admin(user_id) else "guest:availability"
         )
@@ -283,7 +283,7 @@ async def select_checkout_date(callback: CallbackQuery):
         [
             InlineKeyboardButton(
                 text="🔙 В меню",
-                callback_data="admin:menu" if is_admin(user_id) else "guest:menu",
+                callback_data="admin:menu" if is_admin(user_id) else "guest:showcase:menu",
             )
         ]
     )
