@@ -26,8 +26,15 @@ from app.utils.phone import normalize_phone, phones_match
 router = Router()
 logger = logging.getLogger(__name__)
 
-_feedback_waiting_users: set[int] = set()
+_feedback_waiting_users: dict[int, str] = {}
 _pay_receipt_waiting_users: dict[int, int] = {}
+
+FEEDBACK_CATEGORIES = {
+    "booking": "Бронирование",
+    "checkin": "Заселение",
+    "payment": "Оплата",
+    "other": "Другое",
+}
 
 
 async def get_setting_value(session, key: str, default: str = "") -> str:
@@ -211,9 +218,31 @@ async def guest_showcase_location(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:feedback:start")
 async def guest_feedback_start(callback: CallbackQuery):
-    _feedback_waiting_users.add(callback.from_user.id)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🗓 Бронирование", callback_data="guest:feedback:cat:booking")],
+            [InlineKeyboardButton(text="🔑 Заселение", callback_data="guest:feedback:cat:checkin")],
+            [InlineKeyboardButton(text="💳 Оплата", callback_data="guest:feedback:cat:payment")],
+            [InlineKeyboardButton(text="❓ Другое", callback_data="guest:feedback:cat:other")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:faq")],
+        ]
+    )
+    await callback.message.edit_text("Выберите тему вопроса:", reply_markup=keyboard)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("guest:feedback:cat:"))
+async def guest_feedback_choose_category(callback: CallbackQuery):
+    category = callback.data.split(":")[3]
+    if category not in FEEDBACK_CATEGORIES:
+        await callback.answer("Неизвестная категория", show_alert=True)
+        return
+
+    _feedback_waiting_users[callback.from_user.id] = category
     await callback.message.answer(
-        "✍️ Напишите ваш вопрос одним сообщением — я передам его администратору."
+        f"✍️ Тема: <b>{FEEDBACK_CATEGORIES[category]}</b>\n"
+        "Теперь напишите вопрос одним сообщением — я передам администратору.",
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -223,7 +252,7 @@ async def guest_feedback_message(message: Message):
     if not message.from_user or message.from_user.id not in _feedback_waiting_users:
         return
 
-    _feedback_waiting_users.discard(message.from_user.id)
+    category = _feedback_waiting_users.pop(message.from_user.id)
 
     users = await get_all_users()
     admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
@@ -231,6 +260,7 @@ async def guest_feedback_message(message: Message):
 
     text = (
         "📩 <b>Новый вопрос от гостя</b>\n\n"
+        f"Тема: <b>{FEEDBACK_CATEGORIES.get(category, 'Другое')}</b>\n"
         f"От: {message.from_user.full_name} (@{message.from_user.username or '-'})\n"
         f"User ID: <code>{message.from_user.id}</code>\n\n"
         f"{message.text}"
@@ -593,18 +623,24 @@ async def guest_pay_reject(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:partners")
 async def guest_partners(callback: CallbackQuery):
-    text = (
-        "🤝 <b>Партнёры</b>\n\n"
-        "Скоро здесь появятся проверенные партнёры: инструкторы, квадроциклы и активности.\n"
-        "Пока можно оставить запрос через администратора."
-    )
+    async with AsyncSessionLocal() as session:
+        partners_text = await get_setting_value(
+            session,
+            "guest_partners_v1",
+            "🤝 <b>Партнёры</b>\n\n"
+            "<b>Инструкторы</b> — обучение/сопровождение на склонах.\n"
+            "<b>Квадроциклы</b> — маршруты и прокат по согласованию.\n"
+            "<b>Активности</b> — подскажем, чем заняться в Архызе.\n\n"
+            "Чтобы подобрать вариант под даты проживания — отправьте запрос администратору.",
+        )
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📞 Запросить через администратора", callback_data="guest:contact_admin")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
         ]
     )
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.message.edit_text(partners_text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 
 
