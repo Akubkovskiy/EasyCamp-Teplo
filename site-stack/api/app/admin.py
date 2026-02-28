@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import BookingRequest
 from .schemas import BookingRequestOut
+from .audit import log_action
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -51,6 +52,7 @@ def admin_update_booking_request(request_id: int, payload: BookingStatusUpdate, 
         raise HTTPException(status_code=404, detail="Booking request not found")
 
     req.status = payload.status
+    log_action(db, entity="booking_request", entity_id=req.id, action="status_update", payload={"status": payload.status})
     db.commit()
     db.refresh(req)
     return req

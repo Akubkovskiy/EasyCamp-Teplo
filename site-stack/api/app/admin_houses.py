@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import House
 from .schemas import HouseOut
+from .audit import log_action
 
 router = APIRouter(prefix="/admin/houses", tags=["admin-houses"])
 
@@ -39,6 +40,7 @@ def admin_create_house(payload: HouseCreate, db: Session = Depends(get_db)):
 
     house = House(**payload.model_dump())
     db.add(house)
+    log_action(db, entity="house", entity_id=None, action="create", payload=payload.model_dump())
     db.commit()
     db.refresh(house)
     return house
@@ -59,6 +61,7 @@ def admin_update_house(house_id: int, payload: HouseUpdate, db: Session = Depend
     for k, v in data.items():
         setattr(house, k, v)
 
+    log_action(db, entity="house", entity_id=house.id, action="update", payload=data)
     db.commit()
     db.refresh(house)
     return house
