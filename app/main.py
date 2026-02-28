@@ -8,6 +8,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 
 from aiogram import Dispatcher
+from app.telegram.middlewares.panel_guard import PanelGuardMiddleware
 
 from app.core.config import settings
 from app.core.logging import setup_logging
@@ -112,6 +113,10 @@ app.include_router(booking_web.router)
 # (Imports are at the top of the file)
 
 dp = Dispatcher()
+# Global callback guard: prevents cross-panel/role callback leaks
+# (e.g., old buttons from other menus)
+dp.callback_query.middleware(PanelGuardMiddleware())
+
 dp.include_router(admin_menu.router)
 dp.include_router(availability.router)
 dp.include_router(bookings.router)
