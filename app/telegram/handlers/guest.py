@@ -362,7 +362,12 @@ async def my_booking(callback: CallbackQuery):
 
 
 async def get_active_booking(session, user_id: int):
-    """Помощник: ищет активную бронь для пользователя"""
+    """Помощник: ищет актуальную бронь для пользователя.
+
+    Приоритет:
+    1) Текущая/будущая бронь (check_out >= today) с ближайшим check_in
+    2) Если таких нет — самая свежая по check_in
+    """
     user_result = await session.execute(select(User).where(User.telegram_id == user_id))
     user = user_result.scalar_one_or_none()
 
@@ -374,15 +379,31 @@ async def get_active_booking(session, user_id: int):
     query = (
         select(Booking)
         .options(joinedload(Booking.house))
-        .where(Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAID]))
+        .where(
+            Booking.status.in_(
+                [
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.PAID,
+                    BookingStatus.CHECKING_IN,
+                    BookingStatus.CHECKED_IN,
+                ]
+            )
+        )
     )
     result = await session.execute(query)
-    bookings = result.scalars().all()
+    bookings = [b for b in result.scalars().all() if phones_match(clean_user_phone, b.guest_phone)]
 
-    for b in bookings:
-        if phones_match(clean_user_phone, b.guest_phone):
-            return b
-    return None
+    if not bookings:
+        return None
+
+    today = datetime.now().date()
+    current_or_future = [b for b in bookings if b.check_out >= today]
+    if current_or_future:
+        current_or_future.sort(key=lambda x: x.check_in)
+        return current_or_future[0]
+
+    bookings.sort(key=lambda x: x.check_in, reverse=True)
+    return bookings[0]
 
 
 @router.callback_query(F.data == "guest:instruction")
