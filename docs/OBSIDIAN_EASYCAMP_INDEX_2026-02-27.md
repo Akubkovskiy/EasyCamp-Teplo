@@ -282,6 +282,12 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - G8 (MVP) завершён: добавлены guest feature flags и условная сборка меню.
 - G9 (тех) завершён: финальный прогон тестов и подготовка UAT чеклиста.
 
+## 15) Admin V2 roadmap (новый трек)
+
+- Добавлен roadmap: `docs/admin/ADMIN_V2_ROADMAP.md`
+- Добавлен execution checklist: `docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md`
+- Подход: не удалять legacy admin сразу, а безопасно мигрировать на новый UI/API поэтапно.
+
 ## 14) Site + API roadmap (новый трек)
 
 - Добавлен документ: `docs/site/SITE_API_ROADMAP_TEPLO.md`
