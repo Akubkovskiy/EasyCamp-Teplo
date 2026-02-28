@@ -176,7 +176,7 @@ async def guest_showcase_houses(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
         ]
     )
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
@@ -203,7 +203,7 @@ async def guest_showcase_faq(callback: CallbackQuery):
         inline_keyboard=[
             [InlineKeyboardButton(text="✍️ Задать свой вопрос", callback_data="guest:feedback:start")],
             [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
         ]
     )
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
@@ -230,7 +230,7 @@ async def guest_showcase_location(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:showcase:menu")],
         ]
     )
     await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
@@ -720,17 +720,32 @@ async def contact_admin(callback: CallbackQuery):
     await callback.answer()
 
 
+@router.callback_query(F.data == "guest:showcase:menu")
+async def back_to_showcase_menu(callback: CallbackQuery):
+    """Гарантированный возврат в витрину (для unauth flow)."""
+    await safe_edit(
+        callback,
+        f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+        "Выберите, что хотите посмотреть:",
+        reply_markup=guest_showcase_menu_keyboard(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
 @router.callback_query(F.data == "guest:menu")
 async def back_to_guest_menu(callback: CallbackQuery):
     """Возврат в главное меню (витрина или кабинет)."""
     if is_guest(callback.from_user.id):
-        await callback.message.edit_text(
+        await safe_edit(
+            callback,
             messages.GUEST_WELCOME,
             reply_markup=guest_menu_keyboard(),
             parse_mode="HTML",
         )
     else:
-        await callback.message.edit_text(
+        await safe_edit(
+            callback,
             f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
             "Выберите, что хотите посмотреть:",
             reply_markup=guest_showcase_menu_keyboard(),
