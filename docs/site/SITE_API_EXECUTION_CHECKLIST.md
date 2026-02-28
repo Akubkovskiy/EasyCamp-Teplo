@@ -4,6 +4,7 @@
 - [x] E0 — Infra baseline + backup vpnbot config
 - [x] E1 — Front/API/DB scaffold в отдельном docker-compose
 - [ ] E2 — API models + migrations + booking request endpoint
+- [x] T-plan — Testing stack roadmap создан
 - [ ] E3 — Front booking flow + форма заявки
 - [ ] E4 — Безопасный reverse-proxy subdomain через vpnbot override
 - [ ] E5 — Admin MVP

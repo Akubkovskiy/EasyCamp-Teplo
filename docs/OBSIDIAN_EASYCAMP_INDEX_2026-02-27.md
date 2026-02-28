@@ -288,6 +288,8 @@ EasyCamp-Teplo — B2B SaaS/MVP для базы отдыха (пилот: «Те
 - Зафиксировано: 80/443 уже заняты VPN-стеком (`vpnbot`), правки только безопасным путём через отдельные `server_name` в `override.conf`.
 - Подход: отдельные subdomain для сайта/API + отдельный compose проект.
 - Прогресс: E0/E1 выполнены, добавлен `site-stack` и execution-checklist `docs/site/SITE_API_EXECUTION_CHECKLIST.md`.
+- Добавлен testing roadmap: `docs/site/TESTING_STACK_ROADMAP.md`.
+- Установлены testing skills: `playwright-mcp`, `playwright`, `cypress`.
 - Планируемый стек:
   - Front: Next.js + Tailwind v4 + shadcn/ui
   - API: FastAPI + PostgreSQL + Alembic
