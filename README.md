@@ -1,5 +1,9 @@
 # EasyCamp-Teplo
 
+[![CI](https://github.com/Akubkovskiy/EasyCamp-Teplo/actions/workflows/ci.yml/badge.svg)](https://github.com/Akubkovskiy/EasyCamp-Teplo/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+
 **B2B SaaS‑платформа для автоматизации управления базой отдыха. MVP-пример — база отдыха «Тепло» в Архызе, КЧР.**
 
 ## 🏕 Кратко о проекте
@@ -82,3 +86,11 @@ python -m uvicorn app.main:app --reload
 ## ⚠️ Статус
 
 > Проект находится в активной доработке. MVP готовится на базе отдыха «Тепло». Все консультации и помощь приветствуются!
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project locally and submit improvements.
+
+## 📄 License
+
+[MIT](LICENSE) © Alexey Kubkovskiy
