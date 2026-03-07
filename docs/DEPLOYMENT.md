@@ -143,7 +143,7 @@ GOOGLE_SHEETS_SPREADSHEET_ID=ваш_id_таблицы_из_шага_3.2
 2. Отправьте команду `/newbot`
 3. Введите имя бота (например: `EasyCamp Teplo Bot`)
 4. Введите username (например: `easycamp_teplo_bot`)
-5. **Скопируйте токен** (выглядит как `6645018380:AAHgxe2jeqdzwirGiFR1_nh4RhxyFGOL5cw`)
+5. **Скопируйте токен** (выглядит как `1234567890:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 ### 4.2 Получение Chat ID
 
