@@ -26,6 +26,7 @@ jobs:
       AVITO_CLIENT_ID: "test"
       AVITO_CLIENT_SECRET: "test"
       AVITO_REDIRECT_URI: "http://localhost"
+      TELEGRAM_CHAT_ID: "123456789"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
