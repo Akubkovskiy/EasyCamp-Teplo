@@ -73,7 +73,7 @@ app.add_middleware(RequestLoggerMiddleware)
 # from app.web.middleware.setup_middleware import SetupMiddleware
 # app.add_middleware(SetupMiddleware)
 
-from app.web.deps import AuthRedirectException
+from app.web.deps import AuthRedirectException  # noqa: E402
 
 @app.exception_handler(AuthRedirectException)
 async def auth_redirect_handler(request: Request, exc: AuthRedirectException):
@@ -84,11 +84,8 @@ app.include_router(health_router)
 app.include_router(avito_router)
 app.include_router(avito_oauth_router)
 
-# Web Admin
-from fastapi.staticfiles import StaticFiles
-# Web Admin
-from fastapi.staticfiles import StaticFiles
-from app.web.routers import auth_web, admin_web, setup_web, settings_web, house_web, booking_web
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+from app.web.routers import auth_web, admin_web, setup_web, settings_web, house_web, booking_web  # noqa: E402
 
 app.mount("/admin-web/static", StaticFiles(directory="app/web/static"), name="static")
 app.include_router(setup_web.router)
