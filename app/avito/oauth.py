@@ -97,6 +97,7 @@ async def oauth_callback(request: Request, code: str = None, error: str = None):
                 "client_secret": settings.avito_client_secret,
                 "redirect_uri": settings.avito_redirect_uri,
             },
+            timeout=30,
         )
 
         response.raise_for_status()

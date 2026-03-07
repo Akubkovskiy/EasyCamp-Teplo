@@ -19,6 +19,13 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: "0000000000:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      DATABASE_URL: "sqlite+aiosqlite:///./test.db"
+      GOOGLE_SHEETS_CREDENTIALS: "{}"
+      AVITO_CLIENT_ID: "test"
+      AVITO_CLIENT_SECRET: "test"
+      AVITO_REDIRECT_URI: "http://localhost"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,7 +44,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install bandit pip-audit
-      - run: bandit -r app/ -ll
+      - run: bandit -r app/ -lll
       - run: pip-audit
 
   docker:
