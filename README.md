@@ -1,96 +1,69 @@
-# EasyCamp-Teplo
+# EasyCamp
 
 [![CI](https://github.com/Akubkovskiy/EasyCamp-Teplo/actions/workflows/ci.yml/badge.svg)](https://github.com/Akubkovskiy/EasyCamp-Teplo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 
-**B2B SaaS‑платформа для автоматизации управления базой отдыха. MVP-пример — база отдыха «Тепло» в Архызе, КЧР.**
+**Open-source automation platform for small resorts and vacation rental businesses.**
 
-## 🏕 Кратко о проекте
+> 🇷🇺 [Документация на русском](README.ru.md)
 
-EasyCamp — это open-source платформа, которую ты можешь настроить для своей базы отдыха, чтобы:
-- автоматизировать бронирование (через Telegram, Авито и др. каналы)
-- упростить управление домами, бронированиями, сотрудниками
-- интегрировать CRM, платежные сервисы, уведомления
+EasyCamp connects your **Telegram bot**, **Avito listings**, and **Google Sheets** into one automated management system — no paid SaaS required. Fork it, adapt it, run it on your own server.
 
-Вся архитектура построена так, чтобы учиться на реальном бизнесе и масштабировать решение под другие объекты отдыха.
+**Battle-tested** on [Teplo resort](https://teplo-v-arkhyze.ru) (Arkhyz, Russia) since 2025.
 
-## 🚀 Быстрый старт
+---
 
-**Новый проект?** Следуйте подробному руководству по развертыванию:
-👉 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** 👈
+## ✨ What it does
 
-Время развертывания: ~20-30 минут
+| Feature | Description |
+|---------|-------------|
+| 🤖 Telegram admin bot | Manage bookings, houses, staff — all from Telegram |
+| 🔄 Avito sync | Auto-import bookings from Avito rental platform |
+| 📊 Google Sheets | Real-time sync of all booking data |
+| 🧹 Cleaning tasks | Assign and track cleaning staff via Telegram |
+| 📅 Availability calendar | Interactive date picker for guests and staff |
+| 🔔 Notifications | Instant alerts for new bookings and updates |
 
-### Краткая инструкция
+---
+
+## 🚀 Quick Start
 
 ```bash
-# 1. Клонировать и установить
 git clone https://github.com/Akubkovskiy/EasyCamp-Teplo.git
 cd EasyCamp-Teplo
 pip install -r requirements.txt
-
-# 2. Настроить .env (см. .env.example)
-cp .env.example .env
-# Заполните переменные в .env
-
-# 3. Запустить
+cp .env.example .env   # fill in your credentials
 python -m uvicorn app.main:app --reload
 ```
 
-Подробные инструкции по настройке Google Sheets API, Telegram Bot и других сервисов - в [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Full setup guide (Google Sheets API, Telegram Bot, Avito): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
-## 📋 Основные возможности
+---
 
-### Синхронизация данных
-- 🔄 **Автоматическая синхронизация**: Данные обновляются при каждом обращении к боту (умное кэширование)
-- ⏱ **Периодическая синхронизация**: Фоновое обновление каждые 5 минут
-- 🚀 **При старте**: Актуализация данных сразу после запуска бота
-- 🛡 **Защита**: Умная система предотвращает превышение лимитов API Google
+## 🔧 Stack
 
-### Управление бронями
-- Полная синхронизация с Avito API (включая неподтвержденные брони)
-- Удобный календарь с выбором дат и навигацией по месяцам
-- Просмотр занятости и списка заездов
-- Автоматические уведомления о новых и обновленных бронях
+- **Python 3.11** · FastAPI · aiogram 3.x
+- **Database**: SQLite via SQLAlchemy (async)
+- **Integrations**: Telegram Bot API · Avito API · Google Sheets API
+- **Scheduler**: APScheduler for background sync
+- **Deploy**: Docker Compose
 
-### Telegram бот
-- Админ-панель для управления бронями и домиками
-- Гостевое меню для проверки доступности
-- Интерактивные календари и формы
-- Команды: `/start`, `/sync`, `/fetch_avito`, `/availability`
+---
 
-## 🔧 Технологии
+## 📚 Documentation
 
-- **Backend**: Python 3.11+, FastAPI, aiogram 3.x
-- **База данных**: SQLite (SQLAlchemy ORM)
-- **Интеграции**: 
-  - Google Sheets API (синхронизация данных)
-  - Telegram Bot API (интерфейс управления)
-  - Avito API (автоматическая синхронизация броней)
-- **Планировщик**: APScheduler (фоновые задачи)
+- [Deployment Guide](docs/DEPLOYMENT.md) — full self-hosting setup
+- [Architecture](docs/architecture.md) — service structure and data flow
+- [Roadmap](docs/roadmap.md) — planned features and MVP stages
+- [Google Sheets Setup](docs/google_sheets_setup.md) — integration details
 
-## 📚 Документация
-
-- [DEPLOYMENT.md](docs/DEPLOYMENT.md) — полное руководство по развертыванию
-- [Architecture](docs/architecture.md) — техническая структура и схемы сервисов
-- [Roadmap](docs/roadmap.md) — стратегическое развитие и MVP-этапы
-- [Google Sheets Setup](docs/google_sheets_setup.md) — настройка интеграции с Google Sheets
-- [Ideas Log](docs/ideas_log.md) — идеи, расширения, брейншторминг
-
-## 📱 Связь и автор
-
-- Алексей Кубковский (РФ, Архыз)
-- [Telegram](https://t.me/Alexey_kubkovskiy) / [Email](mailto:akubkovskiy@gmail.com)
-
-## ⚠️ Статус
-
-> Проект находится в активной доработке. MVP готовится на базе отдыха «Тепло». Все консультации и помощь приветствуются!
+---
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project locally and submit improvements.
+See [CONTRIBUTING.md](CONTRIBUTING.md). The project is designed to be forked and adapted for any resort or vacation rental — PRs and feedback welcome.
 
 ## 📄 License
 
-[MIT](LICENSE) © Alexey Kubkovskiy
+[MIT](LICENSE) © Alexey Kubkovskiy · [Telegram](https://t.me/Alexey_kubkovskiy)
