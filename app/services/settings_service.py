@@ -26,8 +26,10 @@ class SettingsService:
                 # Handle boolean conversions if necessary
                 val = s.value
                 if isinstance(val, str):
-                    if val.lower() == "true": val = True
-                    elif val.lower() == "false": val = False
+                    if val.lower() == "true":
+                        val = True
+                    elif val.lower() == "false":
+                        val = False
                 
                 effective[s.key] = val
                 

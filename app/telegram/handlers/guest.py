@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (

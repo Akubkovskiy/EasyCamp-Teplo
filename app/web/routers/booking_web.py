@@ -4,7 +4,6 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from decimal import Decimal
-from typing import Optional
 
 from app.database import get_db
 from app.web.deps import get_current_admin

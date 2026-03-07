@@ -6,8 +6,9 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus, BookingSource, House
+from app.models import Booking, BookingStatus, House
 from app.schemas.booking import BookingCreate, BookingUpdate
+from app.avito.schemas import AvitoBookingPayload
 from app.services.sheets_service import sheets_service
 
 logger = logging.getLogger(__name__)
@@ -415,13 +416,13 @@ class BookingService:
             return False
     @staticmethod
     async def create_or_update_avito_booking(
-        db: AsyncSession, booking_payload: "AvitoBookingPayload"
+        db: AsyncSession, booking_payload: AvitoBookingPayload
     ) -> Optional[Booking]:
         """
         Создать или обновить бронь из Avito webhook.
         """
         try:
-            from app.models import Booking, BookingSource, BookingStatus
+            from app.models import Booking, BookingSource
             from app.services.avito_sync_service import map_avito_status
             from app.utils.validators import format_phone
             from decimal import Decimal

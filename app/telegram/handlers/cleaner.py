@@ -11,9 +11,8 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus, CleaningTask, CleaningTaskStatus
+from app.models import Booking, BookingStatus
 from app.telegram.auth.admin import get_user_name, is_admin
-from app.services.cleaning_task_service import CleaningTaskService
 from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
 
 router = Router()

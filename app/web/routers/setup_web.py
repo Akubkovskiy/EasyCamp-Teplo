@@ -5,8 +5,6 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.services.setup_service import SetupStateService
-from app.web.help_texts import HELP_TEXTS
-from app.web.help_texts import HELP_TEXTS
 
 templates = Jinja2Templates(directory="app/web/templates")
 
@@ -168,7 +166,6 @@ async def step3_save(
     if request.cookies.get("setup_token") != "valid":
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
-    from app.services.setup_service import SetupStateService
     from app.models import User, UserRole
     from app.core.security import get_password_hash
     from sqlalchemy import select

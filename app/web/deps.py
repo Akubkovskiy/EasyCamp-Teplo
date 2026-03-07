@@ -1,9 +1,7 @@
 from typing import Optional
 from fastapi import Request, Depends, HTTPException, status
-from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose import JWTError
 
 class AuthRedirectException(Exception):
     """Custom exception for authentication redirects in web routes"""
@@ -12,7 +10,6 @@ class AuthRedirectException(Exception):
 from app.database import get_db
 from app.models import User, UserRole
 from app.core.security import decode_access_token
-from app.core.config import settings
 
 async def get_current_admin(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """
