@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from aiogram import Router, F
+from aiogram.filters import StateFilter
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     Message,
@@ -374,7 +375,7 @@ async def guest_feedback_choose_category(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.message(F.text)
+@router.message(StateFilter(None), F.text)
 async def guest_feedback_message(message: Message):
     if not message.from_user or message.from_user.id not in _feedback_waiting_users:
         return
