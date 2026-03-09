@@ -28,6 +28,7 @@ def build_month_keyboard(
     month: int,
     prefix: str,
     min_date: datetime.date | None = None,
+    back_callback: str = "admin:menu",
 ) -> InlineKeyboardMarkup:
     today = datetime.date.today()
     dates = get_month_dates(year, month)
@@ -100,7 +101,7 @@ def build_month_keyboard(
         [
             InlineKeyboardButton(
                 text="🔙 Назад в меню",
-                callback_data="admin:menu",
+                callback_data=back_callback,
             )
         ]
     )

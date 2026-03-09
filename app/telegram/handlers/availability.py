@@ -23,6 +23,10 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
+def _back_cb(user_id: int) -> str:
+    return "admin:menu" if is_admin(user_id) else "guest:showcase:menu"
+
+
 @router.message(Command("availability"))
 async def availability_command(message: Message):
     """Обработчик команды /availability для проверки доступности домиков"""
@@ -41,6 +45,7 @@ async def availability_command(message: Message):
             today.month,
             prefix="checkin",
             min_date=today,
+            back_callback=_back_cb(user_id),
         ),
     )
 
@@ -62,6 +67,7 @@ async def start_availability(callback: CallbackQuery):
             today.month,
             prefix="checkin",
             min_date=today,
+            back_callback=_back_cb(user_id),
         ),
     )
     await callback.answer()
@@ -74,6 +80,7 @@ async def change_checkin_month(callback: CallbackQuery):
 
     _, value = callback.data.split(":")
     year, month = map(int, value.split("-"))
+    uid = callback.from_user.id if callback.from_user else 0
 
     await callback.message.edit_text(
         "📅 <b>Выберите дату заезда</b>",
@@ -81,6 +88,7 @@ async def change_checkin_month(callback: CallbackQuery):
             year,
             month,
             prefix="checkin",
+            back_callback=_back_cb(uid),
         ),
     )
     await callback.answer()
@@ -148,6 +156,7 @@ async def select_checkin_date(callback: CallbackQuery):
             prefix="checkout",
             min_date=selected_date
             + datetime.timedelta(days=1),  # Минимум на следующий день
+            back_callback=_back_cb(user_id),
         ),
     )
     await callback.answer()
@@ -169,6 +178,7 @@ async def change_checkout_month(callback: CallbackQuery):
     _, value = callback.data.split(":")
     year, month = map(int, value.split("-"))
 
+    uid = callback.from_user.id if callback.from_user else 0
     await callback.message.edit_text(
         f"📅 <b>Выберите дату выезда</b>\n\n"
         f"Заезд: {state.check_in.strftime('%d.%m.%Y')}",
@@ -177,6 +187,7 @@ async def change_checkout_month(callback: CallbackQuery):
             month,
             prefix="checkout",
             min_date=state.check_in + datetime.timedelta(days=1),
+            back_callback=_back_cb(uid),
         ),
     )
     await callback.answer()
