@@ -7,7 +7,7 @@
 import logging
 
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
+from aiogram.types import BotCommand, BotCommandScopeDefault
 
 logger = logging.getLogger(__name__)
 
