@@ -120,7 +120,7 @@ async def ensure_guest_context(callback: CallbackQuery, expected: str) -> bool:
         set_guest_context(callback.from_user.id, "showcase")
         await safe_edit(
             callback,
-            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
             "Выберите, что хотите посмотреть:",
             reply_markup=guest_showcase_menu_keyboard(),
             parse_mode="HTML",
@@ -136,7 +136,7 @@ async def ensure_guest_auth(callback: CallbackQuery) -> bool:
 
     await safe_edit(
         callback,
-        f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+        f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
         "Сначала авторизуйтесь, чтобы открыть личный кабинет.",
         reply_markup=guest_showcase_menu_keyboard(),
         parse_mode="HTML",
@@ -174,7 +174,7 @@ async def show_guest_menu(message: Message):
     else:
         set_guest_context(user_id, "showcase")
         await message.answer(
-            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
             "Выберите, что хотите посмотреть:",
             reply_markup=guest_showcase_menu_keyboard(),
             parse_mode="HTML",
@@ -193,9 +193,12 @@ async def cmd_about(message: Message):
         about_text = await get_setting_value(
             session,
             "guest_showcase_about",
-            f"🏕 <b>{settings.project_name}</b>\n\n"
-            f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
-            "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
+            f"<b>{settings.project_name}</b> — база отдыха рядом с Архызом, "
+            "в спокойной локации немного в стороне от посёлка.\n\n"
+            "На территории 3 домика для 2–6 гостей. Во всех есть Wi-Fi, горячая вода, "
+            "постельное бельё, полотенца, кухня с посудой, мангал и парковка.\n\n"
+            "Подойдёт тем, кто хочет отдыхать не в центре, а в более тихом месте "
+            "недалеко от курорта и горных маршрутов.",
         )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text="🔙 Меню", callback_data="guest:showcase:menu")]]
@@ -221,9 +224,9 @@ async def cmd_location(message: Message):
             session,
             "guest_showcase_location",
             f"📍 <b>Где мы находимся</b>\n\n"
-            f"{settings.project_name} находится в {settings.project_location}.\n"
-            f"Координаты: <code>{coords}</code>\n\n"
-            "После авторизации будет доступен детальный маршрут до объекта.",
+            f"{settings.project_name} расположена рядом с Архызом, в спокойной локации "
+            "немного в стороне от посёлка.\n\n"
+            f"Координаты для навигатора:\n<code>{coords}</code>",
         )
 
     rows = [[InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")]]
@@ -376,9 +379,12 @@ async def guest_showcase_about(callback: CallbackQuery):
         about_text = await get_setting_value(
             session,
             "guest_showcase_about",
-            f"🏕 <b>{settings.project_name}</b>\n\n"
-            f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
-            "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
+            f"<b>{settings.project_name}</b> — база отдыха рядом с Архызом, "
+            "в спокойной локации немного в стороне от посёлка.\n\n"
+            "На территории 3 домика для 2–6 гостей. Во всех есть Wi-Fi, горячая вода, "
+            "постельное бельё, полотенца, кухня с посудой, мангал и парковка.\n\n"
+            "Подойдёт тем, кто хочет отдыхать не в центре, а в более тихом месте "
+            "недалеко от курорта и горных маршрутов.",
         )
     keyboard = InlineKeyboardMarkup(inline_keyboard=build_showcase_section_rows("about"))
     await safe_edit(callback, about_text, reply_markup=keyboard, parse_mode="HTML")
@@ -437,9 +443,9 @@ async def guest_showcase_location(callback: CallbackQuery):
             session,
             "guest_showcase_location",
             f"📍 <b>Где мы находимся</b>\n\n"
-            f"{settings.project_name} находится в {settings.project_location}.\n"
-            f"Координаты: <code>{coords}</code>\n\n"
-            "После авторизации будет доступен детальный маршрут до объекта.",
+            f"{settings.project_name} расположена рядом с Архызом, в спокойной локации "
+            "немного в стороне от посёлка.\n\n"
+            f"Координаты для навигатора:\n<code>{coords}</code>",
         )
 
     text = location_text
@@ -963,7 +969,7 @@ async def back_to_showcase_menu(callback: CallbackQuery):
         set_guest_context(callback.from_user.id, "showcase")
     await safe_edit(
         callback,
-        f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+        f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
         "Выберите, что хотите посмотреть:",
         reply_markup=guest_showcase_menu_keyboard(),
         parse_mode="HTML",
@@ -986,7 +992,7 @@ async def back_to_guest_menu(callback: CallbackQuery):
         set_guest_context(callback.from_user.id, "showcase")
         await safe_edit(
             callback,
-            f"🏕 <b>{settings.project_name}</b> — место для отдыха в {settings.project_location}.\n\n"
+            f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
             "Выберите, что хотите посмотреть:",
             reply_markup=guest_showcase_menu_keyboard(),
             parse_mode="HTML",
