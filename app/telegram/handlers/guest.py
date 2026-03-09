@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from aiogram import Router, F
-from aiogram.filters import StateFilter
+from aiogram.filters import Command, StateFilter
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     Message,
@@ -179,6 +179,114 @@ async def show_guest_menu(message: Message):
             reply_markup=guest_showcase_menu_keyboard(),
             parse_mode="HTML",
         )
+
+
+# -------------------------------------------------
+# Slash-команды для Bot Menu (кнопка Menu)
+# -------------------------------------------------
+
+
+@router.message(Command("about"))
+async def cmd_about(message: Message):
+    """Команда /about — О базе отдыха."""
+    async with AsyncSessionLocal() as session:
+        about_text = await get_setting_value(
+            session,
+            "guest_showcase_about",
+            f"🏕 <b>{settings.project_name}</b>\n\n"
+            f"Мы находимся в {settings.project_location}. Уютные домики, природа и спокойный отдых.\n"
+            "Выберите следующий раздел, чтобы посмотреть домики, даты и условия.",
+        )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="🔙 Меню", callback_data="guest:showcase:menu")]]
+    )
+    await message.answer(about_text, reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.message(Command("dates"))
+async def cmd_dates(message: Message):
+    """Команда /dates — проверить свободные даты (запускает availability flow)."""
+    from app.telegram.handlers.availability import availability_command
+    await availability_command(message)
+
+
+@router.message(Command("location"))
+async def cmd_location(message: Message):
+    """Команда /location — Где мы находимся."""
+    async with AsyncSessionLocal() as session:
+        setting = await session.get(GlobalSetting, "coords")
+        coords = setting.value if setting and setting.value else settings.project_coords
+
+        location_text = await get_setting_value(
+            session,
+            "guest_showcase_location",
+            f"📍 <b>Где мы находимся</b>\n\n"
+            f"{settings.project_name} находится в {settings.project_location}.\n"
+            f"Координаты: <code>{coords}</code>\n\n"
+            "После авторизации будет доступен детальный маршрут до объекта.",
+        )
+
+    rows = [[InlineKeyboardButton(text="📍 Открыть в Яндекс.Картах", url=f"https://yandex.ru/maps/?text={coords}")]]
+    rows.append([InlineKeyboardButton(text="🔙 Меню", callback_data="guest:showcase:menu")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=rows)
+    await message.answer(location_text, reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.message(Command("contact"))
+async def cmd_contact(message: Message):
+    """Команда /contact — Связаться с нами."""
+    await message.answer(messages.CONTACT_ADMIN, parse_mode="HTML")
+
+
+@router.message(Command("login"))
+async def cmd_login(message: Message):
+    """Команда /login — Авторизоваться по брони."""
+    user_id = message.from_user.id
+    if is_guest_authorized(user_id):
+        await message.answer("✅ Вы уже авторизованы.")
+        await show_guest_menu(message)
+        return
+
+    await message.answer(
+        messages.GUEST_LOGIN_PROMPT,
+        reply_markup=request_contact_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+@router.message(Command("booking"))
+async def cmd_booking(message: Message):
+    """Команда /booking — Моя бронь."""
+    user_id = message.from_user.id
+    if not is_guest_authorized(user_id):
+        await message.answer(
+            "🔐 Сначала авторизуйтесь, чтобы посмотреть свою бронь.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")]]
+            ),
+        )
+        return
+
+    async with AsyncSessionLocal() as session:
+        booking = await get_active_booking(session, user_id)
+        if not booking:
+            await message.answer("❌ Активная бронь не найдена.")
+            return
+
+        house = booking.house
+        text = messages.booking_card(
+            house_name=house.name if house else "—",
+            check_in=booking.check_in,
+            check_out=booking.check_out,
+            guests_count=booking.guests_count,
+            total_price=int(booking.total_price) if booking.total_price else 0,
+            advance_amount=int(booking.advance_amount) if booking.advance_amount else 0,
+            status=booking.status,
+        )
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="🔙 Меню", callback_data="guest:menu")]]
+        )
+        await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.message(F.contact)

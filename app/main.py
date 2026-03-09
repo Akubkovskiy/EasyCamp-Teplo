@@ -191,6 +191,10 @@ async def on_startup():
     await refresh_users_cache()
     logger.info("👥 User cache refreshed")
 
+    # Set bot menu commands
+    from app.telegram.commands import setup_commands
+    await setup_commands(bot)
+
     logger.info("Starting Telegram polling")
 
     asyncio.create_task(dp.start_polling(bot))
