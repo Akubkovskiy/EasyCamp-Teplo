@@ -162,6 +162,22 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Failed to register notification jobs: {e}")
 
+        # Pricing cycle: auto-discounts + Avito price sync (2x daily: 09:00 and 18:00)
+        try:
+            from app.jobs.pricing_job import pricing_cycle_job
+
+            for hour in [9, 18]:
+                self.scheduler.add_job(
+                    pricing_cycle_job,
+                    CronTrigger(hour=hour, minute=0),
+                    id=f"pricing_cycle_{hour}",
+                    name=f"Pricing cycle at {hour}:00",
+                    replace_existing=True,
+                )
+            logger.info("Registered pricing cycle jobs (at 09:00 and 18:00)")
+        except Exception as e:
+            logger.error(f"Failed to register pricing jobs: {e}")
+
         self._jobs_registered = True
 
     def start(self):

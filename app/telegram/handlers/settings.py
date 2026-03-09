@@ -58,6 +58,11 @@ async def show_settings(event):
                     text="📝 Редактор контента", callback_data="admin:settings:content"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="💰 Ценообразование", callback_data="settings_pricing"
+                )
+            ],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_admin")],
         ]
     )
@@ -471,6 +476,88 @@ async def test_cleaning_notify(callback: CallbackQuery):
         )
     except Exception as e:
         await callback.message.answer(f"❌ Ошибка при запуске: {e}")
+
+
+@router.callback_query(F.data == "settings_pricing")
+async def pricing_settings(callback: CallbackQuery):
+    """Настройки ценообразования"""
+
+    auto_disc = "✅ Вкл" if settings.enable_auto_discounts else "❌ Выкл"
+    avito_sync = "✅ Вкл" if settings.enable_avito_price_sync else "❌ Выкл"
+
+    text = (
+        "💰 <b>Настройки ценообразования</b>\n\n"
+        f"<b>Авто-скидки (горящие):</b> {auto_disc}\n"
+        f"  Завтра: -{settings.auto_discount_tomorrow_percent}%\n"
+        f"  Послезавтра: -{settings.auto_discount_day_after_percent}%\n\n"
+        f"<b>Авто-синхр. цен → Авито:</b> {avito_sync}\n\n"
+        "<i>Цикл запускается в 09:00 и 18:00:\n"
+        "1) Проверка загруженности → авто-скидки\n"
+        "2) Отправка цен на Авито</i>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"{'❌ Выключить' if settings.enable_auto_discounts else '✅ Включить'} авто-скидки",
+                    callback_data="toggle_auto_discounts",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"{'❌ Выключить' if settings.enable_avito_price_sync else '✅ Включить'} синхр. Авито",
+                    callback_data="toggle_avito_price_sync",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔄 Запустить цикл сейчас",
+                    callback_data="run_pricing_cycle",
+                )
+            ],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_settings")],
+        ]
+    )
+
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "toggle_auto_discounts")
+async def toggle_auto_discounts(callback: CallbackQuery):
+    new_val = not settings.enable_auto_discounts
+    settings.enable_auto_discounts = new_val
+    update_env_variable("ENABLE_AUTO_DISCOUNTS", str(new_val).lower())
+    status = "включены" if new_val else "выключены"
+    await callback.answer(f"✅ Авто-скидки {status}", show_alert=True)
+    await pricing_settings(callback)
+
+
+@router.callback_query(F.data == "toggle_avito_price_sync")
+async def toggle_avito_price_sync(callback: CallbackQuery):
+    new_val = not settings.enable_avito_price_sync
+    settings.enable_avito_price_sync = new_val
+    update_env_variable("ENABLE_AVITO_PRICE_SYNC", str(new_val).lower())
+    status = "включена" if new_val else "выключена"
+    await callback.answer(f"✅ Синхронизация цен → Авито {status}", show_alert=True)
+    await pricing_settings(callback)
+
+
+@router.callback_query(F.data == "run_pricing_cycle")
+async def run_pricing_cycle_now(callback: CallbackQuery):
+    """Ручной запуск цикла ценообразования"""
+    await callback.answer("🔄 Запускаю цикл...", show_alert=False)
+
+    from app.jobs.pricing_job import pricing_cycle_job
+    try:
+        await pricing_cycle_job()
+        await callback.message.answer(
+            "✅ Цикл ценообразования завершён.\n"
+            "Проверены авто-скидки и синхронизированы цены с Авито."
+        )
+    except Exception as e:
+        await callback.message.answer(f"❌ Ошибка: {e}")
 
 
 @router.callback_query(F.data == "back_to_settings")

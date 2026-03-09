@@ -9,6 +9,7 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from aiogram.filters import Command
+from aiogram.exceptions import TelegramBadRequest
 from app.services.booking_service import BookingService
 from app.database import AsyncSessionLocal
 from app.telegram.auth.admin import is_admin
@@ -255,32 +256,80 @@ async def select_checkout_date(callback: CallbackQuery):
         await callback.answer()
         return
 
-    # Формируем список доступных домов
-    text = (
-        f"✅ <b>Доступные домики:</b>\n\n"
+    # Формируем карточки доступных домов с фото и ценами
+    from app.services.pricing_service import PricingService
+    from app.data.house_descriptions import get_short_description
+
+    # Удаляем предыдущее сообщение (календарь) чтобы отправить карточки
+    try:
+        await callback.message.delete()
+    except TelegramBadRequest:
+        pass
+
+    header = (
+        f"✅ <b>Доступные домики</b>\n\n"
         f"📅 {state.check_in.strftime('%d.%m.%Y')} — {state.check_out.strftime('%d.%m.%Y')}\n"
-        f"🌙 Ночей: {nights}\n"
-        f"──────────────────\n"
+        f"🌙 Ночей: {nights}"
     )
+    await callback.message.answer(header, parse_mode="HTML")
 
-    buttons = []
-    for house in available_houses:
-        text += f"🏠 <b>{house.name}</b>\n"
-        if house.description:
-            text += f"ℹ️ {house.description}\n"
-        text += f"👥 До {house.capacity} гостей\n\n"
+    # Отправляем карточку для каждого домика
+    async with AsyncSessionLocal() as db:
+        for house in available_houses:
+            desc = house.description or get_short_description(house.name)
 
-        # Кнопка бронирования
-        buttons.append(
-            [
-                InlineKeyboardButton(
-                    text=f"✅ Забронировать {house.name}",
+            # Расчёт цены за весь период
+            stay = await PricingService.calculate_stay_total(
+                db, house.id, state.check_in, state.check_out
+            )
+            total = stay["total"]
+            avg = stay["avg_per_night"]
+            total_orig = stay.get("total_without_discount", total)
+
+            # Формируем текст карточки
+            card = f"🏠 <b>{house.name}</b>\n"
+            card += f"👥 До {house.capacity} гостей\n"
+            if desc:
+                card += f"\n{desc}\n"
+
+            if total > 0:
+                card += "\n"
+                if total < total_orig:
+                    card += (
+                        f"💰 <s>{total_orig:,} ₽</s> → <b>{total:,} ₽</b> "
+                        f"({avg:,} ₽/ночь × {nights})\n"
+                    )
+                else:
+                    card += f"💰 <b>{total:,} ₽</b> ({avg:,} ₽/ночь × {nights})\n"
+            elif house.base_price > 0:
+                card += f"\n💰 от <b>{house.base_price:,} ₽/ночь</b>\n"
+
+            # Кнопка бронирования
+            btn_text = f"✅ Забронировать"
+            if total > 0:
+                btn_text += f" — {total:,} ₽"
+            house_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text=btn_text,
                     callback_data=f"booking:create:{house.id}",
-                )
-            ]
-        )
+                )]
+            ])
 
-    buttons.append(
+            # Отправляем с фото или без
+            if house.promo_image_id:
+                await callback.message.answer_photo(
+                    photo=house.promo_image_id,
+                    caption=card,
+                    reply_markup=house_kb,
+                    parse_mode="HTML",
+                )
+            else:
+                await callback.message.answer(
+                    card, reply_markup=house_kb, parse_mode="HTML",
+                )
+
+    # Навигация внизу
+    nav_buttons = [
         [
             InlineKeyboardButton(
                 text="🔄 Выбрать другие даты",
@@ -288,20 +337,17 @@ async def select_checkout_date(callback: CallbackQuery):
                 if is_admin(user_id)
                 else "guest:availability",
             )
-        ]
-    )
-    buttons.append(
+        ],
         [
             InlineKeyboardButton(
                 text="🔙 В меню",
                 callback_data="admin:menu" if is_admin(user_id) else "guest:showcase:menu",
             )
-        ]
-    )
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        ],
+    ]
+    await callback.message.answer(
+        "👆 Выберите домик для бронирования",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_buttons),
         parse_mode="HTML",
     )
     await callback.answer()

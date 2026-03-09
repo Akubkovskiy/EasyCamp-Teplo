@@ -73,6 +73,12 @@ class Settings(BaseModel):
     payment_receiver: str = "Сергей Иванович П."
     payment_methods: str = "Сбер/Тинькофф"
 
+    # Pricing settings
+    enable_auto_discounts: bool = True  # Авто-скидки на горящие даты
+    enable_avito_price_sync: bool = True  # Синхронизация цен → Авито
+    auto_discount_tomorrow_percent: int = 20  # Скидка если свободно завтра
+    auto_discount_day_after_percent: int = 15  # Скидка если свободно послезавтра
+
     # Guest feature flags (SaaS toggles)
     guest_feature_faq: bool = True
     guest_feature_partners: bool = True
@@ -143,6 +149,10 @@ settings = Settings(
     contact_website=os.environ.get("CONTACT_WEBSITE", ""),
     payment_receiver=os.environ.get("PAYMENT_RECEIVER", "Сергей Иванович П."),
     payment_methods=os.environ.get("PAYMENT_METHODS", "Сбер/Тинькофф"),
+    enable_auto_discounts=os.environ.get("ENABLE_AUTO_DISCOUNTS", "true").lower() == "true",
+    enable_avito_price_sync=os.environ.get("ENABLE_AVITO_PRICE_SYNC", "true").lower() == "true",
+    auto_discount_tomorrow_percent=int(os.environ.get("AUTO_DISCOUNT_TOMORROW_PERCENT", "20")),
+    auto_discount_day_after_percent=int(os.environ.get("AUTO_DISCOUNT_DAY_AFTER_PERCENT", "15")),
     guest_feature_faq=os.environ.get("GUEST_FEATURE_FAQ", "true").lower() == "true",
     guest_feature_partners=os.environ.get("GUEST_FEATURE_PARTNERS", "true").lower() == "true",
     guest_feature_showcase_houses=os.environ.get("GUEST_FEATURE_SHOWCASE_HOUSES", "true").lower() == "true",

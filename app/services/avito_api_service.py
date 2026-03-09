@@ -613,5 +613,93 @@ class AvitoAPIService:
             return False
 
 
+    def update_prices(
+        self, item_id: int, price_intervals: List[Dict]
+    ) -> bool:
+        """
+        Обновить цены на Avito через Price Calendar API.
+
+        Args:
+            item_id: ID объявления на Avito
+            price_intervals: Список словарей:
+                [{"date": "2026-03-10", "price": 5000}, ...]
+                Или диапазонами:
+                [{"date_from": "2026-03-10", "date_to": "2026-03-15", "price": 5000}, ...]
+
+        Returns:
+            True если обновление успешно
+        """
+        self.ensure_token()
+
+        logger.info(
+            f"Updating prices for item {item_id}: {len(price_intervals)} intervals"
+        )
+
+        try:
+            # Avito Price Calendar API: POST /realty/v1/accounts/{user_id}/items/{item_id}/price_calendar
+            response = requests.post(
+                f"{self.BASE_URL}/realty/v1/accounts/{self.user_id}/items/{item_id}/price_calendar",
+                headers={
+                    "Authorization": f"Bearer {self.access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={"prices": price_intervals},
+                timeout=15,
+            )
+            response.raise_for_status()
+
+            logger.info(f"✅ Prices updated successfully for item {item_id}")
+            return True
+
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else None
+            logger.error(
+                f"❌ HTTP error updating prices (status {status_code}): {e}"
+            )
+            logger.error(
+                f"Response: {e.response.text if e.response else 'No response'}"
+            )
+            return False
+        except Exception as e:
+            logger.error(f"❌ Failed to update prices: {e}", exc_info=True)
+            return False
+
+    def get_price_calendar(self, item_id: int, date_from: str, date_to: str) -> Dict:
+        """
+        Получить текущий прайс-календарь с Avito.
+
+        Args:
+            item_id: ID объявления
+            date_from: Начало периода (YYYY-MM-DD)
+            date_to: Конец периода (YYYY-MM-DD)
+
+        Returns:
+            Dict с ценами по датам
+        """
+        self.ensure_token()
+
+        try:
+            response = requests.get(
+                f"{self.BASE_URL}/realty/v1/accounts/{self.user_id}/items/{item_id}/price_calendar",
+                headers={"Authorization": f"Bearer {self.access_token}"},
+                params={"date_from": date_from, "date_to": date_to},
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            logger.info(
+                f"Fetched price calendar for item {item_id}: {len(data.get('prices', []))} entries"
+            )
+            return data
+
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error fetching price calendar: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Failed to fetch price calendar: {e}", exc_info=True)
+            return {}
+
+
 # Глобальный экземпляр сервиса
 avito_api_service = AvitoAPIService()

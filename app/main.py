@@ -80,9 +80,12 @@ async def auth_redirect_handler(request: Request, exc: AuthRedirectException):
     return RedirectResponse(url="/admin-web/login")
 
 
+from app.api.houses import router as houses_api_router  # noqa: E402
+
 app.include_router(health_router)
 app.include_router(avito_router)
 app.include_router(avito_oauth_router)
+app.include_router(houses_api_router)
 
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from app.web.routers import auth_web, admin_web, setup_web, settings_web, house_web, booking_web  # noqa: E402

@@ -41,6 +41,7 @@ class House(Base):
     name: Mapped[str] = mapped_column(String, unique=True)
     description: Mapped[Optional[str]] = mapped_column(String)
     capacity: Mapped[int] = mapped_column(Integer, default=2)
+    base_price: Mapped[int] = mapped_column(Integer, default=0)  # Базовая цена ₽/сут
 
     # Динамический контент
     wifi_info: Mapped[Optional[str]] = mapped_column(
@@ -64,6 +65,42 @@ class House(Base):
     )  # Tg File ID (схема проезда)
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="house")
+    seasonal_prices: Mapped[list["HousePrice"]] = relationship(back_populates="house")
+    discounts: Mapped[list["HouseDiscount"]] = relationship(back_populates="house")
+
+
+class HousePrice(Base):
+    """Сезонные цены для домика. Перекрывают base_price на указанный период."""
+    __tablename__ = "house_prices"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    house_id: Mapped[int] = mapped_column(ForeignKey("houses.id"), index=True)
+    label: Mapped[str] = mapped_column(String)  # "Новогодние", "Лето", "Стандарт"
+    price_per_night: Mapped[int] = mapped_column(Integer)  # ₽/сут
+    date_from: Mapped[date] = mapped_column(Date)
+    date_to: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    house: Mapped["House"] = relationship(back_populates="seasonal_prices")
+
+
+class HouseDiscount(Base):
+    """Автоматические или ручные скидки. Применяются поверх сезонной/базовой цены."""
+    __tablename__ = "house_discounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    house_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("houses.id"), nullable=True, index=True
+    )  # None = для всех домиков
+    label: Mapped[str] = mapped_column(String)  # "Горящее предложение", "Ранее бронирование"
+    discount_percent: Mapped[int] = mapped_column(Integer)  # 10 = -10%
+    date_from: Mapped[date] = mapped_column(Date)
+    date_to: Mapped[date] = mapped_column(Date)
+    is_auto: Mapped[bool] = mapped_column(default=False)  # True = создана автоматически
+    is_active: Mapped[bool] = mapped_column(default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    house: Mapped[Optional["House"]] = relationship(back_populates="discounts")
 
 
 class Booking(Base):

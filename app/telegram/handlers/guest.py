@@ -395,13 +395,128 @@ async def guest_showcase_about(callback: CallbackQuery):
 async def guest_showcase_houses(callback: CallbackQuery):
     if not await ensure_guest_context(callback, "showcase"):
         return
-    text = (
-        "🏠 <b>Домики и фото</b>\n\n"
-        "Раздел в доработке: скоро здесь будет галерея по каждому домику с фото и описанием.\n"
-        "Пока можно проверить даты и перейти к бронированию."
+
+    from app.services.house_service import HouseService
+    from app.services.pricing_service import PricingService
+    from app.data.house_descriptions import get_short_description
+
+    async with AsyncSessionLocal() as db:
+        houses = await HouseService.get_all_houses(db)
+
+        if not houses:
+            text = "🏠 <b>Домики и фото</b>\n\nИнформация о домиках скоро появится."
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=build_showcase_section_rows("houses")
+            )
+            await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
+            await callback.answer()
+            return
+
+        # Показываем список домиков с ценами
+        text = "🏠 <b>Наши домики</b>\n\n"
+        for house in houses:
+            price_info = await PricingService.get_display_price(db, house.id)
+            price = price_info["final_price"]
+            base = price_info["price"]
+
+            desc = house.description or get_short_description(house.name)
+
+            text += f"<b>{house.name}</b>\n"
+            text += f"👥 До {house.capacity} гостей\n"
+            if desc:
+                text += f"{desc}\n"
+            if price:
+                if price_info["discount_percent"]:
+                    text += (
+                        f"💰 <s>{base} ₽</s> → <b>{price} ₽/сут</b> "
+                        f"(-{price_info['discount_percent']}% {price_info['discount_label'] or ''})\n"
+                    )
+                else:
+                    text += f"💰 от <b>{price} ₽/сут</b>\n"
+            text += "\n"
+
+    keyboard_rows = []
+    for house in houses:
+        keyboard_rows.append([
+            InlineKeyboardButton(
+                text=f"🏠 {house.name}",
+                callback_data=f"guest:house:{house.id}",
+            )
+        ])
+    keyboard_rows.extend(build_showcase_section_rows("houses"))
+
+    await safe_edit(
+        callback, text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows),
+        parse_mode="HTML",
     )
-    keyboard = InlineKeyboardMarkup(inline_keyboard=build_showcase_section_rows("houses"))
-    await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("guest:house:"))
+async def guest_house_detail(callback: CallbackQuery):
+    """Детальная карточка домика с фото"""
+    if not await ensure_guest_context(callback, "showcase"):
+        return
+
+    house_id = int(callback.data.split(":")[2])
+
+    from app.services.house_service import HouseService
+    from app.services.pricing_service import PricingService
+    from app.data.house_descriptions import get_full_description
+
+    async with AsyncSessionLocal() as db:
+        house = await HouseService.get_house_by_id(db, house_id)
+        if not house:
+            await callback.answer("Домик не найден")
+            return
+
+        price_info = await PricingService.get_display_price(db, house.id)
+
+    price = price_info["final_price"]
+    base = price_info["price"]
+
+    text = f"🏠 <b>{house.name}</b>\n\n"
+    text += f"👥 Вместимость: до {house.capacity} гостей\n"
+
+    # Полное описание: promo > БД > файл описаний
+    full_desc = house.promo_description or house.description or get_full_description(house.name)
+    if full_desc:
+        text += f"\n{full_desc}\n"
+
+    if price:
+        text += "\n💰 <b>Стоимость:</b> "
+        if price_info["discount_percent"]:
+            text += (
+                f"<s>{base} ₽</s> → <b>{price} ₽/сут</b> "
+                f"(-{price_info['discount_percent']}%)\n"
+            )
+        else:
+            text += f"от <b>{price} ₽/сут</b>\n"
+
+        if price_info["season_label"]:
+            text += f"📅 Сезон: {price_info['season_label']}\n"
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📅 Забронировать", callback_data="guest:availability")],
+        [InlineKeyboardButton(text="🔙 Все домики", callback_data="guest:showcase:houses")],
+    ])
+
+    # Если есть фото — отправляем с фото
+    if house.promo_image_id:
+        try:
+            await callback.message.delete()
+        except TelegramBadRequest:
+            pass
+        await callback.message.answer_photo(
+            photo=house.promo_image_id,
+            caption=text,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+    else:
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
+
     await callback.answer()
 
 
