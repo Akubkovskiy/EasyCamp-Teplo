@@ -469,11 +469,8 @@ class BookingService:
                 return existing
 
             else:
-                # Create
+                # Create — but check for overlaps first
                 # We need house_id. Since webhook might not contain internal house_id, we need mapping.
-                # But typically Avito webhook contains item_id.
-                
-                # Mapping item_id -> house_id
                 from app.core.config import settings
                 item_house_mapping = {}
                 for pair in settings.avito_item_ids.split(","):
@@ -486,6 +483,21 @@ class BookingService:
                     logger.error(f"Unknown Avito item_id {booking_payload.item_id}")
                     return None
 
+                check_in = datetime.strptime(booking_payload.check_in, "%Y-%m-%d").date()
+                check_out = datetime.strptime(booking_payload.check_out, "%Y-%m-%d").date()
+
+                # Overlap guard
+                is_available = await BookingService.check_availability(
+                    db, house_id=house_id, check_in=check_in, check_out=check_out
+                )
+                if not is_available:
+                    logger.warning(
+                        f"⚠️ OVERLAP BLOCKED: Avito webhook booking {avito_id} "
+                        f"({check_in} - {check_out}) conflicts with existing booking "
+                        f"for house {house_id}. Skipping creation."
+                    )
+                    return None
+
                 contact = booking_payload.contact or {}
                 # Handle contact if it is object or dict (Pydantic)
                 guest_name = getattr(contact, "name", "Гость Avito")
@@ -495,8 +507,8 @@ class BookingService:
                     house_id=house_id,
                     guest_name=guest_name,
                     guest_phone=format_phone(guest_phone),
-                    check_in=datetime.strptime(booking_payload.check_in, "%Y-%m-%d").date(),
-                    check_out=datetime.strptime(booking_payload.check_out, "%Y-%m-%d").date(),
+                    check_in=check_in,
+                    check_out=check_out,
                     guests_count=booking_payload.guest_count or 1,
                     total_price=Decimal(str(booking_payload.base_price or 0)),
                     status=map_avito_status(booking_payload.status),

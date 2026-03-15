@@ -197,7 +197,32 @@ async def process_avito_booking(
             stats["updated_bookings"].append(existing)
 
     else:
-        # Создать новую бронь
+        # Создать новую бронь — но сначала проверяем overlap
+        check_in = datetime.strptime(booking_data["check_in"], "%Y-%m-%d").date()
+        check_out = datetime.strptime(booking_data["check_out"], "%Y-%m-%d").date()
+
+        # Overlap guard: ищем активные брони для того же дома с пересечением дат
+        overlap_stmt = select(Booking).where(
+            Booking.house_id == house_id,
+            Booking.status != BookingStatus.CANCELLED,
+            Booking.check_in < check_out,
+            Booking.check_out > check_in,
+        ).limit(1)
+        overlap_result = await session.execute(overlap_stmt)
+        conflicting = overlap_result.scalar_one_or_none()
+
+        if conflicting:
+            logger.warning(
+                f"⚠️ OVERLAP BLOCKED: Avito booking {avito_id} "
+                f"({check_in} - {check_out}) conflicts with "
+                f"existing booking #{conflicting.id} "
+                f"({conflicting.check_in} - {conflicting.check_out}) "
+                f"for house {house_id}. Skipping creation."
+            )
+            stats.setdefault("conflicts", 0)
+            stats["conflicts"] += 1
+            return
+
         contact = booking_data.get("contact", {})
 
         # Extract name with safety checks
@@ -208,8 +233,8 @@ async def process_avito_booking(
             house_id=house_id,
             guest_name=guest_name,
             guest_phone=format_phone(contact.get("phone", "")),
-            check_in=datetime.strptime(booking_data["check_in"], "%Y-%m-%d").date(),
-            check_out=datetime.strptime(booking_data["check_out"], "%Y-%m-%d").date(),
+            check_in=check_in,
+            check_out=check_out,
             guests_count=booking_data.get("guest_count", 1),
             total_price=Decimal(str(booking_data.get("base_price", 0))),
             status=map_avito_status(booking_data["status"]),
