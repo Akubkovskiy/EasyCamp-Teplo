@@ -18,6 +18,30 @@ from app.utils.validators import format_phone
 logger = logging.getLogger(__name__)
 
 
+def extract_avito_contact_field(booking_data: dict, field: str) -> str | None:
+    """Read Avito guest contact fields from nested contact or legacy top-level payload fields."""
+    contact = booking_data.get("contact", {}) or {}
+
+    value = None
+    if isinstance(contact, dict):
+        value = contact.get(field)
+    else:
+        value = getattr(contact, field, None)
+
+    if isinstance(value, str):
+        value = value.strip()
+        if value:
+            return value
+
+    legacy_value = booking_data.get(f"guest_{field}")
+    if isinstance(legacy_value, str):
+        legacy_value = legacy_value.strip()
+        if legacy_value:
+            return legacy_value
+
+    return None
+
+
 def map_avito_status(avito_status: str) -> BookingStatus:
     """Маппинг статусов Avito на статусы системы"""
     mapping = {
@@ -223,16 +247,12 @@ async def process_avito_booking(
             stats["conflicts"] += 1
             return
 
-        contact = booking_data.get("contact", {})
-
-        # Extract name with safety checks
-        raw_name = contact.get("name")
-        guest_name = raw_name if raw_name else "Гость Avito"
+        guest_name = extract_avito_contact_field(booking_data, "name") or "Гость Avito"
 
         new_booking = Booking(
             house_id=house_id,
             guest_name=guest_name,
-            guest_phone=format_phone(contact.get("phone", "")),
+            guest_phone=format_phone(extract_avito_contact_field(booking_data, "phone") or ""),
             check_in=check_in,
             check_out=check_out,
             guests_count=booking_data.get("guest_count", 1),

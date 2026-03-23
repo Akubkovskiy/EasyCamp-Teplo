@@ -14,6 +14,39 @@ from app.services.sheets_service import sheets_service
 logger = logging.getLogger(__name__)
 
 
+def extract_avito_contact_value(payload: AvitoBookingPayload, field: str) -> str | None:
+    """
+    Read guest contact fields from either nested contact data or legacy top-level payload fields.
+
+    Avito payloads in this project exist in multiple shapes:
+    - webhook payloads with contact.name / contact.phone
+    - legacy/top-level guest_name / guest_phone fields
+    The old code used getattr(contact, "...") on a dict, which silently forced
+    the fallback guest name for valid webhook payloads.
+    """
+    contact = getattr(payload, "contact", None) or {}
+
+    value = None
+    if isinstance(contact, dict):
+        value = contact.get(field)
+    else:
+        value = getattr(contact, field, None)
+
+    if isinstance(value, str):
+        value = value.strip()
+        if value:
+            return value
+
+    legacy_field = f"guest_{field}"
+    legacy_value = getattr(payload, legacy_field, None)
+    if isinstance(legacy_value, str):
+        legacy_value = legacy_value.strip()
+        if legacy_value:
+            return legacy_value
+
+    return None
+
+
 class BookingService:
     """Сервис бизнес-логики для бронирований"""
 
@@ -498,10 +531,8 @@ class BookingService:
                     )
                     return None
 
-                contact = booking_payload.contact or {}
-                # Handle contact if it is object or dict (Pydantic)
-                guest_name = getattr(contact, "name", "Гость Avito")
-                guest_phone = getattr(contact, "phone", "")
+                guest_name = extract_avito_contact_value(booking_payload, "name") or "Гость Avito"
+                guest_phone = extract_avito_contact_value(booking_payload, "phone") or ""
 
                 new_booking = Booking(
                     house_id=house_id,
