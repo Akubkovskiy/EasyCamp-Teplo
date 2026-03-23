@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 
 from app.services.avito_sync_service import extract_avito_contact_field
-from app.services.booking_service import extract_avito_contact_value
+from app.services.booking_service import (
+    extract_avito_contact_value,
+    should_replace_avito_guest_value,
+)
 
 
 class PayloadWithDictContact:
@@ -50,3 +53,14 @@ def test_sync_service_falls_back_to_legacy_top_level_fields():
     assert extract_avito_contact_field(booking_data, "name") == "Сергей"
     assert extract_avito_contact_field(booking_data, "phone") == "+79990000005"
 
+
+def test_replace_placeholder_guest_name_with_real_value():
+    assert should_replace_avito_guest_value("Гость Avito", "Анна Петрова") is True
+
+
+def test_do_not_override_existing_real_guest_name():
+    assert should_replace_avito_guest_value("Иван Иванов", "Анна Петрова") is False
+
+
+def test_replace_empty_phone_with_incoming_value():
+    assert should_replace_avito_guest_value("", "+79990000006", placeholder=None) is True

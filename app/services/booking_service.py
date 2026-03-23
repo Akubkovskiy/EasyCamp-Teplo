@@ -47,6 +47,32 @@ def extract_avito_contact_value(payload: AvitoBookingPayload, field: str) -> str
     return None
 
 
+def should_replace_avito_guest_value(
+    current_value: str | None,
+    incoming_value: str | None,
+    placeholder: str | None = "Гость Avito",
+) -> bool:
+    """Replace only empty or placeholder values with a better Avito contact value."""
+    if not isinstance(incoming_value, str):
+        return False
+
+    incoming_clean = incoming_value.strip()
+    if not incoming_clean:
+        return False
+
+    if not isinstance(current_value, str):
+        return True
+
+    current_clean = current_value.strip()
+    if not current_clean:
+        return True
+
+    if placeholder and current_clean == placeholder:
+        return True
+
+    return False
+
+
 class BookingService:
     """Сервис бизнес-логики для бронирований"""
 
@@ -489,16 +515,30 @@ class BookingService:
                 if existing.status != new_status:
                     existing.status = new_status
                     existing.updated_at = datetime.now(timezone.utc)
-                
+
+                incoming_guest_name = extract_avito_contact_value(booking_payload, "name")
+                if should_replace_avito_guest_value(existing.guest_name, incoming_guest_name):
+                    existing.guest_name = incoming_guest_name
+                    existing.updated_at = datetime.now(timezone.utc)
+
+                incoming_guest_phone = extract_avito_contact_value(booking_payload, "phone")
+                if should_replace_avito_guest_value(
+                    existing.guest_phone,
+                    incoming_guest_phone,
+                    placeholder=None,
+                ):
+                    existing.guest_phone = format_phone(incoming_guest_phone)
+                    existing.updated_at = datetime.now(timezone.utc)
+
                 # Update other fields if needed ...
                 existing.advance_amount = get_prepayment(booking_payload)
-                
+
                 await db.commit()
                 await db.refresh(existing)
-                
+
                 # Sync to sheets
                 asyncio.create_task(BookingService._safe_background_sheets_sync())
-                
+
                 return existing
 
             else:

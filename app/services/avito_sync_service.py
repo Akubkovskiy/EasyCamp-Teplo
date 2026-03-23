@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Booking, BookingStatus, BookingSource, House
 from app.services.avito_api_service import avito_api_service
+from app.services.booking_service import should_replace_avito_guest_value
 from app.database import AsyncSessionLocal
 from app.utils.validators import format_phone
 
@@ -192,6 +193,22 @@ async def process_avito_booking(
             logger.info(
                 f"Updated booking {avito_id}: {existing.status} -> {new_status}"
             )
+
+        incoming_guest_name = extract_avito_contact_field(booking_data, "name")
+        if should_replace_avito_guest_value(existing.guest_name, incoming_guest_name):
+            existing.guest_name = incoming_guest_name
+            existing.updated_at = datetime.now()
+            is_updated = True
+
+        incoming_guest_phone = extract_avito_contact_field(booking_data, "phone")
+        if should_replace_avito_guest_value(
+            existing.guest_phone,
+            incoming_guest_phone,
+            placeholder=None,
+        ):
+            existing.guest_phone = format_phone(incoming_guest_phone)
+            existing.updated_at = datetime.now()
+            is_updated = True
 
         # Update commission and owner prepayment
         safe_deposit = booking_data.get("safe_deposit") or {}
