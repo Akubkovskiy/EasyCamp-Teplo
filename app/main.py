@@ -16,6 +16,7 @@ from app.core.rate_limiter import limiter
 from app.middleware.request_logger import RequestLoggerMiddleware
 
 from app.api.health import router as health_router
+from app.api.site_leads import router as site_leads_router
 from app.avito.webhook import router as avito_router
 from app.avito.oauth import router as avito_oauth_router
 
@@ -84,6 +85,7 @@ async def auth_redirect_handler(request: Request, exc: AuthRedirectException):
 from app.api.houses import router as houses_api_router  # noqa: E402
 
 app.include_router(health_router)
+app.include_router(site_leads_router)
 app.include_router(avito_router)
 app.include_router(avito_oauth_router)
 app.include_router(houses_api_router)

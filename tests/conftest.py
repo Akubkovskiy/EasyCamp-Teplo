@@ -1,6 +1,7 @@
 """
 Pytest configuration for EasyCamp tests
 """
+import os
 import pytest
 import asyncio
 import sys
@@ -8,6 +9,15 @@ from pathlib import Path
 
 # Ensure app is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Test-friendly defaults — без них `app.core.config` падает при импорте,
+# когда .env отсутствует (CI, sandbox, локальный pytest без env).
+# Token must pass aiogram's basic format check `\d+:[A-Za-z0-9_-]{35,}`
+os.environ.setdefault(
+    "TELEGRAM_BOT_TOKEN",
+    "1234567890:AAEhBP0av28cxuwxxxxxxxxxxxxxxxxxxxx",
+)
+os.environ.setdefault("TELEGRAM_CHAT_ID", "1")
 
 
 @pytest.fixture(scope="session")

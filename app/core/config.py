@@ -90,6 +90,10 @@ class Settings(BaseModel):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     setup_secret: str = "easycamp_secret"
 
+    # Site lead intake (Phase S10) — публичный endpoint /api/leads
+    # принимает заявки с teplo-v-arkhyze.ru. Token обязателен, иначе 401.
+    site_lead_token: str = ""
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -160,4 +164,5 @@ settings = Settings(
     algorithm="HS256",
     access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
     setup_secret=os.environ.get("SETUP_SECRET", "easycamp_secret"),
+    site_lead_token=os.environ.get("SITE_LEAD_TOKEN", ""),
 )
