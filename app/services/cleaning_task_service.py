@@ -16,6 +16,8 @@ from app.models import (
     CleaningTaskMedia,
     CleaningTaskStatus,
     PaymentStatus,
+    SupplyAlert,
+    SupplyAlertStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -216,6 +218,63 @@ class CleaningTaskService:
             return False, f"Нужно минимум {min_photos} фото, сейчас: {photos_count}"
 
         return True, "ok"
+
+    @staticmethod
+    async def open_supply_alert(
+        db: AsyncSession,
+        task: CleaningTask,
+        items_json: str | None = None,
+        reporter_user_id: int | None = None,
+    ) -> SupplyAlert | None:
+        """Открывает (или возвращает существующий) `SupplyAlert` для задачи.
+        Idempotent: если уже есть NEW или IN_PROGRESS — возвращает его,
+        дубль не создаёт.
+        """
+        existing_q = await db.execute(
+            select(SupplyAlert).where(
+                SupplyAlert.task_id == task.id,
+                SupplyAlert.status.in_(
+                    [SupplyAlertStatus.NEW, SupplyAlertStatus.IN_PROGRESS]
+                ),
+            )
+        )
+        existing = existing_q.scalar_one_or_none()
+        if existing:
+            if items_json and not existing.items_json:
+                existing.items_json = items_json
+            return existing
+
+        alert = SupplyAlert(
+            task_id=task.id,
+            house_id=task.house_id,
+            reported_by_user_id=reporter_user_id,
+            items_json=items_json,
+            status=SupplyAlertStatus.NEW,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(alert)
+        await db.flush()
+        return alert
+
+    @staticmethod
+    async def resolve_supply_alerts(db: AsyncSession, task: CleaningTask) -> int:
+        """Помечает активные `SupplyAlert` задачи как RESOLVED.
+        Возвращает количество затронутых записей."""
+        q = await db.execute(
+            select(SupplyAlert).where(
+                SupplyAlert.task_id == task.id,
+                SupplyAlert.status.in_(
+                    [SupplyAlertStatus.NEW, SupplyAlertStatus.IN_PROGRESS]
+                ),
+            )
+        )
+        alerts = list(q.scalars().all())
+        now = datetime.now(timezone.utc)
+        for a in alerts:
+            a.status = SupplyAlertStatus.RESOLVED
+            a.resolved_at = now
+        await db.flush()
+        return len(alerts)
 
     @staticmethod
     async def _accrue_cleaning_fee(db: AsyncSession, task: CleaningTask) -> None:

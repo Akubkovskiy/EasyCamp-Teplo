@@ -8,6 +8,7 @@ from sqlalchemy import and_, or_, select
 from app.database import AsyncSessionLocal
 from app.models import CleaningTask, CleaningTaskCheck, CleaningTaskStatus
 from app.services.cleaning_task_service import CleaningTaskService
+from app.telegram.auth.admin import resolve_user_db_id
 
 router = Router()
 
@@ -150,6 +151,11 @@ async def cleaner_toggle_check(callback: CallbackQuery):
     _, _, _, task_id_str, code = callback.data.split(":", 4)
     task_id = int(task_id_str)
 
+    new_value: bool | None = None
+    supply_alert_opened = False
+    supply_alert_resolved = False
+    house_id_for_alert = None
+
     async with AsyncSessionLocal() as session:
         q = await session.execute(
             select(CleaningTaskCheck).where(
@@ -161,11 +167,74 @@ async def cleaner_toggle_check(callback: CallbackQuery):
         if not check:
             await callback.answer("Пункт не найден", show_alert=True)
             return
-        await CleaningTaskService.toggle_check(session, task_id, code, not check.is_checked)
+
+        new_value = not check.is_checked
+        await CleaningTaskService.toggle_check(session, task_id, code, new_value)
+
+        # Хук C10.1: код `need_purchase` → SupplyAlert (idempotent).
+        if code == "need_purchase":
+            task = await session.get(CleaningTask, task_id)
+            if task:
+                house_id_for_alert = task.house_id
+                cleaner_db_id = await resolve_user_db_id(
+                    session, callback.from_user.id
+                )
+                if new_value:
+                    alert = await CleaningTaskService.open_supply_alert(
+                        session,
+                        task,
+                        items_json=None,
+                        reporter_user_id=cleaner_db_id,
+                    )
+                    supply_alert_opened = bool(alert)
+                else:
+                    affected = await CleaningTaskService.resolve_supply_alerts(
+                        session, task
+                    )
+                    supply_alert_resolved = affected > 0
+
         await session.commit()
+
+    if supply_alert_opened:
+        await _notify_admins_supply_alert(
+            callback.bot, task_id=task_id, house_id=house_id_for_alert
+        )
+
+    if supply_alert_resolved:
+        try:
+            await callback.answer("Расходники отмечены как закрытые")
+        except Exception:
+            pass
 
     callback.data = f"cleaner:task:checks:{task_id}"
     await cleaner_task_checks(callback)
+
+
+async def _notify_admins_supply_alert(bot, *, task_id: int, house_id: int | None):
+    """Шлёт всем админам уведомление о новом SupplyAlert."""
+    from app.core.config import settings
+    from app.models import UserRole
+    from app.telegram.auth.admin import get_all_users
+
+    users = await get_all_users()
+    admin_ids = {
+        u.telegram_id
+        for u in users
+        if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id
+    }
+    admin_ids.add(settings.telegram_chat_id)
+
+    text = (
+        "🧴 <b>Алерт: уборщица отметила нехватку расходников</b>\n\n"
+        f"Задача: #{task_id}\n"
+        f"Домик ID: {house_id if house_id is not None else '—'}\n\n"
+        "Откройте задачу, уточните позиции и запланируйте закупку."
+    )
+    for aid in admin_ids:
+        try:
+            await bot.send_message(aid, text, parse_mode="HTML")
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("cleaner:task:photo:"))
@@ -197,7 +266,13 @@ async def cleaner_receive_photo(message: Message):
         if not task:
             await message.answer("Задача не найдена")
             return
-        await CleaningTaskService.add_photo(session, task_id, file_id, user_id=message.from_user.id if message.from_user else None)
+        # FK на users.id, НЕ на telegram_id.
+        cleaner_db_id = (
+            await resolve_user_db_id(session, message.from_user.id)
+            if message.from_user
+            else None
+        )
+        await CleaningTaskService.add_photo(session, task_id, file_id, user_id=cleaner_db_id)
         await session.commit()
 
     await message.answer(f"✅ Фото прикреплено к задаче #{task_id}")
@@ -210,11 +285,17 @@ async def _do_transition(callback: CallbackQuery, task_id: int, target: Cleaning
             await callback.answer("Задача не найдена", show_alert=True)
             return
 
+        # ВАЖНО: assigned_to_user_id — FK на users.id, передаём не telegram_id
+        # а резолвленный PK. Если пользователь ещё не в БД — None,
+        # тогда service оставит assigned_to_user_id как было (job
+        # обычно уже назначил при генерации).
+        cleaner_db_id = await resolve_user_db_id(session, callback.from_user.id)
+
         ok = await CleaningTaskService.transition_status(
             session,
             task,
             target,
-            cleaner_user_id=callback.from_user.id,
+            cleaner_user_id=cleaner_db_id,
             decline_reason=decline_reason,
         )
         if not ok:

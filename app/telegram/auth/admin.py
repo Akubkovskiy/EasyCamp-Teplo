@@ -120,3 +120,24 @@ async def get_user_name(user_id: int) -> str | None:
         result = await session.execute(select(User).where(User.telegram_id == user_id))
         user = result.scalar_one_or_none()
         return user.name if user else None
+
+
+async def resolve_user_db_id(session, telegram_id: int) -> int | None:
+    """Возвращает PK `users.id` по `telegram_id`. Используется для записи
+    в FK-колонки таблиц (cleaning_tasks.assigned_to_user_id,
+    supply_expense_claims.cleaner_user_id и т.п.), которые ссылаются на
+    `users.id`, НЕ на `telegram_id`.
+
+    Возвращает None, если пользователь ещё не зарегистрирован в БД.
+    Принимает либо открытую AsyncSession, либо None — тогда открывает свою.
+    """
+    if session is None:
+        async with AsyncSessionLocal() as s:
+            result = await s.execute(
+                select(User.id).where(User.telegram_id == telegram_id)
+            )
+            return result.scalar_one_or_none()
+    result = await session.execute(
+        select(User.id).where(User.telegram_id == telegram_id)
+    )
+    return result.scalar_one_or_none()

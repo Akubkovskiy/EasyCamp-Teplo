@@ -15,7 +15,7 @@ from app.models import (
     SupplyClaimStatus,
     SupplyExpenseClaim,
 )
-from app.telegram.auth.admin import UserRole, get_all_users, is_admin
+from app.telegram.auth.admin import UserRole, get_all_users, is_admin, resolve_user_db_id
 
 router = Router()
 
@@ -44,15 +44,24 @@ async def cleaner_claim_submit(message: Message):
     amount = float(m.group(2))
     items = m.group(3).strip()
     file_id = message.photo[-1].file_id
-    cleaner_id = message.from_user.id if message.from_user else None
+    cleaner_tg = message.from_user.id if message.from_user else None
 
-    if not cleaner_id:
+    if not cleaner_tg:
         return
 
     async with AsyncSessionLocal() as session:
+        # FK на users.id — резолвим из telegram_id перед записью.
+        cleaner_db_id = await resolve_user_db_id(session, cleaner_tg)
+        if not cleaner_db_id:
+            await message.answer(
+                "❌ Вы не зарегистрированы как уборщица. "
+                "Попросите администратора добавить вас."
+            )
+            return
+
         claim = SupplyExpenseClaim(
             task_id=task_id,
-            cleaner_user_id=cleaner_id,
+            cleaner_user_id=cleaner_db_id,
             purchase_date=date.today(),
             amount_total=amount,
             items_json=items,

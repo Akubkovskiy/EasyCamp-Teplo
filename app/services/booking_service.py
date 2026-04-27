@@ -6,7 +6,17 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus, House
+from app.models import (
+    Booking,
+    BookingStatus,
+    CleaningPaymentEntryType,
+    CleaningPaymentLedger,
+    CleaningTask,
+    CleaningTaskStatus,
+    House,
+    PaymentStatus,
+    User,
+)
 from app.schemas.booking import BookingCreate, BookingUpdate
 from app.avito.schemas import AvitoBookingPayload
 from app.services.sheets_service import sheets_service
@@ -348,7 +358,8 @@ class BookingService:
 
     @classmethod
     async def cancel_booking(cls, db: AsyncSession, booking_id: int) -> bool:
-        """Отмена брони"""
+        """Отмена брони. Каскадно отменяет связанную CleaningTask и
+        активные начисления уборки в ledger."""
         try:
             booking = await db.get(Booking, booking_id)
             if not booking:
@@ -356,10 +367,21 @@ class BookingService:
 
             booking.status = BookingStatus.CANCELLED
             booking.updated_at = datetime.now(timezone.utc)
+
+            # C10.2: пропагация в cleaning-домен. Делаем до commit, чтобы
+            # отмена брони и каскад были атомарны.
+            cleaner_tg_id = await cls._cascade_cancel_cleaning(db, booking_id)
+
             await db.commit()
 
-            # Разблокировка дат в Avito
+            # Разблокировка дат в Avito (вне транзакции, side-effect)
             await cls._unblock_avito_dates(booking)
+
+            # Уведомление уборщицы (best-effort)
+            if cleaner_tg_id:
+                asyncio.create_task(
+                    cls._notify_cleaner_about_cancel(cleaner_tg_id, booking_id)
+                )
 
             # Фоновая синхронизация (safe wrapper)
             asyncio.create_task(cls._safe_background_sheets_sync())
@@ -368,6 +390,81 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error cancelling booking: {e}")
             return False
+
+    @staticmethod
+    async def _cascade_cancel_cleaning(
+        db: AsyncSession, booking_id: int
+    ) -> int | None:
+        """Находит связанную CleaningTask и переводит её в CANCELLED.
+        Активные cleaning_fee ledger-записи также помечаются CANCELLED.
+        Возвращает telegram_id уборщицы (если назначена) для уведомления.
+        """
+        try:
+            task_q = await db.execute(
+                select(CleaningTask).where(CleaningTask.booking_id == booking_id)
+            )
+            task = task_q.scalar_one_or_none()
+            if not task:
+                return None
+
+            terminal = {
+                CleaningTaskStatus.DONE,
+                CleaningTaskStatus.DECLINED,
+                CleaningTaskStatus.CANCELLED,
+            }
+            now = datetime.now(timezone.utc)
+
+            if task.status not in terminal:
+                task.status = CleaningTaskStatus.CANCELLED
+                task.updated_at = now
+
+            # Откатываем начисления уборки (если были)
+            ledger_q = await db.execute(
+                select(CleaningPaymentLedger).where(
+                    CleaningPaymentLedger.task_id == task.id,
+                    CleaningPaymentLedger.entry_type
+                    == CleaningPaymentEntryType.CLEANING_FEE,
+                    CleaningPaymentLedger.status != PaymentStatus.CANCELLED,
+                )
+            )
+            for entry in ledger_q.scalars().all():
+                entry.status = PaymentStatus.CANCELLED
+                entry.comment = (
+                    (entry.comment or "")
+                    + f" | cancelled: booking #{booking_id} cancelled"
+                ).strip()
+
+            # Резолвим telegram_id уборщицы, если она назначена
+            cleaner_tg_id: int | None = None
+            if task.assigned_to_user_id:
+                u_q = await db.execute(
+                    select(User.telegram_id).where(User.id == task.assigned_to_user_id)
+                )
+                cleaner_tg_id = u_q.scalar_one_or_none()
+
+            return cleaner_tg_id
+
+        except Exception as e:
+            logger.error(
+                f"Error cascading cancel to cleaning for booking {booking_id}: {e}",
+                exc_info=True,
+            )
+            return None
+
+    @staticmethod
+    async def _notify_cleaner_about_cancel(cleaner_tg_id: int, booking_id: int):
+        """Best-effort уведомление уборщицы об отмене связанной задачи."""
+        try:
+            from app.telegram.bot import bot
+
+            await bot.send_message(
+                cleaner_tg_id,
+                f"ℹ️ Бронь #{booking_id} отменена — связанная уборка снята.",
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to notify cleaner {cleaner_tg_id} about cancel: {e}"
+            )
 
     @classmethod
     async def delete_booking(cls, db: AsyncSession, booking_id: int) -> bool:
