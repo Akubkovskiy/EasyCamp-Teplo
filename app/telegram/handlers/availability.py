@@ -304,14 +304,20 @@ async def select_checkout_date(callback: CallbackQuery):
             elif house.base_price > 0:
                 card += f"\n💰 от <b>{house.base_price:,} ₽/ночь</b>\n"
 
-            # Кнопка бронирования
+            # Кнопка бронирования. Для админа — старый flow (booking_management),
+            # для гостя — self-service flow в guest_booking.py (Phase G10.1).
             btn_text = f"✅ Забронировать"
             if total > 0:
                 btn_text += f" — {total:,} ₽"
+            book_callback = (
+                f"booking:create:{house.id}"
+                if is_admin(user_id)
+                else f"guest:book:{house.id}"
+            )
             house_kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(
                     text=btn_text,
-                    callback_data=f"booking:create:{house.id}",
+                    callback_data=book_callback,
                 )]
             ])
 

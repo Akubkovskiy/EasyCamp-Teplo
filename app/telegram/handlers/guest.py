@@ -703,6 +703,12 @@ async def my_booking(callback: CallbackQuery):
                     ),
                     InlineKeyboardButton(text="📶 Wi-Fi", callback_data="guest:wifi"),
                 ],
+                [
+                    InlineKeyboardButton(
+                        text="🚫 Отменить бронь",
+                        callback_data=f"guest:cancel:start:{b.id}",
+                    )
+                ],
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="guest:menu")],
             ]
         )
@@ -759,7 +765,15 @@ async def get_active_booking(session, user_id: int):
 async def guest_instruction(callback: CallbackQuery):
     if not await ensure_guest_auth(callback):
         return
-    """Инструкция по заселению"""
+    """Инструкция по заселению (time-gate настраивается через GlobalSetting
+    `guest_instruction_open_hours`, default 24)."""
+    from datetime import time as dtime
+
+    from app.services.global_settings import (
+        get_guest_instruction_open_hours,
+        is_instruction_open,
+    )
+
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
 
@@ -767,13 +781,17 @@ async def guest_instruction(callback: CallbackQuery):
             await callback.answer("❌ Бронь не найдена", show_alert=True)
             return
 
-        # Time-gate: инструкция доступна за 24 часа до заезда
-        now = datetime.now().date()
-        days_to_checkin = (booking.check_in - now).days
-        if days_to_checkin > 1:
+        open_hours = await get_guest_instruction_open_hours(session)
+
+        check_in_dt = datetime.combine(booking.check_in, dtime.min)
+        hours_to_checkin = (check_in_dt - datetime.now()).total_seconds() / 3600
+
+        if not is_instruction_open(hours_to_checkin, open_hours):
+            # Считаем «дней до заезда» для UX-сообщения
+            days_to_checkin = max(0, int(hours_to_checkin // 24))
             await callback.message.edit_text(
-                "🔒 <b>Инструкция будет доступна за 24 часа до заезда.</b>\n\n"
-                f"До заезда осталось: <b>{days_to_checkin} дн.</b>",
+                f"🔒 <b>Инструкция будет доступна за {open_hours} ч до заезда.</b>\n\n"
+                f"До заезда осталось: <b>~{days_to_checkin} дн.</b>",
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="guest:my_booking")]]
                 ),
@@ -790,7 +808,7 @@ async def guest_instruction(callback: CallbackQuery):
         text = (
             f"🔑 <b>Инструкция по заселению: {booking.house.name}</b>\n\n"
             f"{instruction}\n\n"
-            "<i>(Эта информация доступна за 24ч до заезда)</i>"
+            f"<i>(Эта информация открывается за {open_hours} ч до заезда)</i>"
         )
 
         keyboard = InlineKeyboardMarkup(
