@@ -941,28 +941,32 @@ async def guest_pay_receipt_start(callback: CallbackQuery):
 
     _pay_receipt_waiting_users[callback.from_user.id] = booking.id
     await callback.message.answer(
-        "📸 Отправьте фото чека одним сообщением.\n"
+        "📸 Отправьте фото чека или PDF-выписку из банка одним сообщением.\n"
         "Можно добавить подпись (например: сумма/время оплаты)."
     )
     await callback.answer()
 
 
-@router.message(F.photo)
-async def guest_pay_receipt_photo(message: Message):
-    if not message.from_user:
-        return
-    booking_id = _pay_receipt_waiting_users.get(message.from_user.id)
-    if not booking_id:
-        return
+def _is_pay_receipt_waiting(message: Message) -> bool:
+    """Filter: гость находится в режиме ожидания чека (нажал «Отправить чек»)."""
+    return bool(
+        message.from_user
+        and message.from_user.id in _pay_receipt_waiting_users
+    )
 
-    _pay_receipt_waiting_users.pop(message.from_user.id, None)
-    file_id = message.photo[-1].file_id
-    caption = message.caption or "(без комментария)"
 
+async def _send_pay_receipt_to_admins(
+    message: Message,
+    booking_id: int,
+    file_id: str,
+    is_photo: bool,
+):
+    """Общая логика для photo и document: уведомить админов с inline-кнопками."""
     users = await get_all_users()
     admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
     admin_ids.add(settings.telegram_chat_id)
 
+    caption = message.caption or "(без комментария)"
     text = (
         f"💳 <b>Чек оплаты от гостя</b>\n\n"
         f"Гость: {message.from_user.full_name} (@{message.from_user.username or '-'})\n"
@@ -978,10 +982,57 @@ async def guest_pay_receipt_photo(message: Message):
 
     for aid in admin_ids:
         try:
-            await message.bot.send_photo(aid, file_id, caption=text, reply_markup=kb, parse_mode="HTML")
+            if is_photo:
+                await message.bot.send_photo(aid, file_id, caption=text, reply_markup=kb, parse_mode="HTML")
+            else:
+                await message.bot.send_document(aid, file_id, caption=text, reply_markup=kb, parse_mode="HTML")
         except Exception:
             pass
 
+
+@router.message(F.photo, _is_pay_receipt_waiting)
+async def guest_pay_receipt_photo(message: Message):
+    booking_id = _pay_receipt_waiting_users.get(message.from_user.id)
+    if not booking_id:
+        return
+
+    _pay_receipt_waiting_users.pop(message.from_user.id, None)
+    file_id = message.photo[-1].file_id
+
+    await _send_pay_receipt_to_admins(message, booking_id, file_id, is_photo=True)
+    await message.answer("✅ Чек отправлен администратору на проверку.")
+
+
+@router.message(F.document, _is_pay_receipt_waiting)
+async def guest_pay_receipt_document(message: Message):
+    """PDF / любая выписка из банка как document. Принимаем pdf/jpeg/png по
+    `mime_type`, остальные документы вежливо отклоняем."""
+    booking_id = _pay_receipt_waiting_users.get(message.from_user.id)
+    if not booking_id:
+        return
+
+    doc = message.document
+    if not doc:
+        return
+
+    allowed_mimes = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/heic",
+        "image/webp",
+    }
+    if doc.mime_type and doc.mime_type not in allowed_mimes:
+        await message.answer(
+            "⚠️ Поддерживаются только PDF и изображения (jpg/png). "
+            f"Вы отправили: <code>{doc.mime_type}</code>. "
+            "Пришлите фото чека или PDF-выписку.",
+            parse_mode="HTML",
+        )
+        return
+
+    _pay_receipt_waiting_users.pop(message.from_user.id, None)
+    await _send_pay_receipt_to_admins(message, booking_id, doc.file_id, is_photo=False)
     await message.answer("✅ Чек отправлен администратору на проверку.")
 
 
