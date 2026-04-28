@@ -91,6 +91,35 @@
 
                 <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
 
+                <h3 style="margin-bottom: 0.75rem;">🧳 Правила для гостя</h3>
+                <p style="color:#666;margin-top:0;font-size:0.9em;">
+                    Эти параметры читаются из БД на каждый клик в боте — менять можно без рестарта.
+                </p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="guest_cancel_window_days">
+                        Окно самостоятельной отмены брони (в днях до заезда):
+                        {{ help_icon('guest_cancel_window_days') }}
+                    </label>
+                    <input class="form-input" type="number" min="0" max="365"
+                        id="guest_cancel_window_days" name="guest_cancel_window_days"
+                        value="{{ settings.guest_cancel_window_days if settings.guest_cancel_window_days else 7 }}">
+                    <small style="color:#666;">Default 7. Если до заезда строго больше N дней — гость отменяет сам. Иначе бот предлагает связаться с админом.</small>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="guest_instruction_open_hours">
+                        Открыть инструкцию по заселению за (часов до заезда):
+                        {{ help_icon('guest_instruction_open_hours') }}
+                    </label>
+                    <input class="form-input" type="number" min="0" max="720"
+                        id="guest_instruction_open_hours" name="guest_instruction_open_hours"
+                        value="{{ settings.guest_instruction_open_hours if settings.guest_instruction_open_hours else 24 }}">
+                    <small style="color:#666;">Default 24 (за сутки до заезда). До этого момента гость видит «Инструкция будет доступна за N ч».</small>
+                </div>
+
+                <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
                 <button type="submit" class="btn" style="width: auto; padding-left: 2rem; padding-right: 2rem;">💾
                     Сохранить изменения</button>
             </form>

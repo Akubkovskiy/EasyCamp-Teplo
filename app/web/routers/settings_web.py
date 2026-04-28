@@ -47,6 +47,8 @@ async def settings_save(
     contact_admin: str = Form(""),
     ai_enabled: str = Form(...),
     spreadsheet_id: str = Form(""),
+    guest_cancel_window_days: str = Form("7"),
+    guest_instruction_open_hours: str = Form("24"),
     user: User = Depends(get_current_admin_or_redirect),
     db: AsyncSession = Depends(get_db)
 ):
@@ -68,10 +70,27 @@ async def settings_save(
     await save_setting("contact_phone", contact_phone)
     await save_setting("project_address", project_address)
     await save_setting("contact_admin_username", contact_admin)
-    
+
     await save_setting("ai_enabled", ai_enabled)
     await save_setting("google_sheets_spreadsheet_id", spreadsheet_id)
-    
+
+    # G10.3 / Cancel window и time-gate инструкции — sanitize int.
+    def _safe_int(raw: str, default: int) -> int:
+        try:
+            v = int(str(raw).strip())
+            return max(0, v)
+        except (TypeError, ValueError):
+            return default
+
+    await save_setting(
+        "guest_cancel_window_days",
+        str(_safe_int(guest_cancel_window_days, 7)),
+    )
+    await save_setting(
+        "guest_instruction_open_hours",
+        str(_safe_int(guest_instruction_open_hours, 24)),
+    )
+
     await db.commit()
 
     return RedirectResponse(
