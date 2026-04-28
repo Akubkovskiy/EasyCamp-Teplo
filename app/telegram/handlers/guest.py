@@ -690,13 +690,27 @@ async def my_booking(callback: CallbackQuery):
             status_emoji=status_emoji,
         )
 
+        # G10.5 polish: для PAID скрываем «оплатить остаток», показываем
+        # «✅ Полностью оплачено» (дисэйблнутая кнопка-метка).
+        is_fully_paid = (
+            b.status == BookingStatus.PAID
+            and remainder <= 0
+        )
+        if is_fully_paid:
+            pay_row = [
+                InlineKeyboardButton(
+                    text="✅ Оплата подтверждена", callback_data="guest:pay"
+                )
+            ]
+        else:
+            pay_row = [
+                InlineKeyboardButton(
+                    text="💳 Оплатить остаток", callback_data="guest:pay"
+                )
+            ]
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="💳 Оплатить остаток", callback_data="guest:pay"
-                    )
-                ],
+                pay_row,
                 [
                     InlineKeyboardButton(
                         text="🔑 Инструкция", callback_data="guest:instruction"
@@ -905,12 +919,51 @@ async def guest_rules(callback: CallbackQuery):
 async def guest_pay(callback: CallbackQuery):
     if not await ensure_guest_auth(callback):
         return
-    """Оплата"""
+    """Оплата."""
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
-        amount = int(booking.total_price - booking.advance_amount) if booking else 0
 
-    text = messages.payment_instructions(amount)
+    if not booking:
+        await callback.answer("❌ Активная бронь не найдена", show_alert=True)
+        return
+
+    total = int(booking.total_price or 0)
+    paid = int(booking.advance_amount or 0)
+    remainder = max(0, total - paid)
+
+    # G10.5 polish: если бронь PAID и остаток 0 — показываем сводку
+    # вместо инструкций по оплате.
+    if booking.status == BookingStatus.PAID and remainder == 0:
+        paid_at = (
+            booking.updated_at.strftime("%d.%m.%Y %H:%M")
+            if getattr(booking, "updated_at", None)
+            else "—"
+        )
+        text = (
+            "✅ <b>Оплата подтверждена</b>\n\n"
+            f"Оплачено: <b>{paid:,} ₽</b>\n"
+            f"Дата подтверждения: <b>{paid_at}</b>\n\n"
+            "Если у вас вопросы — напишите администратору."
+        )
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="📞 Связаться с нами",
+                        callback_data="guest:contact_admin",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="🔙 Назад", callback_data="guest:my_booking"
+                    )
+                ],
+            ]
+        )
+        await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
+        return
+
+    text = messages.payment_instructions(remainder)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
