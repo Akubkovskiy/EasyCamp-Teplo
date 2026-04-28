@@ -251,7 +251,15 @@ async def cleaner_task_photo_hint(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.message(F.photo)
+def _is_task_photo(message: Message) -> bool:
+    """Filter: только фото с caption `#taskN`. Без этого фильтра handler
+    проглатывает фото гостя и оплата-чек handler в guest.py не получает
+    событие."""
+    caption = message.caption or ""
+    return bool(PHOTO_HINT_RE.search(caption))
+
+
+@router.message(F.photo, _is_task_photo)
 async def cleaner_receive_photo(message: Message):
     caption = message.caption or ""
     m = PHOTO_HINT_RE.search(caption)

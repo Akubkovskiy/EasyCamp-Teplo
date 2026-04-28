@@ -33,11 +33,20 @@ async def cleaner_expense_hint(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.message(F.photo)
+def _is_cleaner_claim_photo(message: Message) -> bool:
+    """Filter: только фото с caption в формате `claim task=N amount=X items=...`.
+    Без этого фильтра handler «съедает» все фото в боте, не отдавая их
+    другим обработчикам (guest pay-receipt, и т.п.)."""
+    caption = message.caption or ""
+    return bool(CLAIM_RE.search(caption))
+
+
+@router.message(F.photo, _is_cleaner_claim_photo)
 async def cleaner_claim_submit(message: Message):
     caption = message.caption or ""
     m = CLAIM_RE.search(caption)
     if not m:
+        # Дополнительная защита; в норме filter уже отсёк.
         return
 
     task_id = int(m.group(1))
