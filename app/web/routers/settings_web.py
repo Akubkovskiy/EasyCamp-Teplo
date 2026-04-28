@@ -49,6 +49,7 @@ async def settings_save(
     spreadsheet_id: str = Form(""),
     guest_cancel_window_days: str = Form("7"),
     guest_instruction_open_hours: str = Form("24"),
+    guest_advance_percent: str = Form("30"),
     user: User = Depends(get_current_admin_or_redirect),
     db: AsyncSession = Depends(get_db)
 ):
@@ -90,6 +91,12 @@ async def settings_save(
         "guest_instruction_open_hours",
         str(_safe_int(guest_instruction_open_hours, 24)),
     )
+
+    # G10.6 — % задатка от total. Clamp 0..100 чтобы случайно не записать
+    # 200% (потом оплата ушла бы в minus).
+    advance_pct = _safe_int(guest_advance_percent, 30)
+    advance_pct = max(0, min(100, advance_pct))
+    await save_setting("guest_advance_percent", str(advance_pct))
 
     await db.commit()
 

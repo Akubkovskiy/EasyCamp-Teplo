@@ -101,3 +101,48 @@ def is_instruction_open(hours_to_checkin: float, open_hours: int) -> bool:
     """Pure-функция для тестов: инструкция доступна, если до заезда
     осталось <= `open_hours` часов (включая прошлое)."""
     return hours_to_checkin <= open_hours
+
+
+# -------------------------------------------------
+# G10.6 — двухэтапная оплата (задаток + остаток при заезде)
+# -------------------------------------------------
+
+GUEST_ADVANCE_PERCENT_KEY = "guest_advance_percent"
+GUEST_ADVANCE_PERCENT_DEFAULT = 30  # 30% от total — типовой задаток
+
+
+async def get_guest_advance_percent(session: AsyncSession) -> int:
+    """% от total_price, который гость вносит как задаток при бронировании.
+    Остаток (100% - %) платится при заезде. Default 30."""
+    val = await get_int(
+        session,
+        GUEST_ADVANCE_PERCENT_KEY,
+        GUEST_ADVANCE_PERCENT_DEFAULT,
+    )
+    return max(0, min(100, val))
+
+
+def compute_advance_amount(total_price: int | float, percent: int) -> int:
+    """Pure: рассчитать сумму задатка от total_price по проценту.
+    Округление вниз до рубля. percent выходит за [0..100] — clamp'им."""
+    if total_price is None:
+        return 0
+    p = max(0, min(100, int(percent)))
+    return int((float(total_price) * p) // 100)
+
+
+def payment_stage(total: int | float, advance: int | float, required_advance: int) -> str:
+    """Pure: определить стадию оплаты.
+    - "no_payment" — ничего не оплачено, ждём задаток.
+    - "advance_paid" — задаток внесён, ждём остаток.
+    - "fully_paid" — оплачено полностью.
+    """
+    total_i = int(total or 0)
+    advance_i = int(advance or 0)
+    if advance_i >= total_i and total_i > 0:
+        return "fully_paid"
+    if advance_i > 0:
+        return "advance_paid"
+    if advance_i <= 0 and required_advance > 0:
+        return "no_payment"
+    return "no_payment"

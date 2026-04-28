@@ -919,9 +919,17 @@ async def guest_rules(callback: CallbackQuery):
 async def guest_pay(callback: CallbackQuery):
     if not await ensure_guest_auth(callback):
         return
-    """Оплата."""
+    """Оплата — двухэтапная (G10.6): задаток при бронировании + остаток
+    при заселении. Текущая стадия определяется по advance_amount."""
+    from app.services.global_settings import (
+        compute_advance_amount,
+        get_guest_advance_percent,
+        payment_stage,
+    )
+
     async with AsyncSessionLocal() as session:
         booking = await get_active_booking(session, callback.from_user.id)
+        advance_percent = await get_guest_advance_percent(session)
 
     if not booking:
         await callback.answer("❌ Активная бронь не найдена", show_alert=True)
@@ -929,20 +937,20 @@ async def guest_pay(callback: CallbackQuery):
 
     total = int(booking.total_price or 0)
     paid = int(booking.advance_amount or 0)
+    required_advance = compute_advance_amount(total, advance_percent)
+    stage = payment_stage(total, paid, required_advance)
     remainder = max(0, total - paid)
 
-    # G10.5 polish: если бронь PAID и остаток 0 — показываем сводку
-    # вместо инструкций по оплате.
-    if booking.status == BookingStatus.PAID and remainder == 0:
+    if stage == "fully_paid":
         paid_at = (
             booking.updated_at.strftime("%d.%m.%Y %H:%M")
             if getattr(booking, "updated_at", None)
             else "—"
         )
         text = (
-            "✅ <b>Оплата подтверждена</b>\n\n"
+            "✅ <b>Оплата подтверждена полностью</b>\n\n"
             f"Оплачено: <b>{paid:,} ₽</b>\n"
-            f"Дата подтверждения: <b>{paid_at}</b>\n\n"
+            f"Дата: <b>{paid_at}</b>\n\n"
             "Если у вас вопросы — напишите администратору."
         )
         keyboard = InlineKeyboardMarkup(
@@ -963,12 +971,43 @@ async def guest_pay(callback: CallbackQuery):
         await safe_edit(callback, text, reply_markup=keyboard, parse_mode="HTML")
         return
 
-    text = messages.payment_instructions(remainder)
+    if stage == "advance_paid":
+        # задаток внесён, ждём остаток (вносится при заезде)
+        text = (
+            "💳 <b>Доплата при заселении</b>\n\n"
+            f"Всего: <b>{total:,} ₽</b>\n"
+            f"Задаток внесён: <b>{paid:,} ₽</b> ✅\n"
+            f"К доплате при заезде: <b>{remainder:,} ₽</b>\n\n"
+            "Сумму остатка можно перевести по тем же реквизитам:\n"
+            f"<code>{settings.contact_phone}</code> ({settings.payment_methods})\n"
+            f"Получатель: {settings.payment_receiver}\n\n"
+            "После перевода пришлите чек — мы подтвердим."
+        )
+        button_text = "📸 Отправить чек остатка"
+    else:
+        # стадия no_payment — гость должен внести задаток
+        if required_advance > 0:
+            text = (
+                "💰 <b>Внесите задаток</b>\n\n"
+                f"Всего: <b>{total:,} ₽</b>\n"
+                f"Задаток ({advance_percent}%): <b>{required_advance:,} ₽</b>\n"
+                f"Остаток оплачивается при заезде: {total - required_advance:,} ₽\n\n"
+                f"Переведите задаток по реквизитам:\n"
+                f"<code>{settings.contact_phone}</code> ({settings.payment_methods})\n"
+                f"Получатель: {settings.payment_receiver}\n\n"
+                "После перевода пришлите чек — мы подтвердим."
+            )
+            button_text = "📸 Отправить чек задатка"
+        else:
+            # special case: нулевой процент задатка → сразу полная оплата
+            text = messages.payment_instructions(remainder)
+            button_text = "📸 Отправить чек оплаты"
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📸 Отправить чек оплаты", callback_data="guest:pay:receipt"
+                    text=button_text, callback_data="guest:pay:receipt"
                 )
             ],
             [
@@ -1014,23 +1053,63 @@ async def _send_pay_receipt_to_admins(
     file_id: str,
     is_photo: bool,
 ):
-    """Общая логика для photo и document: уведомить админов с inline-кнопками."""
+    """Общая логика для photo и document: уведомить админов с inline-кнопками
+    задатка / полной оплаты / отклонения (G10.6)."""
+    from app.services.global_settings import (
+        compute_advance_amount,
+        get_guest_advance_percent,
+    )
+
     users = await get_all_users()
     admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
     admin_ids.add(settings.telegram_chat_id)
 
-    caption = message.caption or "(без комментария)"
+    # Подтянем актуальные данные брони + рассчёт задатка для подсказки в кнопке
+    advance_btn_label = "✅ Задаток"
+    full_btn_label = "✅ Полная оплата"
+    info_lines = []
+    async with AsyncSessionLocal() as session:
+        booking = await session.get(Booking, booking_id)
+        percent = await get_guest_advance_percent(session)
+        if booking:
+            total_i = int(booking.total_price or 0)
+            paid_i = int(booking.advance_amount or 0)
+            required_advance = compute_advance_amount(total_i, percent)
+            remainder = max(0, total_i - paid_i)
+            info_lines.append(f"Всего: {total_i:,} ₽")
+            info_lines.append(f"Уже оплачено: {paid_i:,} ₽")
+            info_lines.append(f"Задаток ({percent}%): {required_advance:,} ₽")
+            info_lines.append(f"Остаток: {remainder:,} ₽")
+            advance_btn_label = f"✅ Задаток ({required_advance:,} ₽)"
+            full_btn_label = f"✅ Полная (+{remainder:,} ₽)"
+
+    caption_user = message.caption or "(без комментария)"
     text = (
         f"💳 <b>Чек оплаты от гостя</b>\n\n"
         f"Гость: {message.from_user.full_name} (@{message.from_user.username or '-'})\n"
         f"Booking ID: <code>{booking_id}</code>\n"
-        f"Комментарий: {caption}"
+        + ("\n".join(info_lines) + "\n\n" if info_lines else "")
+        + f"Комментарий: {caption_user}"
     )
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data=f"guest:pay:approve:{booking_id}:{message.from_user.id}"),
-            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"guest:pay:reject:{booking_id}:{message.from_user.id}"),
-        ]]
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=advance_btn_label,
+                    callback_data=f"guest:pay:approve_advance:{booking_id}:{message.from_user.id}",
+                ),
+                InlineKeyboardButton(
+                    text=full_btn_label,
+                    callback_data=f"guest:pay:approve_full:{booking_id}:{message.from_user.id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отклонить",
+                    callback_data=f"guest:pay:reject:{booking_id}:{message.from_user.id}",
+                ),
+            ],
+        ]
     )
 
     for aid in admin_ids:
@@ -1089,30 +1168,104 @@ async def guest_pay_receipt_document(message: Message):
     await message.answer("✅ Чек отправлен администратору на проверку.")
 
 
-@router.callback_query(F.data.startswith("guest:pay:approve:"))
-async def guest_pay_approve(callback: CallbackQuery):
+async def _admin_approve_payment(
+    callback: CallbackQuery,
+    *,
+    full_payment: bool,
+):
+    """Общая логика admin approve: задаток или полная оплата.
+
+    full_payment=False → advance += required_advance, status=CONFIRMED
+                        (если уже было > 0, не задваиваем — берём max).
+    full_payment=True  → advance = total, status=PAID.
+    """
+    from decimal import Decimal
+
+    from app.services.global_settings import (
+        compute_advance_amount,
+        get_guest_advance_percent,
+    )
+
     if not is_admin(callback.from_user.id):
         await callback.answer("Недостаточно прав", show_alert=True)
         return
 
-    _, _, _, booking_id_str, guest_tg_str = callback.data.split(":")
-    booking_id = int(booking_id_str)
-    guest_tg = int(guest_tg_str)
+    parts = callback.data.split(":")
+    # callback: guest:pay:approve_advance:{id}:{tg} OR guest:pay:approve_full:{id}:{tg}
+    # OR legacy: guest:pay:approve:{id}:{tg}
+    try:
+        booking_id = int(parts[-2])
+        guest_tg = int(parts[-1])
+    except (IndexError, ValueError):
+        await callback.answer("Bad callback", show_alert=True)
+        return
 
+    label = ""
     async with AsyncSessionLocal() as session:
         booking = await session.get(Booking, booking_id)
         if not booking:
             await callback.answer("Бронь не найдена", show_alert=True)
             return
-        booking.status = BookingStatus.PAID
-        booking.advance_amount = booking.total_price
+
+        total = int(booking.total_price or 0)
+        paid = int(booking.advance_amount or 0)
+        percent = await get_guest_advance_percent(session)
+        required_advance = compute_advance_amount(total, percent)
+
+        if full_payment:
+            booking.advance_amount = booking.total_price
+            booking.status = BookingStatus.PAID
+            label = "✅ Оплата подтверждена полностью. Спасибо!"
+        else:
+            # «Задаток» — поднимаем advance до required_advance, не выше total.
+            new_advance = max(paid, required_advance)
+            new_advance = min(new_advance, total)
+            booking.advance_amount = Decimal(str(new_advance))
+            if new_advance >= total > 0:
+                booking.status = BookingStatus.PAID
+                label = "✅ Оплата подтверждена. Спасибо!"
+            else:
+                booking.status = BookingStatus.CONFIRMED
+                remainder = total - new_advance
+                label = (
+                    f"✅ Задаток ({new_advance:,} ₽) подтверждён.\n"
+                    f"Остаток {remainder:,} ₽ — при заселении."
+                )
+
         await session.commit()
 
+    pay_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
+        ]
+    )
     try:
-        await callback.bot.send_message(guest_tg, "✅ Оплата подтверждена. Спасибо!")
+        await callback.bot.send_message(guest_tg, label, reply_markup=pay_kb)
     except Exception:
         pass
-    await callback.answer("Оплата подтверждена")
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.answer("Готово")
+
+
+@router.callback_query(F.data.startswith("guest:pay:approve_advance:"))
+async def guest_pay_approve_advance(callback: CallbackQuery):
+    await _admin_approve_payment(callback, full_payment=False)
+
+
+@router.callback_query(F.data.startswith("guest:pay:approve_full:"))
+async def guest_pay_approve_full(callback: CallbackQuery):
+    await _admin_approve_payment(callback, full_payment=True)
+
+
+# Legacy callback (старые уведомления админам, отправленные до G10.6 deploy)
+# трактуем как «полная оплата» — оригинальное поведение.
+@router.callback_query(F.data.startswith("guest:pay:approve:"))
+async def guest_pay_approve_legacy(callback: CallbackQuery):
+    await _admin_approve_payment(callback, full_payment=True)
 
 
 @router.callback_query(F.data.startswith("guest:pay:reject:"))

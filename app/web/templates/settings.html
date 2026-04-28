@@ -118,6 +118,17 @@
                     <small style="color:#666;">Default 24 (за сутки до заезда). До этого момента гость видит «Инструкция будет доступна за N ч».</small>
                 </div>
 
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" for="guest_advance_percent">
+                        Размер задатка при бронировании, %:
+                        {{ help_icon('guest_advance_percent') }}
+                    </label>
+                    <input class="form-input" type="number" min="0" max="100"
+                        id="guest_advance_percent" name="guest_advance_percent"
+                        value="{{ settings.guest_advance_percent if settings.guest_advance_percent else 30 }}">
+                    <small style="color:#666;">Default 30 (%). Гость вносит задаток при бронировании, остаток — при заселении. 0 = полная оплата сразу.</small>
+                </div>
+
                 <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
 
                 <button type="submit" class="btn" style="width: auto; padding-left: 2rem; padding-right: 2rem;">💾
