@@ -41,24 +41,56 @@ async def login(
     password: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
-    """Обработка входа"""
-    # 1. Find user
-    stmt = select(User).where(User.username == username)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
+    """Обработка входа.
 
-    # 2. Verify password
-    if not user or not verify_password(password, user.hashed_password):
-        project_settings = await SettingsService.get_project_settings(db)
-        return templates.TemplateResponse(
-            "login.html",
-            {
-                "request": request,
-                "project_name": project_settings.get("name") or settings.project_name,
-                "error": "Неверное имя пользователя или пароль"
-            },
-            status_code=401
-        )
+    Сначала пробуем env-fallback (`ADMIN_WEB_USERNAME` / `ADMIN_WEB_PASSWORD`).
+    Если оба заданы и совпали — пускаем без обращения к БД (создаём
+    или находим запись `User(role=ADMIN)` чтобы выдать корректный токен).
+    Иначе — обычная проверка по `users.username` + bcrypt.
+    """
+    env_user = (settings.admin_web_username or "").strip()
+    env_pass = (settings.admin_web_password or "").strip()
+    user = None
+
+    if env_user and env_pass and username == env_user and password == env_pass:
+        # Try to attach env login to an existing User row, чтобы access-token
+        # имел стабильный sub. Если такой записи нет — создаём.
+        stmt = select(User).where(User.username == env_user)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if not user:
+            # Минимальная запись; password здесь не используется (env
+            # перебивает), но поле ненулёвое для совместимости со схемой.
+            from app.core.security import get_password_hash
+            from app.models import UserRole
+
+            user = User(
+                username=env_user,
+                hashed_password=get_password_hash(env_pass),
+                role=UserRole.ADMIN,
+                name="Env Admin",
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+    # 1. Если env-вход не сработал — обычная проверка по БД
+    if user is None:
+        stmt = select(User).where(User.username == username)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user or not verify_password(password, user.hashed_password):
+            project_settings = await SettingsService.get_project_settings(db)
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "project_name": project_settings.get("name") or settings.project_name,
+                    "error": "Неверное имя пользователя или пароль"
+                },
+                status_code=401
+            )
 
     # 3. Create Token
     access_token = create_access_token(data={"sub": str(user.id), "role": user.role.value})

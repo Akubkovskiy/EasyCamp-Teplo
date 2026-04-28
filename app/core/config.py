@@ -94,6 +94,13 @@ class Settings(BaseModel):
     # принимает заявки с teplo-v-arkhyze.ru. Token обязателен, иначе 401.
     site_lead_token: str = ""
 
+    # Env-based admin web login (override / fallback to DB users.username).
+    # Если оба заданы — сравнение по этим креденшелам идёт ДО запроса в БД.
+    # Это удобно для первичного входа после деплоя или когда DB-пароль
+    # потерян. Пустые строки = отключено.
+    admin_web_username: str = ""
+    admin_web_password: str = ""
+
 
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
@@ -165,4 +172,6 @@ settings = Settings(
     access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
     setup_secret=os.environ.get("SETUP_SECRET", "easycamp_secret"),
     site_lead_token=os.environ.get("SITE_LEAD_TOKEN", ""),
+    admin_web_username=os.environ.get("ADMIN_WEB_USERNAME", ""),
+    admin_web_password=os.environ.get("ADMIN_WEB_PASSWORD", ""),
 )
