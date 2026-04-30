@@ -1,0 +1,213 @@
+---
+type: community
+cohesion: 0.07
+members: 162
+---
+
+# BookingStatus / Booking
+
+**Cohesion:** 0.07 - loosely connected
+**Members:** 162 nodes
+
+## Members
+- [[AvitoBookingPayload]] - code - app\avito\schemas.py
+- [[Base]] - code - app\database.py
+- [[Base_1]] - code
+- [[Best-effort уведомление уборщицы об отмене связанной задачи.]] - rationale - app\services\booking_service.py
+- [[Booking]] - code - app\models.py
+- [[BookingCreate]] - code - app\schemas\booking.py
+- [[BookingService]] - code - app\services\booking_service.py
+- [[BookingSource]] - code - app\models.py
+- [[BookingStatus]] - code - app\models.py
+- [[BookingUpdate]] - code - app\schemas\booking.py
+- [[Checkout day == next checkin day is NOT an overlap (adjacent bookings OK).]] - rationale - tests\test_avito_overlap_guard.py
+- [[CleaningPaymentEntryType]] - code - app\models.py
+- [[CleaningPaymentLedger]] - code - app\models.py
+- [[CleaningRate]] - code - app\models.py
+- [[CleaningTask]] - code - app\models.py
+- [[CleaningTaskCheck]] - code - app\models.py
+- [[CleaningTaskMedia]] - code - app\models.py
+- [[CleaningTaskService]] - code - app\services\cleaning_task_service.py
+- [[CleaningTaskStatus]] - code - app\models.py
+- [[ContactInfo]] - code - app\models\contact_info.py
+- [[DeclarativeBase]] - code
+- [[Entry гость нажал «Забронировать» в карточке домика.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Enum]] - code
+- [[FastAPI TestClient с подменённой сессией и заглушенными side-effects.]] - rationale - tests\test_site_leads.py
+- [[Filter contact share только от гостей в pending booking flow.     Если фильтр н]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Filter гость находится в режиме ожидания чека (нажал «Отправить чек»).]] - rationale - app\telegram\handlers\guest.py
+- [[Filter только фото с caption `taskN`. Без этого фильтра handler     проглатыв]] - rationale - app\telegram\handlers\cleaner_task_flow.py
+- [[Filter только фото с caption в формате `claim task=N amount=X items=...`.]] - rationale - app\telegram\handlers\cleaner_expenses.py
+- [[House]] - code - app\models.py
+- [[HouseDiscount]] - code - app\models.py
+- [[HousePrice]] - code - app\models.py
+- [[HouseService]] - code - app\services\house_service.py
+- [[In-memory async SQLite + create tables. Один engine per test.]] - rationale - tests\test_site_leads.py
+- [[Match `guestbookdigits` strictly. Excludes guests, confirm,     cancel,]] - rationale - app\telegram\handlers\guest_booking.py
+- [[PDF  любая выписка из банка как document. Принимаем pdfjpegpng по     `mime_]] - rationale - app\telegram\handlers\guest.py
+- [[PaymentStatus]] - code - app\models.py
+- [[PricingService]] - code - app\services\pricing_service.py
+- [[Read Avito guest contact fields from nested contact or legacy top-level payload]] - rationale - app\services\avito_sync_service.py
+- [[Read guest contact fields from either nested contact data or legacy top-level pa]] - rationale - app\services\booking_service.py
+- [[Replace only empty or placeholder values with a better Avito contact value.]] - rationale - app\services\booking_service.py
+- [[Safe wrapper for background sheets sync.         Catches and logs all errors to]] - rationale - app\services\booking_service.py
+- [[Self-service бронирование гостя (Phase G10.1).  Гость 1) выбирает даты через `g]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Site lead intake endpoint (Phase S10.1).  Принимает заявки с публичного сайта `t]] - rationale - app\api\site_leads.py
+- [[SiteLeadCreate]] - code - app\api\site_leads.py
+- [[SiteLeadOut]] - code - app\api\site_leads.py
+- [[Smoke verification for Cleaner v2 flow.  Checks 1) task completion is blocke]] - rationale - scripts\verify_cleaner_v2_flow.py
+- [[SupplyAlert]] - code - app\models.py
+- [[SupplyAlertStatus]] - code - app\models.py
+- [[SupplyClaimStatus]] - code - app\models.py
+- [[SupplyExpenseClaim]] - code - app\models.py
+- [[The condition used in SQL existing.check_in  new.check_out AND existing.check_]] - rationale - tests\test_avito_overlap_guard.py
+- [[Updating an existing booking (same external_id) should still work.]] - rationale - tests\test_avito_overlap_guard.py
+- [[User]] - code - app\models.py
+- [[UserRole]] - code - app\models.py
+- [[Webhook creating a new booking that overlaps should return None.]] - rationale - tests\test_avito_overlap_guard.py
+- [[Webhook creating a non-overlapping booking should succeed.]] - rationale - tests\test_avito_overlap_guard.py
+- [[When a new Avito booking overlaps an existing one, it must NOT be created.]] - rationale - tests\test_avito_overlap_guard.py
+- [[When no overlap exists, booking is created normally.]] - rationale - tests\test_avito_overlap_guard.py
+- [[cancel_booking должен     - перевести task в CANCELLED     - погасить cleaning_]] - rationale - tests\test_cleaner_hardening.py
+- [[contact_info.py]] - code - app\models\contact_info.py
+- [[main()_7]] - code - scripts\verify_cleaner_v2_flow.py
+- [[models.py]] - code - app\models.py
+- [[status_updater_job.py]] - code - app\jobs\status_updater_job.py
+- [[test_cleaning_completion_gate.py]] - code - tests\test_cleaning_completion_gate.py
+- [[test_done_blocked_without_checks_and_photos()]] - code - tests\test_cleaning_completion_gate.py
+- [[update_booking_statuses_job()]] - code - app\jobs\status_updater_job.py
+- [[verify_cleaner_v2_flow.py]] - code - scripts\verify_cleaner_v2_flow.py
+- [[Автоматические или ручные скидки. Применяются поверх сезоннойбазовой цены.]] - rationale - app\models.py
+- [[Автоматическое обновление статусов броней     - CONFIRMEDPAID - CHECKED_IN (]] - rationale - app\jobs\status_updater_job.py
+- [[Авторизация по статичному токену. Если в окружении токен пуст —     endpoint счи]] - rationale - app\api\site_leads.py
+- [[Админ отклоняет бронь - CANCELLED + notify guest.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Админ подтверждает бронь - CONFIRMED + notify guest.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Без посевного дома сервис не может создать бронь.]] - rationale - tests\test_site_leads.py
+- [[Блокировка дат в Avito для брони]] - rationale - app\services\booking_service.py
+- [[Возврат в главное меню (витрина или кабинет).]] - rationale - app\telegram\handlers\guest.py
+- [[Возвращает (house_id, fallback_note). Стратегия     1. Явный id — берём, если H]] - rationale - app\api\site_leads.py
+- [[Возвращает (name, phone) из User, если уже сохранён.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Возвращает цену за ночь для конкретной даты.         Приоритет сезонная цена]] - rationale - app\services\pricing_service.py
+- [[Выбрано кол-во гостей - показ карточки подтверждения.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Гость нажал «Отменить бронь» проверяем окно отмены, спрашиваем подтверждение.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Детальная карточка домика с фото]] - rationale - app\telegram\handlers\guest.py
+- [[Если SITE_LEAD_TOKEN пустой в settings — endpoint 503.]] - rationale - tests\test_site_leads.py
+- [[Если house_name не совпал — берём первый из БД и помечаем в комменте.]] - rationale - tests\test_site_leads.py
+- [[Если задача ещё в IN_PROGRESS  PENDING  ACCEPTED — cancel должен     перевести]] - rationale - tests\test_cleaner_hardening.py
+- [[Засеять минимум один дом, чтобы fallback-резолв работал.]] - rationale - tests\test_site_leads.py
+- [[Заявка с сайта. Минимальный набор полей чтобы создать `Booking`.]] - rationale - app\api\site_leads.py
+- [[Кнопки выбора кол-ва гостей в пределах вместимости домика.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Кнопки для случая «слишком близко к заезду» — гость не может     отменить сам, п]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Команда about — О базе отдыха.]] - rationale - app\telegram\handlers\guest.py
+- [[Команда booking — Моя бронь.]] - rationale - app\telegram\handlers\guest.py
+- [[Команда contact — Связаться с нами.]] - rationale - app\telegram\handlers\guest.py
+- [[Команда dates — проверить свободные даты (запускает availability flow).]] - rationale - app\telegram\handlers\guest.py
+- [[Команда location — Где мы находимся.]] - rationale - app\telegram\handlers\guest.py
+- [[Команда login — Авторизоваться по брони.]] - rationale - app\telegram\handlers\guest.py
+- [[Контакт получен в self-service потоке (не login). Создаём User     с ролью GUEST]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Контактная информация администрации]] - rationale - app\models\contact_info.py
+- [[Маппинг статусов Avito на статусы системы]] - rationale - app\services\avito_sync_service.py
+- [[Меню выбора поля для редактирования]] - rationale - app\telegram\handlers\booking_management\edit.py
+- [[Модель для хранения контактной информации администрации]] - rationale - app\models\contact_info.py
+- [[Находит связанную CleaningTask и переводит её в CANCELLED.         Активные cle]] - rationale - app\services\booking_service.py
+- [[Начало редактирования конкретного поля]] - rationale - app\telegram\handlers\booking_management\edit.py
+- [[Начисляет сдельную оплату за уборку по тарифу домика.]] - rationale - app\services\cleaning_task_service.py
+- [[Обновление бронирования.]] - rationale - app\web\routers\booking_web.py
+- [[Обновление существующего бронирования.]] - rationale - app\services\booking_service.py
+- [[Обработка контакта для входа]] - rationale - app\telegram\handlers\guest.py
+- [[Обработка одной брони из Avito]] - rationale - app\services\avito_sync_service.py
+- [[Обработка создания бронирования.]] - rationale - app\web\routers\booking_web.py
+- [[Обработчики для РЕДАКТИРОВАНИЯ бронирований]] - rationale - app\telegram\handlers\booking_management\edit.py
+- [[Общая логика admin approve задаток или полная оплата.      full_payment=False]] - rationale - app\telegram\handlers\guest.py
+- [[Общая логика для photo и document уведомить админов с inline-кнопками     зада]] - rationale - app\telegram\handlers\guest.py
+- [[Ответ для site API. lead_id == Booking.id.]] - rationale - app\api\site_leads.py
+- [[Открывает (или возвращает существующий) `SupplyAlert` для задачи.         Idemp]] - rationale - app\services\cleaning_task_service.py
+- [[Отмена брони. Каскадно отменяет связанную CleaningTask и         активные начис]] - rationale - app\services\booking_service.py
+- [[Отмена редактирования и возврат к просмотру брони]] - rationale - app\telegram\handlers\booking_management\edit.py
+- [[Отправить уборщицам список задач на завтра с переходом в карточку.]] - rationale - app\jobs\cleaning_tasks_job.py
+- [[Отправить уведомление о новых бронях]] - rationale - app\jobs\avito_sync_job.py
+- [[Отправить уведомление об обновлении броней]] - rationale - app\jobs\avito_sync_job.py
+- [[Отправка списка броней с кнопками управления]] - rationale - app\telegram\handlers\bookings.py
+- [[Периодическая задача для автоматического обновления статусов броней]] - rationale - app\jobs\status_updater_job.py
+- [[Периодическая задача синхронизации с Avito API]] - rationale - app\jobs\avito_sync_job.py
+- [[Периодическая синхронизация броней из Avito]] - rationale - app\jobs\avito_sync_job.py
+- [[Подтверждение отмены — фактически отменяет бронь и нотифицирует админа.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Показать ВСЕ брони, включая старые и тестовые]] - rationale - app\telegram\handlers\bookings.py
+- [[Показать гостей с заездом сегодня]] - rationale - app\telegram\handlers\bookings.py
+- [[Показать гостей, которые сейчас проживают]] - rationale - app\telegram\handlers\bookings.py
+- [[Показывает меню гостя витрина (unauth) или кабинет (auth).]] - rationale - app\telegram\handlers\guest.py
+- [[Полное удаление брони из базы данных.         ВНИМАНИЕ Это действие необратимо]] - rationale - app\services\booking_service.py
+- [[Получить бронь по ID с информацией о доме]] - rationale - app\services\booking_service.py
+- [[Получить список доступных домов на указанные даты.]] - rationale - app\services\booking_service.py
+- [[Помечает активные `SupplyAlert` задачи как RESOLVED.         Возвращает количес]] - rationale - app\services\cleaning_task_service.py
+- [[Помощник ищет актуальную бронь для пользователя.      Приоритет     1) Теку]] - rationale - app\telegram\handlers\guest.py
+- [[Примерная структура payload брони от Avito.     Нужно уточнить реальные поля из]] - rationale - app\avito\schemas.py
+- [[Проверить и синхронизировать локальные брони в Avito]] - rationale - app\jobs\avito_sync_job.py
+- [[Проверка доступности дат.         Возвращает True если даты свободны.]] - rationale - app\services\booking_service.py
+- [[Проверяет загруженность на ближайшие дни.         Если домик свободен завтрапо]] - rationale - app\services\pricing_service.py
+- [[Просмотр деталей бронирования.]] - rationale - app\web\routers\booking_web.py
+- [[Разблокировка дат в Avito при отменеудалении брони.                  Для Авит]] - rationale - app\services\booking_service.py
+- [[Расчёт стоимости за весь период проживания.]] - rationale - app\services\pricing_service.py
+- [[Расчёт цен с учётом сезонности и скидок.]] - rationale - app\services\pricing_service.py
+- [[Сезонные цены для домика. Перекрывают base_price на указанный период.]] - rationale - app\models.py
+- [[Сервис бизнес-логики для бронирований]] - rationale - app\services\booking_service.py
+- [[Сервис для рассылки уведомлений по правилам]] - rationale - app\services\notification_service.py
+- [[Сервис задач уборки + первичный расчёт начислений.]] - rationale - app\services\cleaning_task_service.py
+- [[Сервис синхронизации броней из Avito API]] - rationale - app\services\avito_sync_service.py
+- [[Синхронизация броней из Avito для одного объявления      Args         item_i]] - rationale - app\services\avito_sync_service.py
+- [[Синхронизация всех броней с Google Sheets.         Raises exception on failure]] - rationale - app\services\booking_service.py
+- [[Синхронизация всех объявлений Avito      Args         item_house_mapping Сл]] - rationale - app\services\avito_sync_service.py
+- [[Синхронизация с Авито и открытие таблицы]] - rationale - app\telegram\handlers\bookings.py
+- [[Создание новой брони.]] - rationale - app\services\booking_service.py
+- [[Создать или обновить бронь из Avito webhook.]] - rationale - app\services\booking_service.py
+- [[Создатьобновить задачи уборки по выездам на завтра.]] - rationale - app\jobs\cleaning_tasks_job.py
+- [[Создаёт задачу уборки из брони (idempotent по booking_id).]] - rationale - app\services\cleaning_task_service.py
+- [[Список всех бронирований.]] - rationale - app\web\routers\booking_web.py
+- [[Страница создания нового бронирования.]] - rationale - app\web\routers\booking_web.py
+- [[Тесты Phase C10 (cleaner hardening) accrual, supply_alert, booking cancel propa]] - rationale - tests\test_cleaner_hardening.py
+- [[Тесты Phase S10.1 — `POST apileads` в EasyCamp.  Проверяем токен-аутентификаци]] - rationale - tests\test_site_leads.py
+- [[Уведомление админам с кнопками confirmreject.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Финальное подтверждение - Booking(NEW) + admin notification.]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Форматирует телефон в вид +7 (XXX) XXX-XX-XX]] - rationale - app\web\routers\booking_web.py
+- [[Цена для отображения в каталоге (на сегодня).]] - rationale - app\services\pricing_service.py
+- [[Шлём гостю экран с выбором кол-ва гостей.     Принимаем либо CallbackQuery (edit]] - rationale - app\telegram\handlers\guest_booking.py
+- [[Шлёт всем админам уведомление о новом SupplyAlert.]] - rationale - app\telegram\handlers\cleaner_task_flow.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/BookingStatus_/_Booking
+SORT file.name ASC
+```
+
+## Connections to other communities
+- 56 edges to [[_COMMUNITY_create.py  build_month_keyboard()]]
+- 32 edges to [[_COMMUNITY_GlobalSetting  global_settings.py]]
+- 29 edges to [[_COMMUNITY_booking_service.py  create_or_update_avito_booking()]]
+- 26 edges to [[_COMMUNITY_str  settings.py]]
+- 26 edges to [[_COMMUNITY_guest.py  safe_edit()]]
+- 23 edges to [[_COMMUNITY_houses.py  HouseUpdate]]
+- 21 edges to [[_COMMUNITY_cleaner_task_flow.py  get_all_users()]]
+- 20 edges to [[_COMMUNITY_test_avito_overlap_guard.py  process_avito_booking()]]
+- 19 edges to [[_COMMUNITY_is_admin()  guest_booking.py]]
+- 16 edges to [[_COMMUNITY_NotificationRule  NotificationService]]
+- 16 edges to [[_COMMUNITY_cleaner.py  show_cleaner_menu()]]
+- 16 edges to [[_COMMUNITY_login()  get_password_hash()]]
+- 14 edges to [[_COMMUNITY_avito_webhook()  Verify HMAC-SHA256 signature.     Returns True if signature is valid OR if no s]]
+- 14 edges to [[_COMMUNITY_AvitoAPIService  .ensure_token()]]
+- 12 edges to [[_COMMUNITY_houses.py  get_short_description()]]
+- 9 edges to [[_COMMUNITY_GoogleSheetsService  .sync_bookings_to_sheet()]]
+- 8 edges to [[_COMMUNITY_test_site_leads.py  _payload()]]
+- 6 edges to [[_COMMUNITY_cleaning_task_service.py  transition_status()]]
+- 4 edges to [[_COMMUNITY_bookings.py  send_bookings_response()]]
+- 3 edges to [[_COMMUNITY_pricing_service.py  get_price_for_date()]]
+- 2 edges to [[_COMMUNITY_house_service.py  update_house()]]
+- 2 edges to [[_COMMUNITY_Скрипт для ручной синхронизации броней с Google Sheets  Синхронизация всех броней с Google Sheets]]
+- 2 edges to [[_COMMUNITY_on_startup()  AutoSyncMiddleware]]
+
+## Top bridge nodes
+- [[User]] - degree 93, connects to 10 communities
+- [[UserRole]] - degree 67, connects to 9 communities
+- [[Booking]] - degree 139, connects to 7 communities
+- [[BookingStatus]] - degree 144, connects to 6 communities
+- [[HouseService]] - degree 71, connects to 5 communities

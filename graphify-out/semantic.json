@@ -1,0 +1,4611 @@
+{
+  "nodes": [
+    {
+      "id": "easycamp_teplo_project",
+      "label": "EasyCamp-Teplo Project",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "Alexey Kubkovskiy",
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_telegram_bot",
+      "label": "Telegram Admin Bot",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_avito_sync",
+      "label": "Avito Booking Sync",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_google_sheets",
+      "label": "Google Sheets Integration",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_sqlite_db",
+      "label": "SQLite Database (easycamp.db)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_apscheduler",
+      "label": "APScheduler Background Sync",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_backup_service",
+      "label": "Backup Service (backup_service.py)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_docker_compose",
+      "label": "Docker Compose Deployment",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_fastapi",
+      "label": "FastAPI Web Framework",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_aiogram",
+      "label": "aiogram 3.x Telegram Framework",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_sqlalchemy",
+      "label": "SQLAlchemy Async ORM",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_alembic",
+      "label": "Alembic Database Migrations",
+      "file_type": "document",
+      "source_file": "INDEX.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_server_firz4",
+      "label": "Server FI-RZ-4",
+      "file_type": "document",
+      "source_file": "STATUS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_google_credentials",
+      "label": "Google Credentials (google-credentials.json)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_env_file",
+      "label": "Environment Config (.env)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_container",
+      "label": "Docker Container (easycamp_bot)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_teplo_resort",
+      "label": "Teplo Resort (teplo-v-arkhyze.ru)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_cleaning_tasks",
+      "label": "Cleaning Task Management",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_avito_rate_limit",
+      "label": "Avito Webhook Rate Limiting",
+      "file_type": "document",
+      "source_file": "DEPLOY.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_booking_overlap",
+      "label": "Booking Overlap/Duplicate Guard",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_scheduler_jobs",
+      "label": "Scheduler Jobs (Avito/Sheets/Notify/Backup)",
+      "file_type": "document",
+      "source_file": "verify_log.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_python311",
+      "label": "Python 3.11 Runtime",
+      "file_type": "document",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_slowapi",
+      "label": "SlowAPI Rate Limiter",
+      "file_type": "document",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_bcrypt",
+      "label": "bcrypt Password Hashing",
+      "file_type": "document",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_jose",
+      "label": "python-jose JWT Auth",
+      "file_type": "document",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_jinja2",
+      "label": "Jinja2 Template Engine",
+      "file_type": "document",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_pytest",
+      "label": "pytest Test Framework",
+      "file_type": "document",
+      "source_file": "requirements-dev.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_ruff",
+      "label": "Ruff Linter",
+      "file_type": "document",
+      "source_file": "requirements-dev.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_base_html",
+      "label": "Base HTML Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/base.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_dashboard_html",
+      "label": "Dashboard Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/dashboard.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_login_html",
+      "label": "Login Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/login.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_settings_html",
+      "label": "Settings Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_setup_intro_html",
+      "label": "Setup Intro Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/setup_intro.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_setup_step1_html",
+      "label": "Setup Step 1 Template (Project Info)",
+      "file_type": "document",
+      "source_file": "app/web/templates/setup_step1.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_setup_step2_html",
+      "label": "Setup Step 2 Template (AI Config)",
+      "file_type": "document",
+      "source_file": "app/web/templates/setup_step2.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "template_setup_step3_html",
+      "label": "Setup Step 3 Template (Admin User)",
+      "file_type": "document",
+      "source_file": "app/web/templates/setup_step3.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_admin_web_ui",
+      "label": "Admin Web UI (/admin-web/)",
+      "file_type": "document",
+      "source_file": "app/web/templates/dashboard.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_setup_flow",
+      "label": "First-Run Setup Flow (3-step wizard)",
+      "file_type": "document",
+      "source_file": "app/web/templates/setup_intro.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_guest_rules",
+      "label": "Guest Rules Settings (cancel window, instruction hours, advance %)",
+      "file_type": "document",
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_ai_assistant",
+      "label": "AI Assistant (optional toggle)",
+      "file_type": "document",
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_shared_memory",
+      "label": "Shared Memory (ai-infra memory/)",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_teplo_varkhyz_crosslink",
+      "label": "teplo-v-arkhyze Cross-Project Link",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_contrib_mit_license",
+      "label": "MIT License",
+      "file_type": "document",
+      "source_file": "CONTRIBUTING.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_ci_workflow",
+      "label": "GitHub Actions CI Workflow",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_booking_create",
+      "label": "Booking Create Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_booking_detail",
+      "label": "Booking Detail/Edit Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_booking_list",
+      "label": "Booking List Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/list.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_help_tooltip",
+      "label": "Help Tooltip Component",
+      "file_type": "document",
+      "source_file": "app/web/templates/components/help_tooltip.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_house_form",
+      "label": "House Create/Edit Form Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/houses/form.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tpl_house_list",
+      "label": "House List Template",
+      "file_type": "document",
+      "source_file": "app/web/templates/houses/list.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_ai_context",
+      "label": "AI Context (Legacy Onboarding Doc)",
+      "file_type": "document",
+      "source_file": "docs/AI_CONTEXT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_architecture",
+      "label": "EasyCamp Strategic Architecture Roadmap v5",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_claude_md",
+      "label": "EasyCamp CLAUDE.md (empty)",
+      "file_type": "document",
+      "source_file": "docs/CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_deployment",
+      "label": "Deployment Guide",
+      "file_type": "document",
+      "source_file": "docs/DEPLOYMENT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_easycamp",
+      "label": "EasyCamp B2B SaaS Platform Overview",
+      "file_type": "document",
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_google_sheets_setup",
+      "label": "Google Sheets API Setup Guide",
+      "file_type": "document",
+      "source_file": "docs/google_sheets_setup.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_obsidian_index",
+      "label": "Obsidian EasyCamp Index (2026-02-27)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_roadmap",
+      "label": "EasyCamp Interactive Roadmap v5 (Archived)",
+      "file_type": "document",
+      "source_file": "docs/roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_saas_roadmap",
+      "label": "SaaS Transformation Sprint Plan",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_setup_instructions",
+      "label": "EasyCamp Setup Instructions v2",
+      "file_type": "document",
+      "source_file": "docs/setup_instructions.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_site_arch_decision",
+      "label": "Site Architecture Decision (final)",
+      "file_type": "document",
+      "source_file": "docs/SITE_ARCHITECTURE_DECISION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_site_repo_pointer",
+      "label": "Site Repo Pointer (teplo-v-arkhyze)",
+      "file_type": "document",
+      "source_file": "docs/SITE_REPO_POINTER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_admin_v2_audit",
+      "label": "Admin V2 Legacy Audit",
+      "file_type": "document",
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_booking_status",
+      "label": "Booking Status Lifecycle",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_booking_source",
+      "label": "Booking Source (avito/telegram/direct)",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_booking_finances",
+      "label": "Booking Financial Fields",
+      "file_type": "document",
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_house_entity",
+      "label": "House Entity",
+      "file_type": "document",
+      "source_file": "app/web/templates/houses/form.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_admin_web_ui",
+      "label": "Web Admin UI (admin-web)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_avito_integration",
+      "label": "Avito Integration",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_google_sheets_sync",
+      "label": "Google Sheets Sync Service",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_telegram_bot",
+      "label": "Telegram Bot (aiogram 3.x)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_sqlite_db",
+      "label": "SQLite + SQLAlchemy + Alembic DB",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_fastapi_backend",
+      "label": "FastAPI Backend",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_saas_whitelabel",
+      "label": "SaaS Single-Tenant White-Label Strategy",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_setup_wizard",
+      "label": "Setup Wizard (Onboarding)",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_role_model",
+      "label": "Role Model (owner/admin/cleaner/guest)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_cleaner_module",
+      "label": "Cleaner Module (Tasks/Payments Ledger)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_guest_module",
+      "label": "Guest Module v2 (Self-service Portal)",
+      "file_type": "document",
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_public_site",
+      "label": "Public Site (teplo-v-arkhyze repo)",
+      "file_type": "document",
+      "source_file": "docs/SITE_REPO_POINTER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_ical_sync",
+      "label": "iCal Calendar Sync (Avito/Su\u0442\u043e\u0447\u043d\u043e)",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_ai_concierge",
+      "label": "AI Concierge (Gemini)",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_staff_mode",
+      "label": "Staff Mode (Employee Bot Interface)",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_booking_widget",
+      "label": "Booking Widget (Embeddable JS)",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_escalation_mechanism",
+      "label": "Task Escalation Mechanism",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_payment_integration",
+      "label": "Payment Integration (YuKassa/CloudPayments)",
+      "file_type": "document",
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_audit_log",
+      "label": "Audit Log",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_rbac",
+      "label": "RBAC (Role-Based Access Control)",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_foundation_mvp",
+      "label": "Phase 1: Foundation & Pilot (MVP)",
+      "file_type": "document",
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_growth_onboarding",
+      "label": "Phase 2: Growth & Onboarding",
+      "file_type": "document",
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_scale_ecosystem",
+      "label": "Phase 3: Scale & Ecosystem",
+      "file_type": "document",
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_b",
+      "label": "SaaS Phase B: Web Admin Auth",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_c",
+      "label": "SaaS Phase C: Setup Wizard",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_d",
+      "label": "SaaS Phase D: House CRUD (Web)",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_e",
+      "label": "SaaS Phase E: Calendar (Web)",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_f",
+      "label": "SaaS Phase F: Production Readiness",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_saas_g",
+      "label": "SaaS Phase G: AI Assistant",
+      "file_type": "document",
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "repo_teplo_v_arkhyze",
+      "label": "teplo-v-arkhyze Public Site Repo",
+      "file_type": "document",
+      "source_file": "docs/SITE_REPO_POINTER.md",
+      "source_location": null,
+      "source_url": "https://github.com/Akubkovskiy/teplo-v-arkhyze",
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_v2_execution_checklist",
+      "label": "Admin V2 Execution Checklist",
+      "file_type": "document",
+      "source_file": "docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_v2_roadmap",
+      "label": "Admin V2 Roadmap",
+      "file_type": "document",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-28",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_hardening_roadmap",
+      "label": "Cleaner Hardening Roadmap (Phase C10)",
+      "file_type": "document",
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-04-27",
+      "author": "claude-code",
+      "contributor": null
+    },
+    {
+      "id": "cleaner_issue_backlog",
+      "label": "Cleaner v2 Issue Backlog",
+      "file_type": "document",
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vibecode_roadmap_cleaner",
+      "label": "VibeCoding Roadmap \u2014 Cleaner Role",
+      "file_type": "document",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-27",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "content_seed_teplo",
+      "label": "Guest Showcase Content Seed (Teplo)",
+      "file_type": "document",
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-27",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_product_notes_20260227",
+      "label": "Guest UX/Product Notes 2026-02-27",
+      "file_type": "document",
+      "source_file": "docs/guest/GUEST_PRODUCT_NOTES_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-27",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_self_service_roadmap",
+      "label": "Guest Self-Service Roadmap (G10\u2013G12)",
+      "file_type": "document",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-04-27",
+      "author": "claude-code",
+      "contributor": null
+    },
+    {
+      "id": "guest_v2_implementation_checklist",
+      "label": "Guest V2 Implementation Checklist",
+      "file_type": "document",
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_v2_uat_checklist",
+      "label": "Guest V2 UAT Checklist",
+      "file_type": "document",
+      "source_file": "docs/guest/GUEST_V2_UAT_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-28",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "uat_pending_20260428",
+      "label": "UAT Pending 2026-04-28",
+      "file_type": "document",
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-04-28",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vibecode_roadmap_guest_v2",
+      "label": "VibeCoding Roadmap \u2014 Guest V2",
+      "file_type": "document",
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-02-27",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_admin",
+      "label": "Admin Role",
+      "file_type": "document",
+      "source_file": "docs/roles/admin_role.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_cleaner",
+      "label": "Cleaner Role",
+      "file_type": "document",
+      "source_file": "docs/roles/cleaner_role.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_guest",
+      "label": "Guest Role",
+      "file_type": "document",
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ops_backup",
+      "label": "Ops Backup",
+      "file_type": "document",
+      "source_file": "ops/backup.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ops_deploy",
+      "label": "Ops Deploy",
+      "file_type": "document",
+      "source_file": "ops/deploy.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "ops_restore",
+      "label": "Ops Restore",
+      "file_type": "document",
+      "source_file": "ops/restore.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "scripts_utils_readme",
+      "label": "Scripts Utils README",
+      "file_type": "document",
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_admin_v2_a",
+      "label": "Admin V2 Phase A: Safe Foundation",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_admin_v2_b",
+      "label": "Admin V2 Phase B: API Modernization",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_admin_v2_c",
+      "label": "Admin V2 Phase C: UX/UI",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_admin_v2_d",
+      "label": "Admin V2 Phase D: Security/Quality",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_admin_v2_e",
+      "label": "Admin V2 Phase E: Cutover",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_c10",
+      "label": "Cleaner Phase C10: Hardening",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_c11",
+      "label": "Cleaner Phase C11: UX Extensions",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_g0_g9",
+      "label": "Guest V2 Phases G0-G9 (MVP Complete)",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_g10",
+      "label": "Guest Phase G10: Self-Service MVP",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_g11",
+      "label": "Guest Phase G11: Auto-Payment (Robokassa)",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "phase_g12",
+      "label": "Guest Phase G12: SaaS Finish",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_cleaning_task",
+      "label": "CleaningTask Entity",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_supply_alert",
+      "label": "SupplyAlert Entity",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_payment_ledger",
+      "label": "CleaningPaymentLedger Entity",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_expense_claim",
+      "label": "SupplyExpenseClaim Entity",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_cleaning_rate",
+      "label": "CleaningRate Entity",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_task_fsm",
+      "label": "CleaningTask FSM (pending\u2192accepted\u2192in_progress\u2192done)",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cleaner_sla_monitor",
+      "label": "Cleaning SLA Monitor Job",
+      "file_type": "concept",
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_booking_flow",
+      "label": "Guest Self-Service Booking Flow",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_cancel_flow",
+      "label": "Guest Cancel Booking Flow",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_payment_claim",
+      "label": "GuestPaymentClaim Entity",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_global_settings",
+      "label": "GlobalSetting: guest_cancel_window_days / guest_instruction_open_hours",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_two_stage_payment",
+      "label": "Two-Stage Payment (Advance + Balance)",
+      "file_type": "concept",
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_audit_log",
+      "label": "Admin Audit Log",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "admin_role_based_auth",
+      "label": "Admin Role-Based Access Control",
+      "file_type": "concept",
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "house_a",
+      "label": "House A (2-room, 5500\u20bd/night)",
+      "file_type": "concept",
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "house_b",
+      "label": "House B (3-room, 7500\u20bd/night)",
+      "file_type": "concept",
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_showcase_vitrina",
+      "label": "Guest Unauth Showcase (Vitrina)",
+      "file_type": "concept",
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_personal_cabinet",
+      "label": "Guest Personal Cabinet (Auth Mode)",
+      "file_type": "concept",
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_partner_module",
+      "label": "Guest Partner Module",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_PRODUCT_NOTES_2026-02-27.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "guest_feature_flags",
+      "label": "Guest Feature Flags (FAQ/Partners/Showcase)",
+      "file_type": "concept",
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "easycamp_db",
+      "label": "EasyCamp SQLite DB (easycamp.db)",
+      "file_type": "concept",
+      "source_file": "ops/backup.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "script_init_data",
+      "label": "Script: init_data.py",
+      "file_type": "concept",
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "script_migrate_houses",
+      "label": "Script: migrate_houses.py",
+      "file_type": "concept",
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "script_migrate_users",
+      "label": "Script: migrate_users.py",
+      "file_type": "concept",
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "script_migrate_global_settings",
+      "label": "Script: migrate_global_settings.py",
+      "file_type": "concept",
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_avito_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_google_sheets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_backup_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_docker_compose",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_server_firz4",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "STATUS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_teplo_resort",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_booking_overlap",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_varkhyz_crosslink",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_shared_memory",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_teplo_python311",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_fastapi",
+      "target": "easycamp_teplo_project",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_aiogram",
+      "target": "easycamp_teplo_project",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_sqlalchemy",
+      "target": "easycamp_teplo_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_alembic",
+      "target": "easycamp_teplo_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "INDEX.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_apscheduler",
+      "target": "easycamp_teplo_avito_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "verify_log.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_apscheduler",
+      "target": "easycamp_teplo_google_sheets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "verify_log.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_apscheduler",
+      "target": "easycamp_teplo_backup_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "verify_log.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_docker_compose",
+      "target": "easycamp_teplo_container",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_docker_compose",
+      "target": "easycamp_teplo_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_docker_compose",
+      "target": "easycamp_teplo_google_credentials",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_docker_compose",
+      "target": "easycamp_teplo_env_file",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_backup_service",
+      "target": "easycamp_teplo_google_credentials",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_backup_service",
+      "target": "easycamp_teplo_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_avito_sync",
+      "target": "easycamp_teplo_booking_overlap",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_avito_sync",
+      "target": "easycamp_teplo_avito_rate_limit",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "DEPLOY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_dashboard_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/dashboard.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_login_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/login.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_settings_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_intro_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_intro.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_step1_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step1.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_step2_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step2.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_step3_html",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step3.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_admin_web_ui",
+      "target": "template_dashboard_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/dashboard.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_admin_web_ui",
+      "target": "template_login_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/login.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_admin_web_ui",
+      "target": "template_settings_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_setup_flow",
+      "target": "template_setup_intro_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_intro.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_setup_flow",
+      "target": "template_setup_step1_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step1.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_setup_flow",
+      "target": "template_setup_step2_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step2.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_setup_flow",
+      "target": "template_setup_step3_html",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step3.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_settings_html",
+      "target": "easycamp_guest_rules",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_settings_html",
+      "target": "easycamp_ai_assistant",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_settings_html",
+      "target": "easycamp_teplo_google_sheets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/settings.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_step2_html",
+      "target": "easycamp_ai_assistant",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step2.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "template_setup_step2_html",
+      "target": "easycamp_teplo_google_sheets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_step2.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_jinja2",
+      "target": "template_base_html",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "easycamp_teplo_jose",
+      "target": "easycamp_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "easycamp_teplo_bcrypt",
+      "target": "easycamp_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "easycamp_teplo_slowapi",
+      "target": "easycamp_teplo_avito_rate_limit",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_ci_workflow",
+      "target": "easycamp_teplo_pytest",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "easycamp_ci_workflow",
+      "target": "easycamp_teplo_ruff",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "easycamp_teplo_scheduler_jobs",
+      "target": "easycamp_teplo_apscheduler",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "verify_log.txt",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "easycamp_teplo_project",
+      "target": "easycamp_contrib_mit_license",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_create",
+      "target": "concept_booking_status",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_create",
+      "target": "concept_booking_finances",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_create",
+      "target": "concept_house_entity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_detail",
+      "target": "concept_booking_status",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_detail",
+      "target": "concept_booking_source",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_detail",
+      "target": "concept_booking_finances",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_detail",
+      "target": "concept_avito_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "tpl_booking_list",
+      "target": "concept_booking_status",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/list.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_list",
+      "target": "concept_booking_source",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/list.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_house_form",
+      "target": "tpl_help_tooltip",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/houses/form.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_house_form",
+      "target": "concept_house_entity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/houses/form.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_house_list",
+      "target": "concept_house_entity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/houses/list.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "tpl_booking_create",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "app/web/templates/bookings/create.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "tpl_booking_detail",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "tpl_booking_list",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "app/web/templates/bookings/list.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "tpl_house_form",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "app/web/templates/houses/form.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "tpl_house_list",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "app/web/templates/houses/list.html",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "concept_admin_web_ui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "tpl_booking_create",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "tpl_booking_detail",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "tpl_house_form",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "tpl_house_list",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_admin_v2_audit",
+      "target": "concept_setup_wizard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_fastapi_backend",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_sqlite_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_avito_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_role_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_cleaner_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_guest_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_admin_web_ui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_booking_status",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_booking_source",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_setup_wizard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_obsidian_index",
+      "target": "concept_public_site",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_saas_whitelabel",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_setup_wizard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_audit_log",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_rbac",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_ai_concierge",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_b",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_c",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_d",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_e",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_f",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_saas_roadmap",
+      "target": "phase_saas_g",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "phase_foundation_mvp",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "phase_growth_onboarding",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "phase_scale_ecosystem",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_staff_mode",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_escalation_mechanism",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_booking_widget",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_ical_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_ai_concierge",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_architecture",
+      "target": "concept_payment_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "phase_foundation_mvp",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "phase_growth_onboarding",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "phase_scale_ecosystem",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "concept_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "concept_payment_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_easycamp",
+      "target": "concept_saas_whitelabel",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_roadmap",
+      "target": "phase_foundation_mvp",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_roadmap",
+      "target": "phase_growth_onboarding",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_roadmap",
+      "target": "phase_scale_ecosystem",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_roadmap",
+      "target": "doc_architecture",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roadmap.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "doc_deployment",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DEPLOYMENT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_deployment",
+      "target": "concept_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DEPLOYMENT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_deployment",
+      "target": "concept_avito_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DEPLOYMENT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_deployment",
+      "target": "concept_fastapi_backend",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DEPLOYMENT.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_google_sheets_setup",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/google_sheets_setup.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_setup_instructions",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/setup_instructions.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_setup_instructions",
+      "target": "concept_payment_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/setup_instructions.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_setup_instructions",
+      "target": "concept_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/setup_instructions.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_setup_instructions",
+      "target": "concept_ai_concierge",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/setup_instructions.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_site_arch_decision",
+      "target": "concept_public_site",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_ARCHITECTURE_DECISION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_site_arch_decision",
+      "target": "concept_admin_web_ui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_ARCHITECTURE_DECISION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_site_repo_pointer",
+      "target": "concept_public_site",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_REPO_POINTER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_site_repo_pointer",
+      "target": "repo_teplo_v_arkhyze",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_REPO_POINTER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_site_arch_decision",
+      "target": "repo_teplo_v_arkhyze",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_ARCHITECTURE_DECISION.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_booking_status",
+      "target": "concept_avito_integration",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "concept_google_sheets_sync",
+      "target": "concept_fastapi_backend",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "concept_avito_integration",
+      "target": "concept_booking_source",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_telegram_bot",
+      "target": "concept_booking_source",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/detail.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_cleaner_module",
+      "target": "concept_escalation_mechanism",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "concept_cleaner_module",
+      "target": "concept_staff_mode",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "concept_role_model",
+      "target": "concept_rbac",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "concept_saas_whitelabel",
+      "target": "concept_setup_wizard",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_b",
+      "target": "concept_admin_web_ui",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_c",
+      "target": "concept_setup_wizard",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_d",
+      "target": "concept_house_entity",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_f",
+      "target": "concept_rbac",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_f",
+      "target": "concept_audit_log",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_saas_g",
+      "target": "concept_ai_concierge",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_growth_onboarding",
+      "target": "concept_ical_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_growth_onboarding",
+      "target": "concept_booking_widget",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_scale_ecosystem",
+      "target": "concept_ai_concierge",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/easycamp.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_ai_context",
+      "target": "concept_avito_integration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/AI_CONTEXT.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_ai_context",
+      "target": "concept_telegram_bot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/AI_CONTEXT.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "doc_ai_context",
+      "target": "concept_google_sheets_sync",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/AI_CONTEXT.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "concept_ical_sync",
+      "target": "concept_avito_integration",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "admin_v2_execution_checklist",
+      "target": "admin_v2_roadmap",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "phase_admin_v2_a",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "phase_admin_v2_b",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "phase_admin_v2_c",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "phase_admin_v2_d",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "phase_admin_v2_e",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "admin_audit_log",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "admin_role_based_auth",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "admin_v2_execution_checklist",
+      "target": "phase_admin_v2_a",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/admin/ADMIN_V2_EXECUTION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "vibecode_roadmap_cleaner",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "phase_c10",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "phase_c11",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "cleaner_cleaning_task",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "cleaner_supply_alert",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "cleaner_payment_ledger",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "cleaner_expense_claim",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "cleaner_sla_monitor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_cleaning_task",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_supply_alert",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_payment_ledger",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_expense_claim",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_cleaning_rate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_task_fsm",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "cleaner_sla_monitor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_issue_backlog",
+      "target": "vibecode_roadmap_cleaner",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "weight": 0.9
+    },
+    {
+      "source": "cleaner_issue_backlog",
+      "target": "cleaner_cleaning_task",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_issue_backlog",
+      "target": "cleaner_supply_alert",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_issue_backlog",
+      "target": "cleaner_expense_claim",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_issue_backlog",
+      "target": "cleaner_sla_monitor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/ISSUE_BACKLOG.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "vibecode_roadmap_guest_v2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "phase_g10",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "phase_g11",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "phase_g12",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "guest_booking_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "guest_cancel_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "guest_global_settings",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "guest_payment_claim",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "guest_v2_uat_checklist",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_implementation_checklist",
+      "target": "vibecode_roadmap_guest_v2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_implementation_checklist",
+      "target": "guest_self_service_roadmap",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_implementation_checklist",
+      "target": "phase_g0_g9",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_implementation_checklist",
+      "target": "guest_feature_flags",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_implementation_checklist",
+      "target": "guest_v2_uat_checklist",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_uat_checklist",
+      "target": "guest_booking_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_UAT_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_uat_checklist",
+      "target": "guest_cancel_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_UAT_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_uat_checklist",
+      "target": "guest_global_settings",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_UAT_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_v2_uat_checklist",
+      "target": "guest_feature_flags",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_UAT_CHECKLIST.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "uat_pending_20260428",
+      "target": "guest_two_stage_payment",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "uat_pending_20260428",
+      "target": "guest_cancel_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "uat_pending_20260428",
+      "target": "cleaner_cleaning_task",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "uat_pending_20260428",
+      "target": "phase_c10",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "uat_pending_20260428",
+      "target": "phase_g10",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_guest_v2",
+      "target": "guest_showcase_vitrina",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_guest_v2",
+      "target": "guest_personal_cabinet",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_guest_v2",
+      "target": "guest_partner_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "vibecode_roadmap_guest_v2",
+      "target": "guest_feature_flags",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_product_notes_20260227",
+      "target": "content_seed_teplo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_PRODUCT_NOTES_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_product_notes_20260227",
+      "target": "guest_partner_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_PRODUCT_NOTES_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_product_notes_20260227",
+      "target": "guest_showcase_vitrina",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_PRODUCT_NOTES_2026-02-27.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "content_seed_teplo",
+      "target": "house_a",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "content_seed_teplo",
+      "target": "house_b",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "role_admin",
+      "target": "admin_v2_roadmap",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/roles/admin_role.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "role_admin",
+      "target": "admin_role_based_auth",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/admin_role.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "role_cleaner",
+      "target": "vibecode_roadmap_cleaner",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/roles/cleaner_role.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "role_cleaner",
+      "target": "cleaner_task_fsm",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/roles/cleaner_role.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "role_guest",
+      "target": "vibecode_roadmap_guest_v2",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "role_guest",
+      "target": "guest_booking_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "role_guest",
+      "target": "guest_cancel_flow",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "role_guest",
+      "target": "guest_showcase_vitrina",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "role_guest",
+      "target": "guest_personal_cabinet",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/guest_role.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ops_backup",
+      "target": "easycamp_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/backup.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ops_backup",
+      "target": "ops_restore",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/backup.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ops_restore",
+      "target": "easycamp_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/restore.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ops_deploy",
+      "target": "easycamp_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/deploy.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ops_deploy",
+      "target": "ops_backup",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "ops/deploy.md",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "scripts_utils_readme",
+      "target": "easycamp_db",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_utils_readme",
+      "target": "script_init_data",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_utils_readme",
+      "target": "script_migrate_houses",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_utils_readme",
+      "target": "script_migrate_users",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_utils_readme",
+      "target": "script_migrate_global_settings",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_cleaning_task",
+      "target": "cleaner_task_fsm",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_cleaning_task",
+      "target": "cleaner_payment_ledger",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "cleaner_cleaning_task",
+      "target": "cleaner_supply_alert",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_booking_flow",
+      "target": "guest_two_stage_payment",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "phase_g11",
+      "target": "guest_payment_claim",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "phase_g12",
+      "target": "guest_partner_module",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "house_a",
+      "target": "cleaner_cleaning_rate",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "house_b",
+      "target": "cleaner_cleaning_rate",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "script_migrate_global_settings",
+      "target": "guest_global_settings",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 0.75
+    },
+    {
+      "source": "script_migrate_houses",
+      "target": "house_a",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "script_migrate_houses",
+      "target": "house_b",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "scripts/utils/README.md",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "admin_v2_roadmap",
+      "target": "role_admin",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "vibecode_roadmap_cleaner",
+      "target": "role_cleaner",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "vibecode_roadmap_guest_v2",
+      "target": "role_guest",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/guest/VIBECODE_ROADMAP_GUEST_V2.md",
+      "source_location": null,
+      "weight": 0.85
+    },
+    {
+      "source": "cleaner_hardening_roadmap",
+      "target": "uat_pending_20260428",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "guest_self_service_roadmap",
+      "target": "uat_pending_20260428",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "easycamp_core_stack",
+      "label": "EasyCamp Core Technology Stack",
+      "nodes": [
+        "easycamp_teplo_python311",
+        "easycamp_teplo_fastapi",
+        "easycamp_teplo_aiogram",
+        "easycamp_teplo_sqlalchemy",
+        "easycamp_teplo_apscheduler",
+        "easycamp_teplo_alembic"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md"
+    },
+    {
+      "id": "easycamp_external_integrations",
+      "label": "EasyCamp External Integrations",
+      "nodes": [
+        "easycamp_teplo_telegram_bot",
+        "easycamp_teplo_avito_sync",
+        "easycamp_teplo_google_sheets",
+        "easycamp_teplo_google_credentials"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md"
+    },
+    {
+      "id": "easycamp_production_state",
+      "label": "Production-Sensitive State Files",
+      "nodes": [
+        "easycamp_teplo_sqlite_db",
+        "easycamp_teplo_env_file",
+        "easycamp_teplo_google_credentials"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "STATUS.md"
+    },
+    {
+      "id": "easycamp_admin_ui_flow",
+      "label": "Admin Web UI Flow",
+      "nodes": [
+        "template_base_html",
+        "template_login_html",
+        "template_dashboard_html",
+        "template_settings_html"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/dashboard.html"
+    },
+    {
+      "id": "easycamp_setup_wizard_flow",
+      "label": "First-Run Setup Wizard Steps",
+      "nodes": [
+        "template_setup_intro_html",
+        "template_setup_step1_html",
+        "template_setup_step2_html",
+        "template_setup_step3_html"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/setup_intro.html"
+    },
+    {
+      "id": "easycamp_high_risk_areas",
+      "label": "High-Risk Code Areas",
+      "nodes": [
+        "easycamp_teplo_booking_overlap",
+        "easycamp_teplo_avito_sync",
+        "easycamp_teplo_backup_service",
+        "easycamp_teplo_apscheduler",
+        "easycamp_teplo_sqlite_db"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md"
+    },
+    {
+      "id": "easycamp_scheduler_jobs_group",
+      "label": "APScheduler Background Jobs",
+      "nodes": [
+        "easycamp_teplo_avito_sync",
+        "easycamp_teplo_google_sheets",
+        "easycamp_teplo_backup_service",
+        "easycamp_teplo_cleaning_tasks",
+        "easycamp_teplo_scheduler_jobs"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "verify_log.txt"
+    },
+    {
+      "id": "easycamp_deploy_runtime",
+      "label": "Deployment Runtime Components",
+      "nodes": [
+        "easycamp_teplo_docker_compose",
+        "easycamp_teplo_container",
+        "easycamp_teplo_server_firz4",
+        "easycamp_teplo_env_file"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md"
+    },
+    {
+      "id": "booking_crud_ui",
+      "label": "Booking CRUD Web UI Templates",
+      "nodes": [
+        "tpl_booking_create",
+        "tpl_booking_detail",
+        "tpl_booking_list",
+        "concept_admin_web_ui",
+        "concept_booking_status"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/bookings/"
+    },
+    {
+      "id": "house_management_ui",
+      "label": "House Management Web UI Templates",
+      "nodes": [
+        "tpl_house_form",
+        "tpl_house_list",
+        "tpl_help_tooltip",
+        "concept_house_entity",
+        "concept_admin_web_ui"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/web/templates/houses/"
+    },
+    {
+      "id": "easycamp_saas_phases",
+      "label": "EasyCamp SaaS Transformation Phases",
+      "nodes": [
+        "phase_saas_b",
+        "phase_saas_c",
+        "phase_saas_d",
+        "phase_saas_e",
+        "phase_saas_f",
+        "phase_saas_g",
+        "concept_saas_whitelabel",
+        "doc_saas_roadmap"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/saas_roadmap.md"
+    },
+    {
+      "id": "easycamp_product_phases",
+      "label": "EasyCamp Product Roadmap Phases (v5)",
+      "nodes": [
+        "phase_foundation_mvp",
+        "phase_growth_onboarding",
+        "phase_scale_ecosystem",
+        "doc_architecture",
+        "doc_easycamp",
+        "doc_roadmap"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture.md"
+    },
+    {
+      "id": "core_tech_stack",
+      "label": "EasyCamp Core Tech Stack",
+      "nodes": [
+        "concept_fastapi_backend",
+        "concept_telegram_bot",
+        "concept_sqlite_db",
+        "concept_avito_integration",
+        "concept_google_sheets_sync",
+        "doc_obsidian_index"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md"
+    },
+    {
+      "id": "booking_data_model",
+      "label": "Booking Data Model Fields",
+      "nodes": [
+        "concept_booking_status",
+        "concept_booking_source",
+        "concept_booking_finances",
+        "tpl_booking_detail",
+        "doc_obsidian_index"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/OBSIDIAN_EASYCAMP_INDEX_2026-02-27.md"
+    },
+    {
+      "id": "site_separation_decision",
+      "label": "Site/Admin Architecture Separation",
+      "nodes": [
+        "doc_site_arch_decision",
+        "doc_site_repo_pointer",
+        "repo_teplo_v_arkhyze",
+        "concept_public_site",
+        "concept_admin_web_ui"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SITE_ARCHITECTURE_DECISION.md"
+    },
+    {
+      "id": "admin_v2_legacy_migration",
+      "label": "Admin V2 Legacy Migration Plan",
+      "nodes": [
+        "doc_admin_v2_audit",
+        "concept_admin_web_ui",
+        "tpl_booking_create",
+        "tpl_house_form",
+        "concept_setup_wizard"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_AUDIT_LEGACY.md"
+    },
+    {
+      "id": "admin_v2_phases",
+      "label": "Admin V2 Roadmap Phases A-E",
+      "nodes": [
+        "admin_v2_roadmap",
+        "phase_admin_v2_a",
+        "phase_admin_v2_b",
+        "phase_admin_v2_c",
+        "phase_admin_v2_d",
+        "phase_admin_v2_e"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/admin/ADMIN_V2_ROADMAP.md"
+    },
+    {
+      "id": "cleaner_domain_entities",
+      "label": "Cleaner Domain Entities",
+      "nodes": [
+        "cleaner_cleaning_task",
+        "cleaner_supply_alert",
+        "cleaner_payment_ledger",
+        "cleaner_expense_claim",
+        "cleaner_cleaning_rate"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/VIBECODE_ROADMAP_CLEANER.md"
+    },
+    {
+      "id": "cleaner_c10_hardening_tasks",
+      "label": "Cleaner C10 Hardening Sub-Phases",
+      "nodes": [
+        "phase_c10",
+        "cleaner_cleaning_task",
+        "cleaner_supply_alert",
+        "cleaner_expense_claim",
+        "cleaner_sla_monitor"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/cleaner/CLEANER_HARDENING_ROADMAP.md"
+    },
+    {
+      "id": "guest_v2_mvp_phases",
+      "label": "Guest V2 MVP Phases G0-G9",
+      "nodes": [
+        "vibecode_roadmap_guest_v2",
+        "phase_g0_g9",
+        "guest_v2_implementation_checklist",
+        "guest_v2_uat_checklist"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_V2_IMPLEMENTATION_CHECKLIST.md"
+    },
+    {
+      "id": "guest_self_service_phases",
+      "label": "Guest Self-Service Phases G10-G12",
+      "nodes": [
+        "guest_self_service_roadmap",
+        "phase_g10",
+        "phase_g11",
+        "phase_g12"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md"
+    },
+    {
+      "id": "guest_g10_flows",
+      "label": "Guest G10 Self-Service Flows",
+      "nodes": [
+        "phase_g10",
+        "guest_booking_flow",
+        "guest_cancel_flow",
+        "guest_global_settings",
+        "guest_two_stage_payment"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "docs/guest/GUEST_SELF_SERVICE_ROADMAP.md"
+    },
+    {
+      "id": "system_roles",
+      "label": "EasyCamp System Roles",
+      "nodes": [
+        "role_admin",
+        "role_cleaner",
+        "role_guest"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/roles/admin_role.md"
+    },
+    {
+      "id": "ops_runbook",
+      "label": "Ops Runbook (Backup/Deploy/Restore)",
+      "nodes": [
+        "ops_backup",
+        "ops_deploy",
+        "ops_restore",
+        "easycamp_db"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ops/backup.md"
+    },
+    {
+      "id": "migration_scripts",
+      "label": "DB Migration Scripts",
+      "nodes": [
+        "scripts_utils_readme",
+        "script_init_data",
+        "script_migrate_houses",
+        "script_migrate_users",
+        "script_migrate_global_settings"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/utils/README.md"
+    },
+    {
+      "id": "teplo_houses",
+      "label": "Teplo Resort Houses",
+      "nodes": [
+        "house_a",
+        "house_b",
+        "content_seed_teplo"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/CONTENT_SEED_TEPLO.md"
+    },
+    {
+      "id": "uat_2026_04_28_scope",
+      "label": "UAT 2026-04-28 Deployment Scope",
+      "nodes": [
+        "uat_pending_20260428",
+        "phase_g10",
+        "phase_c10",
+        "guest_two_stage_payment",
+        "guest_cancel_flow"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/guest/UAT_PENDING_2026-04-28.md"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
