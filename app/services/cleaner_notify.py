@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
 from app.models import House, User, UserRole
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,7 @@ async def notify_cleaners_new_booking(bot, booking) -> None:
     )
 
     for cleaner in cleaners:
-        try:
-            await bot.send_message(cleaner.telegram_id, text, parse_mode="HTML")
-        except Exception as e:
-            logger.warning(f"Failed to notify cleaner {cleaner.telegram_id}: {e}")
+        await send_safe(bot, cleaner.telegram_id, text, context="notify_new_booking")
 
 
 async def notify_cleaners_booking_cancelled(bot, booking) -> None:
@@ -70,7 +68,4 @@ async def notify_cleaners_booking_cancelled(bot, booking) -> None:
     )
 
     for cleaner in cleaners:
-        try:
-            await bot.send_message(cleaner.telegram_id, text, parse_mode="HTML")
-        except Exception as e:
-            logger.warning(f"Failed to notify cleaner {cleaner.telegram_id}: {e}")
+        await send_safe(bot, cleaner.telegram_id, text, context="notify_cancelled")

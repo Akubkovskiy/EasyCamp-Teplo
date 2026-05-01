@@ -14,6 +14,34 @@ from app.telegram.bot import bot
 logger = logging.getLogger(__name__)
 
 
+async def send_safe(
+    bot,
+    chat_id: int,
+    text: str,
+    parse_mode: str = "HTML",
+    reply_markup=None,
+    *,
+    context: str = "",
+) -> bool:
+    """Send a Telegram message with error handling and logging.
+
+    Returns True on success, False on failure (never raises).
+    Use this instead of bare bot.send_message so all failures are logged uniformly.
+    """
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            parse_mode=parse_mode,
+            reply_markup=reply_markup,
+        )
+        return True
+    except Exception as e:
+        label = f"[{context}] " if context else ""
+        logger.warning(f"{label}Failed to send message to {chat_id}: {e}")
+        return False
+
+
 @dataclass
 class NotificationRule:
     """Правило уведомления"""

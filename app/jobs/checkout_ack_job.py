@@ -18,6 +18,7 @@ from sqlalchemy.orm import joinedload
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, User, UserRole
 from app.services.checkout_ack import checkout_ack_keyboard, get_ack_status, set_ack_status
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +70,7 @@ async def send_checkout_ack_reminders():
             )
             kb = checkout_ack_keyboard(b.id)
             for c in cleaners:
-                try:
-                    await bot.send_message(c.telegram_id, text, reply_markup=kb, parse_mode="HTML")
-                except Exception as e:
-                    logger.warning(f"ack reminder → cleaner {c.telegram_id}: {e}")
+                await send_safe(bot, c.telegram_id, text, reply_markup=kb, context=f"ack_reminder booking={b.id}")
 
             await set_ack_status(session, b.id, "pending:0")
             logger.info(f"Checkout ack reminder sent for booking {b.id} (checkout {tomorrow})")
@@ -103,10 +101,7 @@ async def retry_checkout_ack():
             )
             kb = checkout_ack_keyboard(b.id)
             for c in cleaners:
-                try:
-                    await bot.send_message(c.telegram_id, text, reply_markup=kb, parse_mode="HTML")
-                except Exception as e:
-                    logger.warning(f"ack retry → cleaner {c.telegram_id}: {e}")
+                await send_safe(bot, c.telegram_id, text, reply_markup=kb, context=f"ack_retry booking={b.id}")
 
             await set_ack_status(session, b.id, "pending:1")
             logger.info(f"Checkout ack retry sent for booking {b.id}")
@@ -134,11 +129,9 @@ async def alert_admin_no_ack():
                 f"📅 Выезд: {b.check_out.strftime('%d.%m')}\n\n"
                 "Никто не подтвердил уборку. Требуется ручное управление."
             )
-            try:
-                await bot.send_message(settings.telegram_chat_id, text, parse_mode="HTML")
+            ok = await send_safe(bot, settings.telegram_chat_id, text, context=f"no_ack_admin booking={b.id}")
+            if ok:
                 logger.warning(f"Admin alerted: no ack for booking {b.id}")
-            except Exception as e:
-                logger.error(f"Failed to alert admin for booking {b.id}: {e}")
 
 
 async def send_morning_checkout_briefing():
@@ -163,10 +156,7 @@ async def send_morning_checkout_briefing():
                 "Гость выезжает до 12:00 🧹"
             )
             for c in cleaners:
-                try:
-                    await bot.send_message(c.telegram_id, text, parse_mode="HTML")
-                except Exception as e:
-                    logger.warning(f"morning briefing → cleaner {c.telegram_id}: {e}")
+                await send_safe(bot, c.telegram_id, text, context=f"morning_briefing booking={b.id}")
 
         logger.info(f"Morning checkout briefing: {len(bookings)} booking(s) on {today}")
 
