@@ -288,6 +288,32 @@ async def cleaner_pay_task_detail(callback: CallbackQuery):
 # Paid history (actual transfers)
 # ---------------------------------------------------------------------------
 
+async def _load_paid_groups(db_user_id: int) -> list[tuple[str, Decimal, list]]:
+    """Returns list of (day_key YYYY-MM-DD, total, entries) sorted newest-first."""
+    from collections import defaultdict
+    from datetime import datetime
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleaningPaymentLedger).where(
+                CleaningPaymentLedger.cleaner_user_id == db_user_id,
+                CleaningPaymentLedger.status == PaymentStatus.PAID,
+                CleaningPaymentLedger.paid_at.isnot(None),
+            ).order_by(CleaningPaymentLedger.paid_at.desc()).limit(200)
+        )
+        entries = list(q.scalars().all())
+
+    by_date: dict[str, list] = defaultdict(list)
+    for e in entries:
+        by_date[e.paid_at.strftime("%Y-%m-%d")].append(e)
+
+    groups = []
+    for day_key in sorted(by_date.keys(), reverse=True):
+        day_entries = by_date[day_key]
+        total = sum(Decimal(e.amount) for e in day_entries)
+        groups.append((day_key, total, day_entries))
+    return groups
+
+
 @router.callback_query(F.data == "cleaner:pay:paid_history")
 async def cleaner_pay_paid_history(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
@@ -299,18 +325,9 @@ async def cleaner_pay_paid_history(callback: CallbackQuery):
         await callback.answer("Пользователь не найден", show_alert=True)
         return
 
-    from datetime import datetime, timezone
-    async with AsyncSessionLocal() as s:
-        q = await s.execute(
-            select(CleaningPaymentLedger).where(
-                CleaningPaymentLedger.cleaner_user_id == db_user_id,
-                CleaningPaymentLedger.status == PaymentStatus.PAID,
-                CleaningPaymentLedger.paid_at.isnot(None),
-            ).order_by(CleaningPaymentLedger.paid_at.desc()).limit(100)
-        )
-        paid_entries = list(q.scalars().all())
+    groups = await _load_paid_groups(db_user_id)
 
-    if not paid_entries:
+    if not groups:
         await callback.message.edit_text(
             "📊 <b>История платежей</b>\n\nОплаченных переводов пока нет.",
             reply_markup=_payments_back_kb(),
@@ -319,41 +336,68 @@ async def cleaner_pay_paid_history(callback: CallbackQuery):
         await callback.answer()
         return
 
-    # Группируем по дате оплаты (день)
-    from collections import defaultdict
-    by_date: dict[str, list] = defaultdict(list)
-    for e in paid_entries:
-        day = e.paid_at.strftime("%Y-%m-%d")
-        by_date[day].append(e)
+    total_all = sum(g[1] for g in groups)
+    rows = []
+    for idx, (day_key, total, _) in enumerate(groups):
+        num = f"#{idx + 1:02d}"
+        d_fmt = day_key[8:10] + "." + day_key[5:7] + "." + day_key[:4]
+        rows.append([InlineKeyboardButton(
+            text=f"{num} — 💸 {d_fmt} — {total:.0f} ₽",
+            callback_data=f"cleaner:pay:paid_detail:{day_key}",
+        )])
 
-    lines = ["📊 <b>История платежей</b>\n"]
-    total_all = Decimal(0)
+    rows.append([InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
 
-    for day_key in sorted(by_date.keys(), reverse=True):
-        entries_day = by_date[day_key]
-        day_total = sum(Decimal(e.amount) for e in entries_day)
-        total_all += day_total
-        d = datetime.strptime(day_key, "%Y-%m-%d")
-        month_name = MONTHS_RU[d.month]
-        lines.append(f"\n💸 <b>{d.day} {month_name} {d.year}</b> — {day_total:.0f} ₽")
-        for e in entries_day:
-            type_label = {
-                CleaningPaymentEntryType.CLEANING_FEE: "Уборка",
-                CleaningPaymentEntryType.ADJUSTMENT: "Доп. работа",
-                CleaningPaymentEntryType.SUPPLY_REIMBURSEMENT: "Расходники",
-            }.get(e.entry_type, e.entry_type.value)
-            task_ref = f" задача #{e.task_id}" if e.task_id else ""
-            lines.append(f"  · {type_label}{task_ref}: {float(e.amount):.0f} ₽")
-
-    lines.append(f"\n\n💰 <b>Всего выплачено: {total_all:.0f} ₽</b>")
-
-    text = "\n".join(lines)
-    if len(text) > 4000:
-        text = text[:3990] + "\n…"
+    text = f"📊 <b>История платежей</b>\n\n💰 Всего выплачено: <b>{total_all:.0f} ₽</b>\n\nНажмите на платёж для детализации:"
 
     await callback.message.edit_text(
         text,
-        reply_markup=_payments_back_kb(),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:pay:paid_detail:"))
+async def cleaner_pay_paid_detail(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    day_key = callback.data[len("cleaner:pay:paid_detail:"):]
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    groups = await _load_paid_groups(db_user_id)
+    group = next(((d, t, e) for d, t, e in groups if d == day_key), None)
+    if not group:
+        await callback.answer("Платёж не найден", show_alert=True)
+        return
+
+    _, total, entries = group
+    idx = next(i for i, (d, _, _) in enumerate(groups) if d == day_key)
+    d_fmt = day_key[8:10] + "." + day_key[5:7] + "." + day_key[:4]
+    num = f"#{idx + 1:02d}"
+
+    lines = [f"💸 <b>Платёж {num} — {d_fmt}</b>\n<b>Итого: {total:.0f} ₽</b>\n"]
+    for e in sorted(entries, key=lambda x: x.task_id or 0):
+        type_label = {
+            CleaningPaymentEntryType.CLEANING_FEE: "Уборка",
+            CleaningPaymentEntryType.ADJUSTMENT: "Доп. работа",
+            CleaningPaymentEntryType.SUPPLY_REIMBURSEMENT: "Расходники",
+        }.get(e.entry_type, e.entry_type.value)
+        task_ref = f" #{e.task_id}" if e.task_id else ""
+        lines.append(f"  · {type_label}{task_ref}: {float(e.amount):.0f} ₽")
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ История платежей", callback_data="cleaner:pay:paid_history")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+        ]),
         parse_mode="HTML",
     )
     await callback.answer()
