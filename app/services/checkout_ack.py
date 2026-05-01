@@ -1,7 +1,7 @@
 """Shared utilities for the checkout acknowledgment flow."""
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.models import GlobalSetting
+from app.services import global_settings
 
 
 def ack_key(booking_id: int) -> str:
@@ -22,15 +22,12 @@ def checkout_ack_keyboard(booking_id: int) -> InlineKeyboardMarkup:
 
 
 async def get_ack_status(session, booking_id: int) -> str | None:
-    s = await session.get(GlobalSetting, ack_key(booking_id))
-    return s.value if s else None
+    """Return current ack state or None if not set."""
+    val = await global_settings.get_str(session, ack_key(booking_id), default="")
+    return val if val else None
 
 
 async def set_ack_status(session, booking_id: int, value: str) -> None:
-    key = ack_key(booking_id)
-    s = await session.get(GlobalSetting, key)
-    if s:
-        s.value = value
-    else:
-        session.add(GlobalSetting(key=key, value=value))
+    """Upsert ack state and commit."""
+    await global_settings.set_value(session, ack_key(booking_id), value)
     await session.commit()
