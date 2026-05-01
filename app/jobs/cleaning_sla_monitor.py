@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.models import CleaningTask, CleaningTaskStatus, User, UserRole
 from app.telegram.bot import bot
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,7 @@ async def run_cleaning_sla_monitor():
                 f"Дедлайн подтверждения истёк"
             )
             for aid in admins:
-                try:
-                    await bot.send_message(aid, text)
-                except Exception:
-                    pass
+                await send_safe(bot, aid, text, context=f"sla_escalation task={task.id}")
 
         await session.commit()
         logger.warning("Escalated overdue cleaning tasks: %s", len(overdue))
