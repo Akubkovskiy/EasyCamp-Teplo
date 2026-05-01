@@ -341,7 +341,14 @@ async def cleaner_receive_photo_auto(message: Message):
         await CleaningTaskService.add_photo(session, task_id, file_id, user_id=cleaner_db_id)
         await session.commit()
 
-    await message.answer(f"✅ Фото сохранено (задача #{task_id})")
+    await message.answer(
+        f"✅ Фото сохранено (задача #{task_id})\n\nМожно ещё добавить фото или завершить уборку:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Завершить уборку", callback_data=f"cleaner:task:done:{task_id}")],
+            [InlineKeyboardButton(text="☑️ Чеклист", callback_data=f"cleaner:task:checks:{task_id}")],
+            [InlineKeyboardButton(text="📋 Открыть задачу", callback_data=f"cleaner:task:view:{task_id}")],
+        ]),
+    )
 
 
 async def _do_transition(callback: CallbackQuery, task_id: int, target: CleaningTaskStatus, decline_reason: str | None = None):
