@@ -489,20 +489,12 @@ async def guest_book_admin_confirm(callback: CallbackQuery):
         return
 
     async with AsyncSessionLocal() as session:
-        booking = await session.get(Booking, booking_id)
-        if not booking:
-            await callback.answer("Бронь не найдена", show_alert=True)
-            return
-        if booking.status != BookingStatus.NEW:
-            await callback.answer(
-                f"Бронь уже в статусе {booking.status.value}", show_alert=True
-            )
-            return
-        booking.status = BookingStatus.CONFIRMED
-        booking.updated_at = datetime.now(timezone.utc)
-        await session.commit()
+        booking = await BookingService.confirm_booking(session, booking_id)
 
-    # Уведомляем уборщицу только после оплаты (не при простом confirm без денег)
+    if booking is None:
+        await callback.answer("Бронь не найдена или уже не в статусе NEW", show_alert=True)
+        return
+
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except Exception:
@@ -592,20 +584,12 @@ async def site_lead_confirm(callback: CallbackQuery):
         return
 
     async with AsyncSessionLocal() as session:
-        booking = await session.get(Booking, booking_id)
-        if not booking:
-            await callback.answer("Бронь не найдена", show_alert=True)
-            return
-        if booking.status != BookingStatus.NEW:
-            await callback.answer(
-                f"Бронь уже в статусе {booking.status.value}", show_alert=True
-            )
-            return
-        booking.status = BookingStatus.CONFIRMED
-        booking.updated_at = datetime.now(timezone.utc)
-        await session.commit()
+        booking = await BookingService.confirm_booking(session, booking_id)
 
-    # Уведомляем уборщицу только после оплаты (не при простом confirm без денег)
+    if booking is None:
+        await callback.answer("Бронь не найдена или уже не в статусе NEW", show_alert=True)
+        return
+
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except Exception:

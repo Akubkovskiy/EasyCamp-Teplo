@@ -14,6 +14,7 @@ from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus
 from app.core.config import settings
 from app.jobs.avito_sync_job import sync_avito_job
+from app.telegram.ui.booking_format import BOOKING_STATUS_EMOJI
 
 router = Router()
 
@@ -331,15 +332,7 @@ async def send_bookings_response(
     # Формируем текст списка
     text = f"<b>{title} ({len(bookings)})</b>\n\n"
 
-    status_emoji = {
-        BookingStatus.NEW: "🆕",
-        BookingStatus.CONFIRMED: "✅",
-        BookingStatus.PAID: "💰",
-        BookingStatus.CHECKING_IN: "🔔",
-        BookingStatus.CHECKED_IN: "🏠",
-        BookingStatus.CANCELLED: "❌",
-        BookingStatus.COMPLETED: "🏁",
-    }
+    status_emoji = BOOKING_STATUS_EMOJI
 
     # Создаем кнопки для каждой брони (макс 10 на страницу для удобства)
     buttons = []

@@ -702,3 +702,64 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error processing Avito booking {booking_payload.avito_booking_id}: {e}", exc_info=True)
             return None
+
+    @staticmethod
+    async def confirm_booking(db: AsyncSession, booking_id: int) -> Optional[Booking]:
+        """NEW → CONFIRMED transition. Returns the booking or None if not found / wrong state."""
+        booking = await db.get(Booking, booking_id)
+        if not booking:
+            return None
+        if booking.status != BookingStatus.NEW:
+            return None
+        booking.status = BookingStatus.CONFIRMED
+        booking.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        return booking
+
+    @staticmethod
+    async def record_payment(
+        db: AsyncSession,
+        booking_id: int,
+        *,
+        full_payment: bool,
+        advance_percent: int,
+    ) -> tuple[Optional["Booking"], str, bool]:
+        """Apply an admin-approved payment (advance or full).
+
+        Returns ``(booking, label, became_paid)`` where:
+        - booking is the updated Booking (None if not found)
+        - label is the confirmation message to send to the guest
+        - became_paid is True when the booking just reached PAID status
+        """
+        from decimal import Decimal
+        from app.services.global_settings import compute_advance_amount
+
+        booking = await db.get(Booking, booking_id)
+        if not booking:
+            return None, "", False
+
+        total = int(booking.total_price or 0)
+        paid = int(booking.advance_amount or 0)
+        required_advance = compute_advance_amount(total, advance_percent)
+
+        if full_payment:
+            booking.advance_amount = booking.total_price
+            booking.status = BookingStatus.PAID
+            label = "✅ Оплата подтверждена полностью. Спасибо!"
+        else:
+            new_advance = min(max(paid, required_advance), total)
+            booking.advance_amount = Decimal(str(new_advance))
+            if new_advance >= total > 0:
+                booking.status = BookingStatus.PAID
+                label = "✅ Оплата подтверждена. Спасибо!"
+            else:
+                booking.status = BookingStatus.CONFIRMED
+                remainder = total - new_advance
+                label = (
+                    f"✅ Задаток ({new_advance:,} ₽) подтверждён.\n"
+                    f"Остаток {remainder:,} ₽ — при заселении."
+                )
+
+        booking.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        return booking, label, booking.status == BookingStatus.PAID

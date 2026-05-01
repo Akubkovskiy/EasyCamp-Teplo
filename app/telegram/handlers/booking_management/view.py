@@ -13,8 +13,15 @@ from aiogram.types import (
 from app.database import AsyncSessionLocal
 from app.services.booking_service import BookingService
 from app.models import BookingStatus
+from app.telegram.ui.booking_format import BOOKING_STATUS_EMOJI, BOOKING_STATUS_NAMES
 
 router = Router()
+
+
+def _back_to_bookings_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 К списку броней", callback_data="bookings:menu")],
+    ])
 
 
 @router.callback_query(F.data.startswith("booking:view:"))
@@ -36,16 +43,6 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
             await event.answer("❌ Бронь не найдена")
         return
 
-    status_emoji = {
-        BookingStatus.NEW: "🆕",
-        BookingStatus.CONFIRMED: "✅",
-        BookingStatus.PAID: "💰",
-        BookingStatus.CHECKING_IN: "🔔",
-        BookingStatus.CHECKED_IN: "🏠",
-        BookingStatus.CANCELLED: "❌",
-        BookingStatus.COMPLETED: "🏁",
-    }
-
     # Расчет суток
     nights = (booking.check_out - booking.check_in).days
 
@@ -53,18 +50,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
     advance = booking.advance_amount or 0
     remaining = booking.total_price - advance
 
-    # Русские названия статусов
-    status_names = {
-        BookingStatus.NEW: "Ожидает",
-        BookingStatus.CONFIRMED: "Подтверждено",
-        BookingStatus.PAID: "Оплачено",
-        BookingStatus.CHECKING_IN: "Заезд сегодня",
-        BookingStatus.CHECKED_IN: "Проживает",
-        BookingStatus.CANCELLED: "Отменено",
-        BookingStatus.COMPLETED: "Завершено",
-    }
-
-    status_display = status_names.get(booking.status, booking.status.value)
+    status_display = BOOKING_STATUS_NAMES.get(booking.status, booking.status.value)
 
     text = (
         f"📋 <b>Бронирование #{booking.id}</b>\n\n"
@@ -78,7 +64,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         f"💳 Аванс: {advance:,.0f} ₽\n"
         f"💵 Остаток: {remaining:,.0f} ₽\n"
         f"──────────────────\n"
-        f"📊 Статус: {status_emoji.get(booking.status, '❓')} <b>{status_display}</b>\n"
+        f"📊 Статус: {BOOKING_STATUS_EMOJI.get(booking.status, '❓')} <b>{status_display}</b>\n"
         f"🔗 Источник: {booking.source.value}\n"
     )
 
@@ -155,29 +141,13 @@ async def execute_cancel(callback: CallbackQuery):
     if success:
         await callback.message.edit_text(
             f"✅ <b>Бронь #{booking_id} отменена</b>\n\nСтатус обновлен.",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 К списку броней", callback_data="bookings:menu"
-                        )
-                    ]
-                ]
-            ),
+            reply_markup=_back_to_bookings_kb(),
             parse_mode="HTML",
         )
     else:
         await callback.message.edit_text(
             f"❌ Ошибка при отмене брони #{booking_id}",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 К списку броней", callback_data="bookings:menu"
-                        )
-                    ]
-                ]
-            ),
+            reply_markup=_back_to_bookings_kb(),
         )
     await callback.answer()
 
@@ -187,27 +157,22 @@ async def request_delete_confirmation(callback: CallbackQuery):
     """Запрос подтверждения удаления"""
     booking_id = int(callback.data.split(":")[2])
 
-    # Получаем информацию о брони для отображения
     async with AsyncSessionLocal() as db:
         booking = await BookingService.get_booking(db, booking_id)
-        
+
     if not booking:
         await callback.answer("❌ Бронь не найдена", show_alert=True)
         return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="✅ Да, удалить навсегда",
-                    callback_data=f"booking:delete_confirm:{booking_id}",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="❌ Нет, вернуться", callback_data=f"booking:view:{booking_id}"
-                ),
-            ],
+            [InlineKeyboardButton(
+                text="✅ Да, удалить навсегда",
+                callback_data=f"booking:delete_confirm:{booking_id}",
+            )],
+            [InlineKeyboardButton(
+                text="❌ Нет, вернуться", callback_data=f"booking:view:{booking_id}"
+            )],
         ]
     )
 
@@ -217,8 +182,7 @@ async def request_delete_confirmation(callback: CallbackQuery):
         f"📅 Даты: {booking.check_in.strftime('%d.%m.%Y')} - {booking.check_out.strftime('%d.%m.%Y')}\n"
         f"🏠 Дом: {booking.house.name}\n\n"
         f"🗑️ <b>Это действие НЕОБРАТИМО!</b>\n"
-        f"Бронь будет полностью удалена из базы данных.\n\n"
-        f"Вы уверены?",
+        f"Бронь будет полностью удалена из базы данных.\n\nВы уверены?",
         reply_markup=keyboard,
         parse_mode="HTML",
     )
@@ -230,10 +194,7 @@ async def execute_delete(callback: CallbackQuery):
     """Выполнение удаления"""
     booking_id = int(callback.data.split(":")[2])
 
-    # Сразу даем обратную связь
-    await callback.message.edit_text(
-        "⏳ Удаляем бронь из базы данных...", reply_markup=None
-    )
+    await callback.message.edit_text("⏳ Удаляем бронь из базы данных...", reply_markup=None)
 
     async with AsyncSessionLocal() as db:
         success = await BookingService.delete_booking(db, booking_id)
@@ -243,28 +204,12 @@ async def execute_delete(callback: CallbackQuery):
             f"✅ <b>Бронь #{booking_id} удалена</b>\n\n"
             f"Запись полностью удалена из базы данных.\n"
             f"Google Sheets обновляется в фоновом режиме.",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 К списку броней", callback_data="bookings:menu"
-                        )
-                    ]
-                ]
-            ),
+            reply_markup=_back_to_bookings_kb(),
             parse_mode="HTML",
         )
     else:
         await callback.message.edit_text(
             f"❌ Ошибка при удалении брони #{booking_id}",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text="🔙 К списку броней", callback_data="bookings:menu"
-                        )
-                    ]
-                ]
-            ),
+            reply_markup=_back_to_bookings_kb(),
         )
     await callback.answer()

@@ -31,6 +31,7 @@ from app.telegram.menus.guest import (
 from app.core.messages import messages
 from app.core.config import settings
 from app.utils.phone import normalize_phone, phones_match
+from app.services.booking_service import BookingService
 from app.services.notification_service import send_safe
 
 router = Router()
@@ -1169,18 +1170,7 @@ async def _admin_approve_payment(
     *,
     full_payment: bool,
 ):
-    """Общая логика admin approve: задаток или полная оплата.
-
-    full_payment=False → advance += required_advance, status=CONFIRMED
-                        (если уже было > 0, не задваиваем — берём max).
-    full_payment=True  → advance = total, status=PAID.
-    """
-    from decimal import Decimal
-
-    from app.services.global_settings import (
-        compute_advance_amount,
-        get_guest_advance_percent,
-    )
+    from app.services.global_settings import get_guest_advance_percent
 
     if not is_admin(callback.from_user.id):
         await callback.answer("Недостаточно прав", show_alert=True)
@@ -1196,42 +1186,17 @@ async def _admin_approve_payment(
         await callback.answer("Bad callback", show_alert=True)
         return
 
-    label = ""
     async with AsyncSessionLocal() as session:
-        booking = await session.get(Booking, booking_id)
-        if not booking:
-            await callback.answer("Бронь не найдена", show_alert=True)
-            return
-
-        total = int(booking.total_price or 0)
-        paid = int(booking.advance_amount or 0)
         percent = await get_guest_advance_percent(session)
-        required_advance = compute_advance_amount(total, percent)
+        booking, label, became_paid = await BookingService.record_payment(
+            session, booking_id, full_payment=full_payment, advance_percent=percent
+        )
 
-        if full_payment:
-            booking.advance_amount = booking.total_price
-            booking.status = BookingStatus.PAID
-            label = "✅ Оплата подтверждена полностью. Спасибо!"
-        else:
-            # «Задаток» — поднимаем advance до required_advance, не выше total.
-            new_advance = max(paid, required_advance)
-            new_advance = min(new_advance, total)
-            booking.advance_amount = Decimal(str(new_advance))
-            if new_advance >= total > 0:
-                booking.status = BookingStatus.PAID
-                label = "✅ Оплата подтверждена. Спасибо!"
-            else:
-                booking.status = BookingStatus.CONFIRMED
-                remainder = total - new_advance
-                label = (
-                    f"✅ Задаток ({new_advance:,} ₽) подтверждён.\n"
-                    f"Остаток {remainder:,} ₽ — при заселении."
-                )
+    if booking is None:
+        await callback.answer("Бронь не найдена", show_alert=True)
+        return
 
-        await session.commit()
-
-    from app.models import BookingStatus as BS
-    if booking.status == BS.PAID:
+    if became_paid:
         from app.services.cleaner_notify import notify_cleaners_new_booking
         await notify_cleaners_new_booking(callback.bot, booking)
 
