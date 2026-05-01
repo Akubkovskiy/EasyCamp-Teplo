@@ -45,9 +45,10 @@ async def _get_profile(db_user_id: int):
 
 
 async def _get_balance(db_user_id: int) -> tuple[Decimal, int, Decimal, Decimal]:
-    """Возвращает (начислено, кол-во уборок, одобрено возмещений, последняя_выплата)."""
+    """Возвращает (начислено_к_выплате, кол-во_уборок, возмещения, выплачено_в_этом_месяце)."""
+    current_month = date.today().strftime("%Y-%m")
     async with AsyncSessionLocal() as s:
-        # Начисления CLEANING_FEE которые ещё не выплачены
+        # Начисления CLEANING_FEE ещё не выплаченные
         accrued = await s.scalar(
             select(func.sum(CleaningPaymentLedger.amount)).where(
                 CleaningPaymentLedger.cleaner_user_id == db_user_id,
@@ -72,15 +73,16 @@ async def _get_balance(db_user_id: int) -> tuple[Decimal, int, Decimal, Decimal]
             )
         ) or Decimal(0)
 
-        # Последняя выплата
-        last_paid = await s.scalar(
+        # Выплачено в текущем календарном месяце
+        paid_this_month = await s.scalar(
             select(func.sum(CleaningPaymentLedger.amount)).where(
                 CleaningPaymentLedger.cleaner_user_id == db_user_id,
                 CleaningPaymentLedger.status == PaymentStatus.PAID,
+                CleaningPaymentLedger.period_key == current_month,
             )
         ) or Decimal(0)
 
-    return Decimal(accrued), int(task_count), Decimal(reimbursements), Decimal(last_paid)
+    return Decimal(accrued), int(task_count), Decimal(reimbursements), Decimal(paid_this_month)
 
 
 def _payments_back_kb() -> InlineKeyboardMarkup:
@@ -105,13 +107,12 @@ async def cleaner_pay_screen(callback: CallbackQuery):
         await callback.answer("Пользователь не найден", show_alert=True)
         return
 
-    accrued, task_count, reimbursements, last_paid = await _get_balance(db_user_id)
+    accrued, task_count, reimbursements, paid_this_month = await _get_balance(db_user_id)
     total = accrued + reimbursements
     profile = await _get_profile(db_user_id)
 
-    month = date.today().strftime("%B %Y")
     reimbursement_line = f"\n🧾 Возмещения расходников: {reimbursements:.0f} ₽" if reimbursements else ""
-    last_paid_line = f"\n\n💳 Всего выплачено ранее: {last_paid:.0f} ₽" if last_paid else ""
+    paid_line = f"\n\n💳 Выплачено в этом месяце: {paid_this_month:.0f} ₽" if paid_this_month else ""
 
     profile_line = ""
     if profile and profile.sbp_phone:
@@ -125,7 +126,7 @@ async def cleaner_pay_screen(callback: CallbackQuery):
         f"💵 Начислено: <b>{accrued:.0f} ₽</b>"
         f"{reimbursement_line}\n"
         f"📦 <b>Итого к получению: {total:.0f} ₽</b>"
-        f"{last_paid_line}"
+        f"{paid_line}"
         f"{profile_line}"
     )
 
@@ -136,6 +137,7 @@ async def cleaner_pay_screen(callback: CallbackQuery):
             callback_data="cleaner:pay:request",
         )])
     rows.append([InlineKeyboardButton(text="📋 История уборок", callback_data="cleaner:pay:history")])
+    rows.append([InlineKeyboardButton(text="📊 История платежей", callback_data="cleaner:pay:paid_history")])
     rows.append([InlineKeyboardButton(text="⚙️ Мои реквизиты", callback_data="cleaner:pay:profile")])
     rows.append([InlineKeyboardButton(text="⬅️ Главное меню", callback_data="cleaner:menu")])
 
@@ -273,6 +275,81 @@ async def cleaner_pay_task_detail(callback: CallbackQuery):
         f"<b>Начисления:</b>{entries_text if entries_text else ' нет'}"
         + (f"\n<b>Чеки:</b>{claims_text}" if claims_text else "")
     )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=_payments_back_kb(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+# ---------------------------------------------------------------------------
+# Paid history (actual transfers)
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data == "cleaner:pay:paid_history")
+async def cleaner_pay_paid_history(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    from datetime import datetime, timezone
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleaningPaymentLedger).where(
+                CleaningPaymentLedger.cleaner_user_id == db_user_id,
+                CleaningPaymentLedger.status == PaymentStatus.PAID,
+                CleaningPaymentLedger.paid_at.isnot(None),
+            ).order_by(CleaningPaymentLedger.paid_at.desc()).limit(100)
+        )
+        paid_entries = list(q.scalars().all())
+
+    if not paid_entries:
+        await callback.message.edit_text(
+            "📊 <b>История платежей</b>\n\nОплаченных переводов пока нет.",
+            reply_markup=_payments_back_kb(),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    # Группируем по дате оплаты (день)
+    from collections import defaultdict
+    by_date: dict[str, list] = defaultdict(list)
+    for e in paid_entries:
+        day = e.paid_at.strftime("%Y-%m-%d")
+        by_date[day].append(e)
+
+    lines = ["📊 <b>История платежей</b>\n"]
+    total_all = Decimal(0)
+
+    for day_key in sorted(by_date.keys(), reverse=True):
+        entries_day = by_date[day_key]
+        day_total = sum(Decimal(e.amount) for e in entries_day)
+        total_all += day_total
+        d = datetime.strptime(day_key, "%Y-%m-%d")
+        month_name = MONTHS_RU[d.month]
+        lines.append(f"\n💸 <b>{d.day} {month_name} {d.year}</b> — {day_total:.0f} ₽")
+        for e in entries_day:
+            type_label = {
+                CleaningPaymentEntryType.CLEANING_FEE: "Уборка",
+                CleaningPaymentEntryType.ADJUSTMENT: "Доп. работа",
+                CleaningPaymentEntryType.SUPPLY_REIMBURSEMENT: "Расходники",
+            }.get(e.entry_type, e.entry_type.value)
+            task_ref = f" задача #{e.task_id}" if e.task_id else ""
+            lines.append(f"  · {type_label}{task_ref}: {float(e.amount):.0f} ₽")
+
+    lines.append(f"\n\n💰 <b>Всего выплачено: {total_all:.0f} ₽</b>")
+
+    text = "\n".join(lines)
+    if len(text) > 4000:
+        text = text[:3990] + "\n…"
 
     await callback.message.edit_text(
         text,
