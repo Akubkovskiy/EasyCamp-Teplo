@@ -454,17 +454,14 @@ class BookingService:
     @staticmethod
     async def _notify_cleaner_about_cancel(cleaner_tg_id: int, booking_id: int):
         """Best-effort уведомление уборщицы об отмене связанной задачи."""
-        try:
-            from app.telegram.bot import bot
+        from app.telegram.bot import bot
+        from app.services.notification_service import send_safe
 
-            await bot.send_message(
-                cleaner_tg_id,
-                f"ℹ️ Бронь #{booking_id} отменена — связанная уборка снята.",
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to notify cleaner {cleaner_tg_id} about cancel: {e}"
-            )
+        await send_safe(
+            bot, cleaner_tg_id,
+            f"ℹ️ Бронь #{booking_id} отменена — связанная уборка снята.",
+            context=f"booking_cancel cleaner={cleaner_tg_id}",
+        )
 
     @classmethod
     async def delete_booking(cls, db: AsyncSession, booking_id: int) -> bool:
