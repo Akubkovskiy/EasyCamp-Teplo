@@ -15,6 +15,7 @@ from app.models import Booking, BookingStatus, GlobalSetting
 from app.telegram.auth.admin import get_user_name, is_admin, resolve_user_db_id
 from app.services.checkout_ack import get_ack_status, set_ack_status
 from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
+from app.telegram.keyboards.cleaner import get_cleaner_keyboard
 
 # Статусы броней которые видит уборщица в расписании
 ACTIVE_BOOKING_STATUSES = [
@@ -82,26 +83,6 @@ async def get_nearest_checkouts() -> str:
 
     return "\n".join(lines)
 
-
-def get_cleaner_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Задачи сегодня", callback_data="cleaner:tasks:today")],
-            [
-                InlineKeyboardButton(text="📅 Брони на неделю", callback_data="cleaner:schedule:week_full"),
-                InlineKeyboardButton(text="📆 Брони на месяц", callback_data="cleaner:schedule:month"),
-            ],
-            [
-                InlineKeyboardButton(text="💰 Мои выплаты", callback_data="cleaner:pay"),
-                InlineKeyboardButton(text="🧾 Расходники", callback_data="cleaner:expense:new"),
-            ],
-            [
-                InlineKeyboardButton(text="⚙️ Настройки", callback_data="cleaner:settings"),
-                InlineKeyboardButton(text="❓ Помощь", callback_data="cleaner:help"),
-            ],
-            [InlineKeyboardButton(text="🔄 Обновить", callback_data="cleaner:menu")],
-        ]
-    )
 
 
 @router.callback_query(F.data == "cleaner:menu")
