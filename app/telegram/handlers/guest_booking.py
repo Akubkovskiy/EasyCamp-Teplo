@@ -579,6 +579,83 @@ async def guest_book_admin_reject(callback: CallbackQuery):
 
 
 # -------------------------------------------------
+# Site-lead confirm/reject (from website bookings)
+# -------------------------------------------------
+
+
+@router.callback_query(F.data.startswith("site_lead:confirm:"))
+async def site_lead_confirm(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+    parts = callback.data.split(":")
+    if len(parts) != 3:
+        return
+    try:
+        booking_id = int(parts[2])
+    except ValueError:
+        return
+
+    async with AsyncSessionLocal() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking:
+            await callback.answer("Бронь не найдена", show_alert=True)
+            return
+        if booking.status != BookingStatus.NEW:
+            await callback.answer(
+                f"Бронь уже в статусе {booking.status.value}", show_alert=True
+            )
+            return
+        booking.status = BookingStatus.CONFIRMED
+        booking.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    try:
+        await callback.message.answer(f"✅ Бронь #{booking_id} (сайт) подтверждена")
+    except Exception:
+        pass
+    await callback.answer("Подтверждено")
+
+
+@router.callback_query(F.data.startswith("site_lead:reject:"))
+async def site_lead_reject(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Недостаточно прав", show_alert=True)
+        return
+    parts = callback.data.split(":")
+    if len(parts) != 3:
+        return
+    try:
+        booking_id = int(parts[2])
+    except ValueError:
+        return
+
+    async with AsyncSessionLocal() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking:
+            await callback.answer("Бронь не найдена", show_alert=True)
+            return
+        ok = await BookingService.cancel_booking(session, booking_id)
+        if not ok:
+            await callback.answer("Не удалось отменить", show_alert=True)
+            return
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    try:
+        await callback.message.answer(f"❌ Бронь #{booking_id} (сайт) отклонена")
+    except Exception:
+        pass
+    await callback.answer("Отклонено")
+
+
+# -------------------------------------------------
 # G10.2 — Self-service cancel
 # -------------------------------------------------
 
