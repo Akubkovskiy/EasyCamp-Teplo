@@ -10,6 +10,7 @@ from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, CleaningTask, User, UserRole
 from app.services.cleaning_task_service import CleaningTaskService
 from app.telegram.bot import bot
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +96,13 @@ async def notify_cleaners_about_tasks() -> int:
                 lines.append(f"• #{t.id} домик={t.house_id} статус={t.status.value}")
                 kb_rows.append([InlineKeyboardButton(text=f"Открыть #{t.id}", callback_data=f"cleaner:task:view:{t.id}")])
 
-            await bot.send_message(
-                chat_id=cleaner.telegram_id,
-                text="\n".join(lines),
+            ok = await send_safe(
+                bot, cleaner.telegram_id, "\n".join(lines),
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows),
+                context=f"cleaning_tasks cleaner={cleaner.id}",
             )
-            sent += 1
+            if ok:
+                sent += 1
 
     return sent
 
