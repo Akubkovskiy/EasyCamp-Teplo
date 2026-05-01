@@ -147,6 +147,13 @@ async def cleaner_pay_screen(callback: CallbackQuery):
 # Task history
 # ---------------------------------------------------------------------------
 
+MONTHS_RU = {
+    1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
+    5: "Май", 6: "Июнь", 7: "Июль", 8: "Август",
+    9: "Сентябрь", 10: "Октябрь", 11: "Ноябрь", 12: "Декабрь",
+}
+
+
 @router.callback_query(F.data == "cleaner:pay:history")
 async def cleaner_pay_history(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
@@ -163,17 +170,16 @@ async def cleaner_pay_history(callback: CallbackQuery):
             select(CleaningTask).where(
                 CleaningTask.assigned_to_user_id == db_user_id,
                 CleaningTask.status == CleaningTaskStatus.DONE,
-            ).order_by(CleaningTask.scheduled_date.desc()).limit(20)
+            ).order_by(CleaningTask.scheduled_date.desc()).limit(60)
         )
         tasks = list(tasks_q.scalars().all())
 
-        # Суммы из ledger по каждой задаче
+        # Все начисления по задаче (fee + adjustment)
         amounts: dict[int, Decimal] = {}
         for t in tasks:
             amt = await s.scalar(
                 select(func.sum(CleaningPaymentLedger.amount)).where(
                     CleaningPaymentLedger.task_id == t.id,
-                    CleaningPaymentLedger.entry_type == CleaningPaymentEntryType.CLEANING_FEE,
                 )
             )
             amounts[t.id] = Decimal(amt or 0)
@@ -187,23 +193,40 @@ async def cleaner_pay_history(callback: CallbackQuery):
         await callback.answer()
         return
 
+    # Группируем по месяцу
+    from collections import defaultdict
+    by_month: dict[str, list] = defaultdict(list)
+    for t in tasks:
+        key = t.scheduled_date.strftime("%Y-%m")
+        by_month[key].append(t)
+
     lines = ["📋 <b>История уборок</b>\n"]
     rows = []
-    for t in tasks:
-        amt = amounts[t.id]
-        amt_str = f" — {amt:.0f} ₽" if amt else ""
-        lines.append(f"✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')} | дом {t.house_id}{amt_str}")
-        rows.append([InlineKeyboardButton(
-            text=f"✅ #{t.id} {t.scheduled_date.strftime('%d.%m')}{amt_str}",
-            callback_data=f"cleaner:pay:task:{t.id}",
-        )])
+    for month_key in sorted(by_month.keys(), reverse=True):
+        month_tasks = by_month[month_key]
+        year, mon = int(month_key[:4]), int(month_key[5:])
+        month_total = sum(amounts[t.id] for t in month_tasks)
+        lines.append(f"\n📅 <b>{MONTHS_RU[mon]} {year}</b> — {len(month_tasks)} уб. / {month_total:.0f} ₽")
+        for t in month_tasks:
+            amt = amounts[t.id]
+            amt_str = f" {amt:.0f} ₽" if amt else ""
+            lines.append(f"  ✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')} | д.{t.house_id}{amt_str}")
+            rows.append([InlineKeyboardButton(
+                text=f"✅ #{t.id} {t.scheduled_date.strftime('%d.%m')} д.{t.house_id}{amt_str}",
+                callback_data=f"cleaner:pay:task:{t.id}",
+            )])
 
     rows.append([InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
 
+    # Обрезаем текст если слишком длинный (Telegram limit 4096)
+    text = "\n".join(lines)
+    if len(text) > 4000:
+        text = text[:3990] + "\n…"
+
     await callback.message.edit_text(
-        "\n".join(lines),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows[:30]),  # макс 30 кнопок
         parse_mode="HTML",
     )
     await callback.answer()
