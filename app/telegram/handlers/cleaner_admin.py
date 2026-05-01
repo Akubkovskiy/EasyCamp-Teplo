@@ -610,6 +610,10 @@ async def admin_cleaner_task_history(callback: CallbackQuery):
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🔍 Детали уборки",
+                callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:ask_detail",
+            )],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)],
             [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
         ]),
