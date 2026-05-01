@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class HouseBase(BaseModel):
@@ -44,6 +44,13 @@ class HousePriceBase(BaseModel):
     price_per_night: int
     date_from: date
     date_to: date
+
+    @field_validator("price_per_night")
+    @classmethod
+    def validate_price(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("price_per_night cannot be negative")
+        return v
 
 
 class HousePriceCreate(HousePriceBase):
