@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.exceptions import TelegramBadRequest
@@ -653,10 +653,15 @@ async def my_booking(callback: CallbackQuery):
         # Снова нечеткий поиск по телефону, или точный если мы уверены
         clean_user_phone = user.phone
 
+        today = date.today()
         query = (
             select(Booking)
             .options(joinedload(Booking.house))
-            .where(Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAID]))
+            .where(
+                Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAID]),
+                Booking.check_out >= today,
+            )
+            .order_by(Booking.check_in)
         )
         result = await session.execute(query)
         bookings = result.scalars().all()
