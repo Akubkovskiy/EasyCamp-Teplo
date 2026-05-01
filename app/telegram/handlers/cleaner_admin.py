@@ -8,10 +8,14 @@ from sqlalchemy import and_, func, select
 from app.database import AsyncSessionLocal
 from app.models import (
     CleaningPaymentLedger,
+    CleaningPaymentEntryType,
+    CleaningRate,
     CleaningTask,
     CleaningTaskCheck,
     CleaningTaskMedia,
     CleaningTaskStatus,
+    GlobalSetting,
+    House,
     PaymentStatus,
     SupplyExpenseClaim,
     SupplyClaimStatus,
@@ -19,6 +23,32 @@ from app.models import (
     UserRole,
 )
 from app.telegram.auth.admin import is_admin
+
+# admin telegram_id → house_id (ждём новый тариф)
+_awaiting_rate_input: dict[int, int] = {}
+# admin telegram_id → "add" | "edit:{idx}" (ждём строку доп. услуги)
+_awaiting_extra_input: dict[int, str] = {}
+
+EXTRAS_KEY = "cleaning_extras"  # GlobalSetting key
+
+
+def _parse_extras(value: str | None) -> list[tuple[str, int]]:
+    """Парсит 'Название|300\\nДругая|500' → [(label, amount), ...]"""
+    if not value:
+        return []
+    result = []
+    for line in value.strip().splitlines():
+        if "|" in line:
+            parts = line.split("|", 1)
+            try:
+                result.append((parts[0].strip(), int(parts[1].strip())))
+            except ValueError:
+                pass
+    return result
+
+
+def _serialize_extras(extras: list[tuple[str, int]]) -> str:
+    return "\n".join(f"{label}|{amount}" for label, amount in extras)
 
 router = Router()
 
@@ -294,6 +324,7 @@ async def admin_cleaning_overview(callback: CallbackQuery):
             callback_data=f"admin:cleaning:cleaner:{c.id}",
         )])
 
+    rows.append([InlineKeyboardButton(text="⚙️ Настройки уборки", callback_data="admin:cleaning:settings")])
     rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
     await callback.message.edit_text(
         "\n".join(lines),
@@ -468,5 +499,270 @@ async def admin_cleaning_task_photos(callback: CallbackQuery):
         f"Показано {len(photos)} фото для задачи #{task_id}",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="⬅️ К задаче", callback_data=f"admin:cleaning:task:{task_id}")],
+        ]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Admin Cleaning Settings
+# ---------------------------------------------------------------------------
+
+async def _render_cleaning_settings(callback: CallbackQuery):
+    async with AsyncSessionLocal() as s:
+        houses_q = await s.execute(select(House).where(House.id != 4).order_by(House.id))
+        houses = list(houses_q.scalars().all())
+
+        rates_q = await s.execute(
+            select(CleaningRate).where(CleaningRate.is_active.is_(True))
+        )
+        rates = {r.house_id: r for r in rates_q.scalars().all()}
+
+        extras_setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(extras_setting.value if extras_setting else None)
+
+    lines = ["⚙️ <b>Настройки уборки</b>\n", "<b>Тарифы по домикам:</b>"]
+    for h in houses:
+        rate = rates.get(h.id)
+        amt = f"{int(rate.base_amount)} ₽" if rate else "не задан"
+        lines.append(f"🏠 {h.name}: <b>{amt}</b>")
+
+    lines.append("\n<b>Стандартные доп. услуги:</b>")
+    if extras:
+        for i, (label, amount) in enumerate(extras):
+            lines.append(f"• {label}: <b>{amount} ₽</b>")
+    else:
+        lines.append("— пусто —")
+
+    rows = []
+    for h in houses:
+        rate = rates.get(h.id)
+        amt = f"{int(rate.base_amount)} ₽" if rate else "не задан"
+        rows.append([InlineKeyboardButton(
+            text=f"✏️ {h.name}: {amt}",
+            callback_data=f"admin:cleaning:settings:rate:{h.id}",
+        )])
+
+    rows.append([InlineKeyboardButton(text="✏️ Доп. услуги", callback_data="admin:cleaning:settings:extras")])
+    rows.append([InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")])
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "admin:cleaning:settings")
+async def admin_cleaning_settings(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    await _render_cleaning_settings(callback)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:cleaning:settings:rate:"))
+async def admin_cleaning_settings_rate_ask(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    house_id = int(callback.data.split(":")[4])
+    _awaiting_rate_input[callback.from_user.id] = house_id
+
+    async with AsyncSessionLocal() as s:
+        house = await s.get(House, house_id)
+        house_name = house.name if house else f"Дом {house_id}"
+
+    await callback.message.edit_text(
+        f"✏️ Введите новый тариф для <b>{house_name}</b> (₽/уборка, только число):",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:cleaning:settings")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_rate_input and m.text)
+async def admin_cleaning_settings_rate_save(message: Message):
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+
+    tg_id = message.from_user.id
+    house_id = _awaiting_rate_input.pop(tg_id, None)
+    if house_id is None:
+        return
+
+    try:
+        amount = int(message.text.strip())
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("❌ Введите целое положительное число.")
+        _awaiting_rate_input[tg_id] = house_id
+        return
+
+    from decimal import Decimal
+    async with AsyncSessionLocal() as s:
+        # Деактивируем старый тариф
+        old_q = await s.execute(
+            select(CleaningRate).where(
+                CleaningRate.house_id == house_id,
+                CleaningRate.is_active.is_(True),
+            )
+        )
+        for old in old_q.scalars().all():
+            old.is_active = False
+            old.active_to = date.today()
+
+        s.add(CleaningRate(
+            house_id=house_id,
+            base_amount=Decimal(amount),
+            active_from=date.today(),
+            is_active=True,
+        ))
+        house = await s.get(House, house_id)
+        house_name = house.name if house else f"Дом {house_id}"
+        await s.commit()
+
+    await message.answer(
+        f"✅ Тариф для <b>{house_name}</b> установлен: <b>{amount} ₽</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Настройки", callback_data="admin:cleaning:settings")],
+        ]),
+    )
+
+
+@router.callback_query(F.data == "admin:cleaning:settings:extras")
+async def admin_cleaning_settings_extras(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(setting.value if setting else None)
+
+    rows = []
+    for i, (label, amount) in enumerate(extras):
+        rows.append([
+            InlineKeyboardButton(text=f"✏️ {label} ({amount} ₽)", callback_data=f"admin:cleaning:settings:extra:edit:{i}"),
+            InlineKeyboardButton(text="🗑", callback_data=f"admin:cleaning:settings:extra:del:{i}"),
+        ])
+    rows.append([InlineKeyboardButton(text="➕ Добавить услугу", callback_data="admin:cleaning:settings:extra:add")])
+    rows.append([InlineKeyboardButton(text="⬅️ Настройки", callback_data="admin:cleaning:settings")])
+
+    text = "📋 <b>Стандартные доп. услуги</b>\n\nФормат при добавлении: <code>Название | 300</code>"
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin:cleaning:settings:extra:add")
+async def admin_cleaning_settings_extra_add_ask(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    _awaiting_extra_input[callback.from_user.id] = "add"
+    await callback.message.edit_text(
+        "➕ Введите услугу в формате:\n<code>Название | сумма</code>\n\nПример: <code>Отвезти белье в прачечную | 300</code>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:cleaning:settings:extras")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:cleaning:settings:extra:edit:"))
+async def admin_cleaning_settings_extra_edit_ask(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    idx = callback.data.split(":")[-1]
+    _awaiting_extra_input[callback.from_user.id] = f"edit:{idx}"
+    await callback.message.edit_text(
+        "✏️ Введите новое значение:\n<code>Название | сумма</code>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:cleaning:settings:extras")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:cleaning:settings:extra:del:"))
+async def admin_cleaning_settings_extra_delete(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    idx = int(callback.data.split(":")[-1])
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(setting.value if setting else None)
+        if 0 <= idx < len(extras):
+            extras.pop(idx)
+        if setting:
+            setting.value = _serialize_extras(extras)
+        else:
+            s.add(GlobalSetting(key=EXTRAS_KEY, value=_serialize_extras(extras)))
+        await s.commit()
+
+    await callback.answer("Удалено")
+    await _render_cleaning_settings(callback)
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_extra_input and m.text)
+async def admin_cleaning_settings_extra_save(message: Message):
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+
+    tg_id = message.from_user.id
+    action = _awaiting_extra_input.pop(tg_id, None)
+    if not action:
+        return
+
+    raw = message.text.strip()
+    if "|" not in raw:
+        await message.answer("❌ Нужен символ |. Пример: <code>Отвезти белье | 300</code>", parse_mode="HTML")
+        _awaiting_extra_input[tg_id] = action
+        return
+
+    parts = raw.split("|", 1)
+    try:
+        label = parts[0].strip()
+        amount = int(parts[1].strip())
+        if amount <= 0 or not label:
+            raise ValueError
+    except ValueError:
+        await message.answer("❌ Неверный формат. Пример: <code>Отвезти белье | 300</code>", parse_mode="HTML")
+        _awaiting_extra_input[tg_id] = action
+        return
+
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(setting.value if setting else None)
+
+        if action == "add":
+            extras.append((label, amount))
+        elif action.startswith("edit:"):
+            idx = int(action.split(":", 1)[1])
+            if 0 <= idx < len(extras):
+                extras[idx] = (label, amount)
+
+        new_val = _serialize_extras(extras)
+        if setting:
+            setting.value = new_val
+        else:
+            s.add(GlobalSetting(key=EXTRAS_KEY, value=new_val, description="Стандартные доп. услуги уборщицы"))
+        await s.commit()
+
+    await message.answer(
+        f"✅ Сохранено: <b>{label}</b> — {amount} ₽",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Доп. услуги", callback_data="admin:cleaning:settings:extras")],
         ]),
     )

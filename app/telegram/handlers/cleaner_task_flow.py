@@ -451,10 +451,109 @@ async def cleaner_task_done(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("cleaner:task:extra:"))
 async def cleaner_task_extra_ask(callback: CallbackQuery):
     task_id = int(callback.data.split(":")[3])
+
+    # Загружаем стандартные доп. услуги из настроек
+    from app.models import GlobalSetting
+    from app.telegram.handlers.cleaner_admin import _parse_extras, EXTRAS_KEY
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(setting.value if setting else None)
+
+    rows = []
+    for i, (label, amount) in enumerate(extras):
+        rows.append([InlineKeyboardButton(
+            text=f"{label} (+{amount} ₽)",
+            callback_data=f"cleaner:task:quickpay:{task_id}:{i}",
+        )])
+    rows.append([InlineKeyboardButton(text="✏️ Описать своё", callback_data=f"cleaner:task:extracustom:{task_id}")])
+    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=f"cleaner:task:view:{task_id}")])
+
+    await callback.message.edit_text(
+        f"💰 <b>Доп. работа — задача #{task_id}</b>\n\nВыберите тип или опишите своё:",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:task:quickpay:"))
+async def cleaner_task_quickpay(callback: CallbackQuery):
+    """Быстрое начисление стандартной доп. услуги — без одобрения админа."""
+    parts = callback.data.split(":")
+    task_id = int(parts[3])
+    extra_idx = int(parts[4])
+
+    from datetime import datetime, timezone
+    from decimal import Decimal
+    from app.models import CleaningPaymentLedger, CleaningPaymentEntryType, PaymentStatus, GlobalSetting, UserRole
+    from app.telegram.handlers.cleaner_admin import _parse_extras, EXTRAS_KEY
+    from app.core.config import settings
+    from app.telegram.auth.admin import get_all_users
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Ошибка", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, EXTRAS_KEY)
+        extras = _parse_extras(setting.value if setting else None)
+
+    if extra_idx >= len(extras):
+        await callback.answer("Услуга не найдена", show_alert=True)
+        return
+
+    label, amount = extras[extra_idx]
+
+    async with AsyncSessionLocal() as s:
+        period_key = __import__("datetime").date.today().strftime("%Y-%m")
+        s.add(CleaningPaymentLedger(
+            task_id=task_id,
+            cleaner_user_id=db_user_id,
+            entry_type=CleaningPaymentEntryType.ADJUSTMENT,
+            amount=Decimal(amount),
+            period_key=period_key,
+            status=PaymentStatus.ACCRUED,
+            comment=f"{label} — задача #{task_id}",
+            created_at=datetime.now(timezone.utc),
+        ))
+        await s.commit()
+
+    # Уведомляем администраторов
+    users = await get_all_users()
+    admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
+    admin_ids.add(settings.telegram_chat_id)
+    name = callback.from_user.first_name or "Уборщица"
+    for aid in admin_ids:
+        try:
+            await callback.bot.send_message(
+                aid,
+                f"💰 <b>Доп. оплата начислена</b>\n\n"
+                f"👤 {name} | 🧹 Задача #{task_id}\n"
+                f"📝 {label}: <b>{amount} ₽</b>",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
+
+    await callback.message.edit_text(
+        f"✅ <b>Начислено: {label} — {amount} ₽</b>\n\nОтражено в выплатах.",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 К задаче", callback_data=f"cleaner:task:view:{task_id}")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:task:extracustom:"))
+async def cleaner_task_extracustom_ask(callback: CallbackQuery):
+    task_id = int(callback.data.split(":")[3])
     if callback.from_user:
         _awaiting_extra_desc[callback.from_user.id] = task_id
     await callback.message.edit_text(
-        f"💰 <b>Доп. работа по задаче #{task_id}</b>\n\n"
+        f"✏️ <b>Доп. работа по задаче #{task_id}</b>\n\n"
         "Напишите что именно было сделано дополнительно (кратко, 1-2 предложения).\n"
         "Администратор рассмотрит и назначит сумму.",
         parse_mode="HTML",
