@@ -28,6 +28,21 @@ async def start_handler(message: Message):
         message.from_user.username,
     )
 
+    # Чистим фотки если остались от предыдущей сессии
+    tg_id = message.from_user.id
+    from app.telegram.handlers.cleaner_admin import _cleanup_photos, _admin_photo_msgs
+    from app.telegram.handlers.cleaner_payments import _cleaner_photo_msgs
+    for msg_id in _admin_photo_msgs.pop(tg_id, []):
+        try:
+            await message.bot.delete_message(message.chat.id, msg_id)
+        except Exception:
+            pass
+    for msg_id in _cleaner_photo_msgs.pop(tg_id, []):
+        try:
+            await message.bot.delete_message(message.chat.id, msg_id)
+        except Exception:
+            pass
+
     # 1. Сначала проверяем админа
     if is_admin(message.from_user.id):
         await message.answer(
