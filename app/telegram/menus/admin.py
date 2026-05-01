@@ -31,6 +31,12 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="🧹 Уборки",
+                    callback_data="admin:cleaning",
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="⚙️ Настройки",
                     callback_data="admin:settings",
                 )

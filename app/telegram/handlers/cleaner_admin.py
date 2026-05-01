@@ -1,14 +1,16 @@
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone, timedelta
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message
-from sqlalchemy import and_, select
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from sqlalchemy import and_, func, select
 
 from app.database import AsyncSessionLocal
 from app.models import (
     CleaningPaymentLedger,
     CleaningTask,
+    CleaningTaskCheck,
+    CleaningTaskMedia,
     CleaningTaskStatus,
     PaymentStatus,
     SupplyExpenseClaim,
@@ -200,3 +202,271 @@ async def cleaner_payout_mark_paid(message: Message):
         await session.commit()
 
     await message.answer(f"✅ Отмечено как выплачено: period={period}, cleaner={cleaner_id}, записей={len(rows)}")
+
+
+# ---------------------------------------------------------------------------
+# Admin Cleaning Panel — inline buttons
+# ---------------------------------------------------------------------------
+
+STATUS_ICON = {
+    CleaningTaskStatus.PENDING: "⏳",
+    CleaningTaskStatus.ACCEPTED: "👍",
+    CleaningTaskStatus.IN_PROGRESS: "🚿",
+    CleaningTaskStatus.ESCALATED: "🚨",
+    CleaningTaskStatus.DONE: "✅",
+    CleaningTaskStatus.DECLINED: "❌",
+    CleaningTaskStatus.CANCELLED: "🚫",
+}
+
+
+def _back_to_cleaning_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")],
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
+    ])
+
+
+def _back_to_cleaner_kb(cleaner_user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ К уборщику", callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}")],
+        [InlineKeyboardButton(text="🧹 Уборки", callback_data="admin:cleaning")],
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
+    ])
+
+
+@router.callback_query(F.data == "admin:cleaning")
+async def admin_cleaning_overview(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    since = date.today().replace(day=1)  # начало месяца
+
+    async with AsyncSessionLocal() as session:
+        cleaners_q = await session.execute(
+            select(User).where(User.role == UserRole.CLEANER)
+        )
+        cleaners = list(cleaners_q.scalars().all())
+
+        stats = {}
+        for c in cleaners:
+            total = await session.scalar(
+                select(func.count()).where(
+                    CleaningTask.assigned_to_user_id == c.id,
+                    CleaningTask.scheduled_date >= since,
+                )
+            )
+            done = await session.scalar(
+                select(func.count()).where(
+                    CleaningTask.assigned_to_user_id == c.id,
+                    CleaningTask.scheduled_date >= since,
+                    CleaningTask.status == CleaningTaskStatus.DONE,
+                )
+            )
+            claims = await session.scalar(
+                select(func.count()).where(
+                    SupplyExpenseClaim.cleaner_user_id == c.id,
+                    SupplyExpenseClaim.status == SupplyClaimStatus.SUBMITTED,
+                )
+            )
+            stats[c.id] = (total or 0, done or 0, claims or 0)
+
+    if not cleaners:
+        await callback.message.edit_text(
+            "🧹 <b>Уборки</b>\n\nУборщиков нет.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")]
+            ]),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    month_name = since.strftime("%B %Y")
+    lines = [f"🧹 <b>Уборки — {month_name}</b>\n"]
+    rows = []
+    for c in cleaners:
+        total, done, claims = stats[c.id]
+        claim_mark = f" | 🧾 {claims}" if claims else ""
+        lines.append(f"👤 <b>{c.name}</b>: {done}/{total} уб.{claim_mark}")
+        rows.append([InlineKeyboardButton(
+            text=f"👤 {c.name} ({done}/{total})",
+            callback_data=f"admin:cleaning:cleaner:{c.id}",
+        )])
+
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:cleaning:cleaner:"))
+async def admin_cleaning_cleaner(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    cleaner_user_id = int(callback.data.split(":")[3])
+    since = date.today() - timedelta(days=30)
+
+    async with AsyncSessionLocal() as session:
+        cleaner = await session.get(User, cleaner_user_id)
+        if not cleaner:
+            await callback.answer("Уборщик не найден", show_alert=True)
+            return
+
+        tasks_q = await session.execute(
+            select(CleaningTask).where(
+                CleaningTask.assigned_to_user_id == cleaner_user_id,
+                CleaningTask.scheduled_date >= since,
+            ).order_by(CleaningTask.scheduled_date.desc())
+        )
+        tasks = list(tasks_q.scalars().all())
+
+        claims_q = await session.execute(
+            select(SupplyExpenseClaim).where(
+                SupplyExpenseClaim.cleaner_user_id == cleaner_user_id,
+                SupplyExpenseClaim.status == SupplyClaimStatus.SUBMITTED,
+            )
+        )
+        pending_claims = list(claims_q.scalars().all())
+
+    lines = [f"👤 <b>{cleaner.name}</b> — задачи за 30 дней\n"]
+    for t in tasks:
+        icon = STATUS_ICON.get(t.status, "•")
+        lines.append(f"{icon} #{t.id} | {t.scheduled_date.strftime('%d.%m')} | дом {t.house_id}")
+
+    if pending_claims:
+        lines.append(f"\n🧾 <b>Чеки на согласовании:</b> {len(pending_claims)} шт.")
+
+    rows = [
+        [InlineKeyboardButton(
+            text=f"{STATUS_ICON.get(t.status,'•')} #{t.id} {t.scheduled_date.strftime('%d.%m')}",
+            callback_data=f"admin:cleaning:task:{t.id}",
+        )]
+        for t in tasks[:15]
+    ]
+    rows.append([InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")])
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:cleaning:task:") & ~F.data.contains(":photos"))
+async def admin_cleaning_task(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    task_id = int(callback.data.split(":")[3])
+
+    async with AsyncSessionLocal() as session:
+        task = await session.get(CleaningTask, task_id)
+        if not task:
+            await callback.answer("Задача не найдена", show_alert=True)
+            return
+
+        checks_q = await session.execute(
+            select(CleaningTaskCheck).where(CleaningTaskCheck.task_id == task_id)
+        )
+        checks = list(checks_q.scalars().all())
+
+        photo_count = await session.scalar(
+            select(func.count()).where(CleaningTaskMedia.task_id == task_id)
+        )
+
+        claims_q = await session.execute(
+            select(SupplyExpenseClaim).where(SupplyExpenseClaim.task_id == task_id)
+        )
+        claims = list(claims_q.scalars().all())
+
+        cleaner = await session.get(User, task.assigned_to_user_id) if task.assigned_to_user_id else None
+
+    checked = sum(1 for c in checks if c.is_checked)
+    duration = ""
+    if task.started_at and task.completed_at:
+        mins = int((task.completed_at - task.started_at).total_seconds() / 60)
+        duration = f"\n⏱ Длительность: {mins} мин."
+
+    claims_line = ""
+    if claims:
+        total_amount = sum(float(c.amount_total) for c in claims)
+        claims_line = f"\n🧾 Чеки: {len(claims)} шт. на {total_amount:.0f} ₽"
+
+    text = (
+        f"🧹 <b>Задача #{task.id}</b>\n"
+        f"📅 {task.scheduled_date.strftime('%d.%m.%Y')} | 🏠 Дом {task.house_id}\n"
+        f"📌 Статус: <b>{STATUS_ICON.get(task.status,'')} {task.status.value}</b>\n"
+        f"👤 Уборщик: {cleaner.name if cleaner else '—'}"
+        f"{duration}\n"
+        f"☑️ Чеклист: {checked}/{len(checks)} пунктов"
+        f"\n📸 Фото: {photo_count or 0}"
+        f"{claims_line}"
+    )
+
+    rows = []
+    if photo_count:
+        rows.append([InlineKeyboardButton(
+            text=f"📸 Посмотреть фото ({photo_count})",
+            callback_data=f"admin:cleaning:task:{task_id}:photos",
+        )])
+    if claims:
+        for c in claims[:3]:
+            rows.append([InlineKeyboardButton(
+                text=f"🧾 Чек #{c.id} — {float(c.amount_total):.0f} ₽ [{c.status.value}]",
+                callback_data=f"admin:cleaning:claim:{c.id}",
+            )])
+    back_cleaner_id = task.assigned_to_user_id or 0
+    rows.append([InlineKeyboardButton(text="⬅️ К уборщику", callback_data=f"admin:cleaning:cleaner:{back_cleaner_id}")])
+    rows.append([InlineKeyboardButton(text="🧹 Уборки", callback_data="admin:cleaning")])
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:task:\d+:photos$"))
+async def admin_cleaning_task_photos(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    task_id = int(callback.data.split(":")[3])
+
+    async with AsyncSessionLocal() as session:
+        q = await session.execute(
+            select(CleaningTaskMedia).where(
+                CleaningTaskMedia.task_id == task_id,
+                CleaningTaskMedia.media_type == "photo",
+            ).order_by(CleaningTaskMedia.created_at)
+        )
+        photos = list(q.scalars().all())
+
+    if not photos:
+        await callback.answer("Фото нет", show_alert=True)
+        return
+
+    await callback.answer()
+    for i, p in enumerate(photos, 1):
+        try:
+            await callback.message.answer_photo(
+                p.telegram_file_id,
+                caption=f"📸 Фото {i}/{len(photos)} — задача #{task_id}",
+            )
+        except Exception:
+            pass
+
+    await callback.message.answer(
+        f"Показано {len(photos)} фото для задачи #{task_id}",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ К задаче", callback_data=f"admin:cleaning:task:{task_id}")],
+        ]),
+    )
