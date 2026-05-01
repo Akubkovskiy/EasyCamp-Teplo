@@ -40,18 +40,15 @@ class AvitoAPIService:
                 timeout=10,
             )
 
-            # Логируем статус и тело ответа
-            logger.info(f"Response status: {response.status_code}")
-            logger.info(f"Response body: {response.text}")
-
+            logger.info(f"Token response status: {response.status_code}")
             response.raise_for_status()
 
             data = response.json()
 
-            # Проверяем наличие access_token
             if "access_token" not in data:
-                logger.error(f"No access_token in response: {data}")
-                raise ValueError(f"Avito API returned unexpected response: {data}")
+                # Log only keys, never values — response may contain the token
+                logger.error(f"No access_token in response (keys: {list(data.keys())})")
+                raise ValueError("Avito API returned unexpected response (no access_token)")
 
             self.access_token = data["access_token"]
 
@@ -63,10 +60,7 @@ class AvitoAPIService:
             return self.access_token
 
         except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP error: {e}")
-            logger.error(
-                f"Response: {e.response.text if e.response else 'No response'}"
-            )
+            logger.error(f"HTTP error getting token: status={e.response.status_code if e.response else 'N/A'}")
             raise
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get access token: {e}")
