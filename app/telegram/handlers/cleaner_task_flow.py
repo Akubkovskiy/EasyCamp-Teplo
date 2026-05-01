@@ -128,9 +128,8 @@ async def cleaner_task_view(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("cleaner:task:checks:"))
-async def cleaner_task_checks(callback: CallbackQuery):
-    task_id = int(callback.data.split(":")[3])
+async def _render_task_checks(callback: CallbackQuery, task_id: int):
+    """Отрисовывает чеклист задачи. Принимает task_id явно."""
     async with AsyncSessionLocal() as session:
         task = await session.get(CleaningTask, task_id)
         if not task:
@@ -154,6 +153,12 @@ async def cleaner_task_checks(callback: CallbackQuery):
         ])
     rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=f"cleaner:task:view:{task_id}")])
     await callback.message.edit_text("\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("cleaner:task:checks:"))
+async def cleaner_task_checks(callback: CallbackQuery):
+    task_id = int(callback.data.split(":")[3])
+    await _render_task_checks(callback, task_id)
     await callback.answer()
 
 
@@ -217,8 +222,7 @@ async def cleaner_toggle_check(callback: CallbackQuery):
         except Exception:
             pass
 
-    callback.data = f"cleaner:task:checks:{task_id}"
-    await cleaner_task_checks(callback)
+    await _render_task_checks(callback, task_id)
 
 
 async def _notify_admins_supply_alert(bot, *, task_id: int, house_id: int | None):
