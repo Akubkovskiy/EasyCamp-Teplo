@@ -1,3 +1,4 @@
+from typing import Optional
 from app.core.config import settings
 
 class Messages:
@@ -9,10 +10,11 @@ class Messages:
     @property
     def GUEST_WELCOME(self) -> str:
         return (
-            f"<b>Добро пожаловать в «{settings.project_name}»</b>\n\n"
-            "Это база отдыха рядом с Архызом — в спокойной локации, "
-            "немного в стороне от посёлка. Здесь можно посмотреть информацию "
-            "о домиках, условиях проживания, контактах и отправить заявку на бронирование."
+            f"🏕 <b>Добро пожаловать в «{settings.project_name}»</b>\n\n"
+            "Глэмпинг в хвойном лесу рядом с Архызом — тишина, горный воздух "
+            "и уют в деревянных домиках. Здесь нет шума посёлка, но до трасс "
+            "и водопадов — рукой подать.\n\n"
+            "Выберите домик, проверьте даты и забронируйте прямо здесь."
         )
 
     @property
@@ -86,16 +88,27 @@ class Messages:
 
     @property
     def CONTACTS_INFO(self) -> str:
-        return (
-            f"📞 <b>Контакты администрации</b>\n\n"
-            f"🏕 <b>{settings.project_name} · {settings.project_location}</b>\n\n"
-            f"📱 Телефон: {settings.contact_phone}\n"
-            f"💬 Telegram: {settings.contact_admin_username}\n"
-            f"📧 Email: {settings.contact_email}\n\n"
-            f"🕐 Режим работы: {settings.contact_work_hours}\n"
-            f"📍 Адрес: {settings.project_address}\n\n"
-            "Мы всегда рады помочь! 🤗"
-        )
+        lines = [
+            f"📞 <b>Контакты</b>\n",
+            f"🏕 <b>{settings.project_name} · {settings.project_location}</b>",
+            f"📍 {settings.project_address}",
+            f"",
+            f"📱 {settings.contact_phone}",
+            f"💬 Telegram: {settings.contact_admin_username}",
+        ]
+        if settings.contact_website:
+            lines.append(f"🌐 {settings.contact_website}")
+        lines.append(f"")
+        lines.append(f"🕐 {settings.contact_work_hours}")
+        return "\n".join(lines)
+
+    @property
+    def YANDEX_REVIEWS_URL(self) -> Optional[str]:
+        return settings.yandex_reviews_url or None
+
+    @property
+    def SITE_URL(self) -> Optional[str]:
+        return settings.contact_website or None
 
     @property
     def ADMIN_PANEL_TITLE(self) -> str:

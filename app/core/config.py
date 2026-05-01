@@ -67,7 +67,8 @@ class Settings(BaseModel):
     contact_admin_username: str = "@sergey_teplo"
     contact_email: str = "info@easycamp.ru"
     contact_work_hours: str = "Круглосуточно"
-    contact_website: str = ""
+    contact_website: str = "https://teplo-v-arkhyze.ru"
+    yandex_reviews_url: str = ""  # Ссылка на отзывы в Яндекс.Картах (задать в .env)
 
     # Payment Info
     payment_receiver: str = "Сергей Иванович П."
@@ -157,7 +158,8 @@ settings = Settings(
     contact_admin_username=os.environ.get("CONTACT_ADMIN_USERNAME", "@sergey_teplo"),
     contact_email=os.environ.get("CONTACT_EMAIL", "info@easycamp.ru"),
     contact_work_hours=os.environ.get("CONTACT_WORK_HOURS", "Круглосуточно"),
-    contact_website=os.environ.get("CONTACT_WEBSITE", ""),
+    contact_website=os.environ.get("CONTACT_WEBSITE", "https://teplo-v-arkhyze.ru"),
+    yandex_reviews_url=os.environ.get("YANDEX_REVIEWS_URL", ""),
     payment_receiver=os.environ.get("PAYMENT_RECEIVER", "Сергей Иванович П."),
     payment_methods=os.environ.get("PAYMENT_METHODS", "Сбер/Тинькофф"),
     enable_auto_discounts=os.environ.get("ENABLE_AUTO_DISCOUNTS", "true").lower() == "true",

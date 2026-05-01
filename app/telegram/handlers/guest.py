@@ -399,13 +399,13 @@ async def guest_showcase_houses(callback: CallbackQuery):
 
     from app.services.house_service import HouseService
     from app.services.pricing_service import PricingService
-    from app.data.house_descriptions import get_short_description
+    from app.data.house_descriptions import get_display_description
 
     async with AsyncSessionLocal() as db:
         houses = await HouseService.get_all_houses(db)
 
         if not houses:
-            text = "🏠 <b>Домики и фото</b>\n\nИнформация о домиках скоро появится."
+            text = "🏕 <b>Наши домики</b>\n\nИнформация о домиках скоро появится."
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=build_showcase_section_rows("houses")
             )
@@ -413,27 +413,25 @@ async def guest_showcase_houses(callback: CallbackQuery):
             await callback.answer()
             return
 
-        # Показываем список домиков с ценами
-        text = "🏠 <b>Наши домики</b>\n\n"
+        text = "🏕 <b>Наши домики</b>\n\n"
         for house in houses:
             price_info = await PricingService.get_display_price(db, house.id)
             price = price_info["final_price"]
             base = price_info["price"]
 
-            desc = house.description or get_short_description(house.name)
+            desc = get_display_description(house.name, house.description)
 
-            text += f"<b>{house.name}</b>\n"
-            text += f"👥 До {house.capacity} гостей\n"
+            text += f"🏠 <b>{house.name}</b>  ·  до {house.capacity} гостей\n"
             if desc:
                 text += f"{desc}\n"
             if price:
                 if price_info["discount_percent"]:
                     text += (
-                        f"💰 <s>{base} ₽</s> → <b>{price} ₽/сут</b> "
-                        f"(-{price_info['discount_percent']}% {price_info['discount_label'] or ''})\n"
+                        f"💰 <b>{price:,} ₽/сут</b>  <s>{base:,} ₽</s>"
+                        f"  <i>−{price_info['discount_percent']}%</i>\n"
                     )
                 else:
-                    text += f"💰 от <b>{price} ₽/сут</b>\n"
+                    text += f"💰 от <b>{price:,} ₽/сут</b>\n"
             text += "\n"
 
     keyboard_rows = []
@@ -1339,10 +1337,11 @@ async def guest_partners(callback: CallbackQuery):
 
 @router.callback_query(F.data == "guest:contact_admin")
 async def contact_admin(callback: CallbackQuery):
-
-    # Тут можно дать ссылку на админа
+    from app.telegram.handlers.contacts import _contacts_keyboard
+    back = "guest:menu" if is_guest(callback.from_user.id) else "guest:showcase:menu"
     await callback.message.answer(
-        messages.CONTACT_ADMIN,
+        messages.CONTACTS_INFO,
+        reply_markup=_contacts_keyboard(back),
         parse_mode="HTML",
     )
     await callback.answer()
@@ -1357,8 +1356,7 @@ async def back_to_showcase_menu(callback: CallbackQuery):
         set_guest_context(callback.from_user.id, "showcase")
     await safe_edit(
         callback,
-        f"🏕 <b>{settings.project_name}</b> — база отдыха рядом с Архызом\n\n"
-        "Выберите, что хотите посмотреть:",
+        messages.GUEST_WELCOME,
         reply_markup=guest_showcase_menu_keyboard(),
         parse_mode="HTML",
     )

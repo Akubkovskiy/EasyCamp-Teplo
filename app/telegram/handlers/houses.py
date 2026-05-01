@@ -11,6 +11,7 @@ from aiogram.fsm.context import FSMContext
 from app.database import AsyncSessionLocal
 from app.services.house_service import HouseService
 from app.schemas.house import HouseCreate, HouseUpdate
+from app.services.platform_sync_service import sync_all_platforms, get_last_sync_time, format_sync_results
 from app.core.config import settings
 
 router = Router()
@@ -42,6 +43,9 @@ async def list_houses(callback: CallbackQuery):
 
     keyboard.append(
         [InlineKeyboardButton(text="➕ Добавить домик", callback_data="house:add")]
+    )
+    keyboard.append(
+        [InlineKeyboardButton(text="🔄 Синхр. цены → все площадки", callback_data="admin:sync_all_platforms")]
     )
     keyboard.append([InlineKeyboardButton(text="🔙 Назад", callback_data="admin:menu")])
 
@@ -229,73 +233,44 @@ class PriceStates(StatesGroup):
 @router.callback_query(F.data.startswith("house:edit:"))
 async def edit_house_menu(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
-    
+
     async with AsyncSessionLocal() as db:
         house = await HouseService.get_house_by_id(db, house_id)
+        last_sync = await get_last_sync_time(db)
 
     if not house:
         await callback.answer("❌ Домик не найден")
         return
 
-    price_label = f"{house.base_price} ₽" if house.base_price else "Не задана"
+    price_label = f"{house.base_price:,} ₽" if house.base_price else "не задана"
+    sync_label = f"⏱ {last_sync[:16].replace('T', ' ')} UTC" if last_sync else "не синхронизировано"
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text="📝 Название", callback_data=f"house:edit_f:{house_id}:name")],
+            [InlineKeyboardButton(text="📄 Описание", callback_data=f"house:edit_f:{house_id}:desc")],
+            [InlineKeyboardButton(text="👥 Вместимость", callback_data=f"house:edit_f:{house_id}:cap")],
+            [InlineKeyboardButton(
+                text=f"💰 Базовая цена ({price_label})",
+                callback_data=f"house:edit_f:{house_id}:base_price",
+            )],
+            [InlineKeyboardButton(text="📅 Сезонные цены", callback_data=f"house:prices:{house_id}")],
             [
-                InlineKeyboardButton(
-                    text="📝 Название", callback_data=f"house:edit_f:{house_id}:name"
-                )
+                InlineKeyboardButton(text="📶 Wi-Fi", callback_data=f"house:edit_f:{house_id}:wifi"),
+                InlineKeyboardButton(text="🔑 Инструкция", callback_data=f"house:edit_f:{house_id}:instr"),
             ],
-            [
-                InlineKeyboardButton(
-                    text="📄 Описание", callback_data=f"house:edit_f:{house_id}:desc"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="👥 Вместимость", callback_data=f"house:edit_f:{house_id}:cap"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=f"💰 Базовая цена ({price_label})",
-                    callback_data=f"house:edit_f:{house_id}:base_price",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📅 Сезонные цены",
-                    callback_data=f"house:prices:{house_id}",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📶 Wi-Fi", callback_data=f"house:edit_f:{house_id}:wifi"
-                ),
-                InlineKeyboardButton(
-                    text="🔑 Инструкция", callback_data=f"house:edit_f:{house_id}:instr"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📸 Фото", callback_data=f"house:edit_f:{house_id}:photo"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔄 Синхр. цены → Авито",
-                    callback_data=f"house:sync_avito:{house_id}",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔙 Назад", callback_data=f"house:view:{house_id}"
-                )
-            ],
+            [InlineKeyboardButton(text="📸 Фото", callback_data=f"house:edit_f:{house_id}:photo")],
+            [InlineKeyboardButton(
+                text="🔄 Синхронизировать цены → площадки",
+                callback_data=f"house:sync_platforms:{house_id}",
+            )],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data=f"house:view:{house_id}")],
         ]
     )
 
     await callback.message.edit_text(
-        f"✏️ <b>Редактирование: {house.name}</b>\nВыберите поле для изменения:",
+        f"✏️ <b>Редактирование: {house.name}</b>\n"
+        f"Последний синк площадок: <i>{sync_label}</i>\n\n"
+        f"Выберите поле для изменения:",
         reply_markup=keyboard,
         parse_mode="HTML",
     )
@@ -411,6 +386,16 @@ async def process_edit_photo(message: Message, state: FSMContext):
     await finish_editing(message, house_id, state)
 
 
+async def _auto_sync_after_price_change(house_id: int) -> None:
+    """Фоновый синк цен на все площадки после любого изменения цены."""
+    try:
+        async with AsyncSessionLocal() as db:
+            await sync_all_platforms(db, house_id=house_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("auto price sync failed house=%s: %s", house_id, e)
+
+
 @router.message(EditHouseStates.editing_base_price)
 async def process_edit_base_price(message: Message, state: FSMContext):
     if not message.text.isdigit():
@@ -424,6 +409,7 @@ async def process_edit_base_price(message: Message, state: FSMContext):
         await HouseService.update_house(db, house_id, HouseUpdate(base_price=int(message.text)))
 
     await finish_editing(message, house_id, state)
+    await _auto_sync_after_price_change(house_id)
 
 
 async def finish_editing(message: Message, house_id: int, state: FSMContext):
@@ -592,13 +578,15 @@ async def process_price_date_to(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         f"✅ Сезон <b>{price.label}</b> добавлен: {price.price_per_night} ₽/сут\n"
-        f"{price.date_from.strftime('%d.%m.%Y')} — {price.date_to.strftime('%d.%m.%Y')}",
+        f"{price.date_from.strftime('%d.%m.%Y')} — {price.date_to.strftime('%d.%m.%Y')}\n\n"
+        f"<i>Синхронизация с площадками запущена...</i>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📅 К ценам", callback_data=f"house:prices:{house_id}")],
             [InlineKeyboardButton(text="🔙 К домику", callback_data=f"house:edit:{house_id}")],
         ]),
         parse_mode="HTML",
     )
+    await _auto_sync_after_price_change(house_id)
 
 
 @router.callback_query(F.data.startswith("house:del_price:"))
@@ -612,42 +600,50 @@ async def delete_house_price(callback: CallbackQuery):
         await PricingService.delete_price(db, price_id)
 
     await callback.answer("✅ Сезон удалён")
-    # Обновляем список
+    await _auto_sync_after_price_change(house_id)
     callback.data = f"house:prices:{house_id}"
     await list_house_prices(callback)
 
 
-# --- Синхронизация цен с Авито ---
+# --- Синхронизация цен с площадками ---
 
 
-@router.callback_query(F.data.startswith("house:sync_avito:"))
-async def sync_house_avito_prices(callback: CallbackQuery):
+@router.callback_query(F.data.startswith("house:sync_platforms:"))
+async def sync_house_prices_to_platforms(callback: CallbackQuery):
     house_id = int(callback.data.split(":")[2])
+    await callback.answer("🔄 Синхронизация...")
 
-    await callback.answer("🔄 Синхронизация цен с Авито...")
-
-    from app.services.avito_price_service import sync_prices_to_avito
     async with AsyncSessionLocal() as db:
         house = await HouseService.get_house_by_id(db, house_id)
-        result = await sync_prices_to_avito(db, house_id=house_id)
+        results = await sync_all_platforms(db, house_id=house_id)
 
-    if result["synced"]:
-        info = result["synced"][0]
-        text = (
-            f"✅ <b>Цены синхронизированы с Авито</b>\n\n"
-            f"🏠 {house.name}\n"
-            f"📅 Обновлено дней: {info['days']}\n"
-            f"🔗 Avito item: {info['item_id']}"
-        )
-    elif result["errors"]:
-        text = f"❌ <b>Ошибка синхронизации</b>\n\n" + "\n".join(result["errors"])
-    else:
-        text = "⚠️ Нет привязки к Авито для этого домика (AVITO_ITEM_IDS)"
+    summary = format_sync_results(results)
+    text = f"🔄 <b>Синхронизация цен: {house.name}</b>\n\n{summary}"
 
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔙 Назад", callback_data=f"house:edit:{house_id}")],
+        ]),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "admin:sync_all_platforms")
+async def sync_all_houses_prices(callback: CallbackQuery):
+    """Синхронизировать цены ВСЕХ домиков на все площадки."""
+    await callback.answer("🔄 Синхронизируем все домики...")
+
+    async with AsyncSessionLocal() as db:
+        results = await sync_all_platforms(db)
+
+    summary = format_sync_results(results)
+    text = f"🔄 <b>Синхронизация всех домиков</b>\n\n{summary}"
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 К домикам", callback_data="admin:houses")],
         ]),
         parse_mode="HTML",
     )

@@ -9,19 +9,22 @@ from app.core.config import settings
 
 
 def guest_menu_keyboard() -> InlineKeyboardMarkup:
-    """Клавиатура главного меню для АВТОРИЗОВАННОГО гостя"""
+    """Клавиатура главного меню для АВТОРИЗОВАННОГО гостя."""
     rows = [
-        [InlineKeyboardButton(text="🔑 Инструкция по заселению", callback_data="guest:instruction")],
-        [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-        [InlineKeyboardButton(text="🛣 Как добраться", callback_data="guest:directions")],
         [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
         [InlineKeyboardButton(text="💳 Оплата", callback_data="guest:pay")],
+        [InlineKeyboardButton(text="🔑 Инструкция по заселению", callback_data="guest:instruction")],
         [InlineKeyboardButton(text="📶 Wi‑Fi", callback_data="guest:wifi")],
-        [InlineKeyboardButton(text="ℹ️ Правила", callback_data="guest:rules")],
+        [InlineKeyboardButton(text="🛣 Как добраться", callback_data="guest:directions")],
+        [InlineKeyboardButton(text="ℹ️ Правила проживания", callback_data="guest:rules")],
+        [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
     ]
 
     if settings.guest_feature_partners:
         rows.append([InlineKeyboardButton(text="🤝 Партнёры", callback_data="guest:partners")])
+
+    if settings.yandex_reviews_url:
+        rows.append([InlineKeyboardButton(text="⭐ Оставить отзыв", url=settings.yandex_reviews_url)])
 
     rows.append([InlineKeyboardButton(text="🚪 Выйти", callback_data="guest:logout")])
 
@@ -29,26 +32,26 @@ def guest_menu_keyboard() -> InlineKeyboardMarkup:
 
 
 def guest_showcase_menu_keyboard() -> InlineKeyboardMarkup:
-    """Клавиатура витрины для НЕавторизованного гостя"""
+    """Клавиатура витрины для НЕавторизованного гостя."""
     rows = [
-        [InlineKeyboardButton(text="🏕 О базе", callback_data="guest:showcase:about")],
+        [InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")],
     ]
 
     if settings.guest_feature_showcase_houses:
-        rows.append([InlineKeyboardButton(text="🏠 Домики и фото", callback_data="guest:showcase:houses")])
+        rows.append([InlineKeyboardButton(text="🏠 Наши домики", callback_data="guest:showcase:houses")])
 
-    rows.append([InlineKeyboardButton(text="📅 Проверить даты и забронировать", callback_data="guest:availability")])
+    rows.append([InlineKeyboardButton(text="🏕 О базе", callback_data="guest:showcase:about")])
+    rows.append([InlineKeyboardButton(text="📍 Как добраться", callback_data="guest:showcase:location")])
 
     if settings.guest_feature_faq:
-        rows.append([InlineKeyboardButton(text="❓ Популярные вопросы", callback_data="guest:showcase:faq")])
+        rows.append([InlineKeyboardButton(text="❓ Вопросы и ответы", callback_data="guest:showcase:faq")])
 
-    rows.extend(
-        [
-            [InlineKeyboardButton(text="📍 Где мы находимся", callback_data="guest:showcase:location")],
-            [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")],
-            [InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")],
-        ]
-    )
+    rows.append([InlineKeyboardButton(text="📞 Связаться с нами", callback_data="guest:contact_admin")])
+
+    if settings.yandex_reviews_url:
+        rows.append([InlineKeyboardButton(text="⭐ Отзывы", url=settings.yandex_reviews_url)])
+
+    rows.append([InlineKeyboardButton(text="🔐 Авторизоваться", callback_data="guest:auth")])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

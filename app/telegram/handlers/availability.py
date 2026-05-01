@@ -258,27 +258,25 @@ async def select_checkout_date(callback: CallbackQuery):
 
     # Формируем карточки доступных домов с фото и ценами
     from app.services.pricing_service import PricingService
-    from app.data.house_descriptions import get_short_description
+    from app.data.house_descriptions import get_display_description
 
-    # Удаляем предыдущее сообщение (календарь) чтобы отправить карточки
     try:
         await callback.message.delete()
     except TelegramBadRequest:
         pass
 
+    date_from = state.check_in.strftime("%d.%m.%Y")
+    date_to = state.check_out.strftime("%d.%m.%Y")
     header = (
-        f"✅ <b>Доступные домики</b>\n\n"
-        f"📅 {state.check_in.strftime('%d.%m.%Y')} — {state.check_out.strftime('%d.%m.%Y')}\n"
-        f"🌙 Ночей: {nights}"
+        f"🏕 <b>Свободные домики</b>\n"
+        f"📅 {date_from} — {date_to} · {nights} {'ночь' if nights == 1 else 'ночи' if 2 <= nights <= 4 else 'ночей'}"
     )
     await callback.message.answer(header, parse_mode="HTML")
 
-    # Отправляем карточку для каждого домика
     async with AsyncSessionLocal() as db:
         for house in available_houses:
-            desc = house.description or get_short_description(house.name)
+            desc = get_display_description(house.name, house.description)
 
-            # Расчёт цены за весь период
             stay = await PricingService.calculate_stay_total(
                 db, house.id, state.check_in, state.check_out
             )
@@ -286,27 +284,28 @@ async def select_checkout_date(callback: CallbackQuery):
             avg = stay["avg_per_night"]
             total_orig = stay.get("total_without_discount", total)
 
-            # Формируем текст карточки
-            card = f"🏠 <b>{house.name}</b>\n"
-            card += f"👥 До {house.capacity} гостей\n"
+            # Карточка: название + вместимость
+            card = f"🏠 <b>{house.name}</b>  ·  до {house.capacity} гостей\n"
             if desc:
                 card += f"\n{desc}\n"
 
+            # Цена
             if total > 0:
                 card += "\n"
                 if total < total_orig:
                     card += (
-                        f"💰 <s>{total_orig:,} ₽</s> → <b>{total:,} ₽</b> "
-                        f"({avg:,} ₽/ночь × {nights})\n"
+                        f"💰 <b>{total:,} ₽</b>  <s>{total_orig:,} ₽</s>\n"
+                        f"<i>{avg:,} ₽/ночь × {nights}</i>\n"
                     )
                 else:
-                    card += f"💰 <b>{total:,} ₽</b> ({avg:,} ₽/ночь × {nights})\n"
+                    card += (
+                        f"💰 <b>{total:,} ₽</b>\n"
+                        f"<i>{avg:,} ₽/ночь × {nights}</i>\n"
+                    )
             elif house.base_price > 0:
                 card += f"\n💰 от <b>{house.base_price:,} ₽/ночь</b>\n"
 
-            # Кнопка бронирования. Для админа — старый flow (booking_management),
-            # для гостя — self-service flow в guest_booking.py (Phase G10.1).
-            btn_text = f"✅ Забронировать"
+            btn_text = "✅ Забронировать"
             if total > 0:
                 btn_text += f" — {total:,} ₽"
             book_callback = (
@@ -315,13 +314,9 @@ async def select_checkout_date(callback: CallbackQuery):
                 else f"guest:book:{house.id}"
             )
             house_kb = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(
-                    text=btn_text,
-                    callback_data=book_callback,
-                )]
+                [InlineKeyboardButton(text=btn_text, callback_data=book_callback)]
             ])
 
-            # Отправляем с фото или без
             if house.promo_image_id:
                 await callback.message.answer_photo(
                     photo=house.promo_image_id,
@@ -330,30 +325,17 @@ async def select_checkout_date(callback: CallbackQuery):
                     parse_mode="HTML",
                 )
             else:
-                await callback.message.answer(
-                    card, reply_markup=house_kb, parse_mode="HTML",
-                )
+                await callback.message.answer(card, reply_markup=house_kb, parse_mode="HTML")
 
-    # Навигация внизу
-    nav_buttons = [
-        [
-            InlineKeyboardButton(
-                text="🔄 Выбрать другие даты",
-                callback_data="admin:availability"
-                if is_admin(user_id)
-                else "guest:availability",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="🔙 В меню",
-                callback_data="admin:menu" if is_admin(user_id) else "guest:showcase:menu",
-            )
-        ],
-    ]
-    await callback.message.answer(
-        "👆 Выберите домик для бронирования",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_buttons),
-        parse_mode="HTML",
-    )
+    nav_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="🔄 Другие даты",
+            callback_data="admin:availability" if is_admin(user_id) else "guest:availability",
+        )],
+        [InlineKeyboardButton(
+            text="🔙 В меню",
+            callback_data="admin:menu" if is_admin(user_id) else "guest:showcase:menu",
+        )],
+    ])
+    await callback.message.answer("─" * 20, reply_markup=nav_kb)
     await callback.answer()
