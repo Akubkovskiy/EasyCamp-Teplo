@@ -14,6 +14,7 @@ from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, GlobalSetting
 from app.telegram.auth.admin import get_user_name, is_admin, resolve_user_db_id
 from app.services.checkout_ack import get_ack_status, set_ack_status
+from app.services.notification_service import send_safe
 from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
 from app.telegram.keyboards.cleaner import get_cleaner_keyboard
 
@@ -334,10 +335,7 @@ async def decline_checkout_callback(callback: CallbackQuery):
         f"🏠 {house_name}\n\n"
         "Требуется организация замены."
     )
-    try:
-        await callback.bot.send_message(settings.telegram_chat_id, alert, parse_mode="HTML")
-    except Exception:
-        pass
+    await send_safe(callback.bot, settings.telegram_chat_id, alert, context="decline_checkout admin")
     await callback.answer("Администратор уведомлён", show_alert=True)
 
 
@@ -391,10 +389,7 @@ async def decline_cleaning(callback: CallbackQuery):
     )
 
     for admin_id in admin_ids:
-        try:
-            await callback.bot.send_message(admin_id, alert_text)
-        except Exception:
-            pass
+        await send_safe(callback.bot, admin_id, alert_text, context=f"decline_cleaning admin={admin_id}")
 
     await callback.answer("Администратор оповещен", show_alert=True)
 

@@ -44,6 +44,7 @@ from app.telegram.auth.admin import (
 from app.telegram.menus.guest import request_contact_keyboard
 from app.telegram.state.availability import availability_states
 from app.utils.phone import normalize_phone
+from app.services.notification_service import send_safe
 
 
 router = Router()
@@ -142,10 +143,7 @@ async def _send_admin_booking_notification(
         ]]
     )
     for aid in admin_ids:
-        try:
-            await bot.send_message(aid, text, reply_markup=kb, parse_mode="HTML")
-        except Exception as e:
-            logger.warning(f"failed to notify admin {aid}: {e}")
+        await send_safe(bot, aid, text, reply_markup=kb, context=f"new_booking admin={aid}")
 
 
 async def _ask_guests_count(message_or_callback, house_id: int):
@@ -520,15 +518,13 @@ async def guest_book_admin_confirm(callback: CallbackQuery):
             [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
         ]
     )
-    try:
-        await callback.bot.send_message(
-            guest_tg,
-            f"✅ Ваша бронь #{booking_id} подтверждена!\n\n"
-            "Откройте «Оплата», чтобы внести предоплату и прислать чек.",
-            reply_markup=pay_kb,
-        )
-    except Exception as e:
-        logger.warning(f"failed to notify guest {guest_tg}: {e}")
+    await send_safe(
+        callback.bot, guest_tg,
+        f"✅ Ваша бронь #{booking_id} подтверждена!\n\n"
+        "Откройте «Оплата», чтобы внести предоплату и прислать чек.",
+        reply_markup=pay_kb,
+        context=f"book_confirm guest={guest_tg}",
+    )
     await callback.answer("Подтверждено")
 
 
@@ -567,15 +563,13 @@ async def guest_book_admin_reject(callback: CallbackQuery):
         await callback.message.answer(f"❌ Бронь #{booking_id} отклонена")
     except Exception:
         pass
-    try:
-        await callback.bot.send_message(
-            guest_tg,
-            f"⚠️ Ваша бронь #{booking_id} отклонена администратором.\n"
-            "Если вы хотите уточнить причину — напишите нам через "
-            "«Связаться с нами» в меню.",
-        )
-    except Exception as e:
-        logger.warning(f"failed to notify guest {guest_tg}: {e}")
+    await send_safe(
+        callback.bot, guest_tg,
+        f"⚠️ Ваша бронь #{booking_id} отклонена администратором.\n"
+        "Если вы хотите уточнить причину — напишите нам через "
+        "«Связаться с нами» в меню.",
+        context=f"book_reject guest={guest_tg}",
+    )
     await callback.answer("Отклонено")
 
 
@@ -860,7 +854,4 @@ async def guest_cancel_confirm(callback: CallbackQuery):
         f"Даты освобождены."
     )
     for aid in admin_ids:
-        try:
-            await callback.bot.send_message(aid, text, parse_mode="HTML")
-        except Exception as e:
-            logger.warning(f"failed to notify admin {aid}: {e}")
+        await send_safe(callback.bot, aid, text, context=f"guest_cancel admin={aid}")

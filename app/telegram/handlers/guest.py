@@ -31,6 +31,7 @@ from app.telegram.menus.guest import (
 from app.core.messages import messages
 from app.core.config import settings
 from app.utils.phone import normalize_phone, phones_match
+from app.services.notification_service import send_safe
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -624,10 +625,7 @@ async def guest_feedback_message(message: Message):
     )
 
     for aid in admin_ids:
-        try:
-            await message.bot.send_message(aid, text, parse_mode="HTML")
-        except Exception:
-            pass
+        await send_safe(message.bot, aid, text, context=f"guest_feedback admin={aid}")
 
     await message.answer("✅ Спасибо! Передали вопрос администрации. Ответим как можно быстрее.")
 
@@ -1244,10 +1242,7 @@ async def _admin_approve_payment(
             [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],
         ]
     )
-    try:
-        await callback.bot.send_message(guest_tg, label, reply_markup=pay_kb)
-    except Exception:
-        pass
+    await send_safe(callback.bot, guest_tg, label, reply_markup=pay_kb, context=f"pay_approve guest={guest_tg}")
 
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -1283,13 +1278,11 @@ async def guest_pay_reject(callback: CallbackQuery):
     booking_id = int(booking_id_str)
     guest_tg = int(guest_tg_str)
 
-    try:
-        await callback.bot.send_message(
-            guest_tg,
-            f"⚠️ Чек по брони #{booking_id} отклонён. Пожалуйста, свяжитесь с администратором.",
-        )
-    except Exception:
-        pass
+    await send_safe(
+        callback.bot, guest_tg,
+        f"⚠️ Чек по брони #{booking_id} отклонён. Пожалуйста, свяжитесь с администратором.",
+        context=f"pay_reject guest={guest_tg}",
+    )
     await callback.answer("Чек отклонён")
 
 

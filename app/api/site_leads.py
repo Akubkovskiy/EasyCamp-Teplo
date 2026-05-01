@@ -26,6 +26,7 @@ from app.database import AsyncSessionLocal
 from app.models import Booking, BookingSource, BookingStatus, House
 from app.schemas.booking import BookingCreate
 from app.services.booking_service import BookingService
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["site"])
@@ -195,10 +196,7 @@ async def _notify_admins(booking: Booking, source: str, comment: str | None) -> 
         )
 
         for aid in admin_ids:
-            try:
-                await bot.send_message(aid, text, reply_markup=kb, parse_mode="HTML")
-            except Exception as e:
-                logger.warning(f"failed to notify admin {aid}: {e}")
+            await send_safe(bot, aid, text, reply_markup=kb, context=f"site_lead admin={aid}")
     except Exception as e:
         logger.error(f"site_lead admin notify failed: {e}", exc_info=True)
 
