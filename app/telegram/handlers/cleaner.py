@@ -85,41 +85,18 @@ async def get_nearest_checkouts() -> str:
 def get_cleaner_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            # Мои ЗАДАЧИ — назначенные CleaningTask (принять/начать/завершить)
+            [InlineKeyboardButton(text="✅ Задачи сегодня", callback_data="cleaner:tasks:today")],
             [
-                InlineKeyboardButton(
-                    text="✅ Задачи сегодня", callback_data="cleaner:tasks:today"
-                ),
-                InlineKeyboardButton(
-                    text="✅ Задачи/7д", callback_data="cleaner:tasks:week"
-                ),
-            ],
-            # Расписание ВЫЕЗДОВ гостей — информация о предстоящих уборках
-            [
-                InlineKeyboardButton(
-                    text="📅 Выезды сегодня", callback_data="cleaner:schedule:today"
-                ),
-                InlineKeyboardButton(
-                    text="📅 Выезды завтра", callback_data="cleaner:schedule:tomorrow"
-                ),
+                InlineKeyboardButton(text="📅 Брони на неделю", callback_data="cleaner:schedule:week_full"),
+                InlineKeyboardButton(text="📆 Брони на месяц", callback_data="cleaner:schedule:month"),
             ],
             [
-                InlineKeyboardButton(
-                    text="📅 Выезды/7д", callback_data="cleaner:schedule:week"
-                ),
-                InlineKeyboardButton(
-                    text="📆 Выезды/месяц", callback_data="cleaner:schedule:month"
-                ),
+                InlineKeyboardButton(text="💰 Мои выплаты", callback_data="cleaner:pay"),
+                InlineKeyboardButton(text="🧾 Расходники", callback_data="cleaner:expense:new"),
             ],
             [
-                InlineKeyboardButton(text="🧾 Чек расходников", callback_data="cleaner:expense:new")
-            ],
-            [
-                InlineKeyboardButton(text="💰 Мои выплаты", callback_data="cleaner:pay")
-            ],
-            [
-                InlineKeyboardButton(text="❓ Помощь", callback_data="cleaner:help"),
                 InlineKeyboardButton(text="⚙️ Настройки", callback_data="cleaner:settings"),
+                InlineKeyboardButton(text="❓ Помощь", callback_data="cleaner:help"),
             ],
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="cleaner:menu")],
         ]
@@ -150,8 +127,7 @@ async def show_cleaner_menu(event: Message | CallbackQuery, user_id: int):
     text = (
         f"👋 <b>Добрый день, {name}!</b>\n\n"
         f"🧹 <b>Ближайшие выезды:</b>\n"
-        f"{nearest_summary}\n\n"
-        "Выберите период для просмотра графика:"
+        f"{nearest_summary}"
     )
 
     if isinstance(event, Message):
@@ -217,6 +193,10 @@ async def show_schedule(callback: CallbackQuery):
     elif mode == "week":
         bookings = await get_cleaning_schedule(today, today + timedelta(days=7))
         title = "на НЕДЕЛЮ"
+    elif mode == "week_full":
+        bookings = await get_cleaning_schedule(today, today + timedelta(days=7))
+        title = "на НЕДЕЛЮ"
+        is_list_view = True
     elif mode == "month":
         days = await _get_cleaner_schedule_days(callback.from_user.id)
         bookings = await get_cleaning_schedule(today, today + timedelta(days=days))
@@ -268,7 +248,7 @@ async def show_schedule(callback: CallbackQuery):
 
             check_in_str = b.check_in.strftime("%d.%m")
             check_out_str = b.check_out.strftime("%d.%m")
-            text += f"🏠 {b.house.name} | {check_in_str} - {check_out_str}\n"
+            text += f"🏠 {b.house.name} | {check_in_str} → {check_out_str} | 👥 {b.guests_count} чел\n"
 
     else:
         # Режим уборок (Подробно с телефоном)
