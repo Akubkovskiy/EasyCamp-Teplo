@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, GlobalSetting, User, UserRole
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -67,14 +68,12 @@ async def send_advance_checkout_notifications():
             lines.append("\nПодготовьтесь заранее 🧹")
             text = "\n".join(lines)
 
-            try:
-                await bot.send_message(cleaner.telegram_id, text, parse_mode="HTML")
+            ok = await send_safe(bot, cleaner.telegram_id, text, context=f"advance_reminder cleaner={cleaner.id}")
+            if ok:
                 logger.info(
                     f"Advance checkout reminder sent to cleaner {cleaner.telegram_id} "
                     f"for {target_date} ({len(bookings)} bookings)"
                 )
-            except Exception as e:
-                logger.error(f"Failed to send advance reminder to {cleaner.telegram_id}: {e}")
 
 
 def _days_word(n: int) -> str:
