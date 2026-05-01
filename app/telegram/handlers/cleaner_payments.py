@@ -11,6 +11,8 @@ from app.models import (
     CleanerPaymentProfile,
     CleaningPaymentLedger,
     CleaningTask,
+    CleaningTaskCheck,
+    CleaningTaskMedia,
     CleaningTaskStatus,
     CleaningPaymentEntryType,
     PaymentStatus,
@@ -27,6 +29,9 @@ BANKS = ["Сбербанк", "Тинькофф", "ВТБ", "Альфа-Банк"
 
 # telegram_id → ожидаем телефон
 _awaiting_phone: set[int] = set()
+
+# cleaner telegram_id → ожидаем номер уборки для детализации
+_awaiting_task_detail: set[int] = set()
 
 # admin telegram_id → (task_id, cleaner_db_id) — ждём комментарий при оспаривании
 _awaiting_adj_dispute: dict[int, tuple[int, int]] = {}
@@ -176,7 +181,6 @@ async def cleaner_pay_history(callback: CallbackQuery):
         )
         tasks = list(tasks_q.scalars().all())
 
-        # Все начисления по задаче (fee + adjustment)
         amounts: dict[int, Decimal] = {}
         for t in tasks:
             amt = await s.scalar(
@@ -195,7 +199,6 @@ async def cleaner_pay_history(callback: CallbackQuery):
         await callback.answer()
         return
 
-    # Группируем по месяцу
     from collections import defaultdict
     by_month: dict[str, list] = defaultdict(list)
     for t in tasks:
@@ -203,7 +206,6 @@ async def cleaner_pay_history(callback: CallbackQuery):
         by_month[key].append(t)
 
     lines = ["📋 <b>История уборок</b>\n"]
-    rows = []
     for month_key in sorted(by_month.keys(), reverse=True):
         month_tasks = by_month[month_key]
         year, mon = int(month_key[:4]), int(month_key[5:])
@@ -213,75 +215,134 @@ async def cleaner_pay_history(callback: CallbackQuery):
             amt = amounts[t.id]
             amt_str = f" {amt:.0f} ₽" if amt else ""
             lines.append(f"  ✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')} | д.{t.house_id}{amt_str}")
-            rows.append([InlineKeyboardButton(
-                text=f"✅ #{t.id} {t.scheduled_date.strftime('%d.%m')} д.{t.house_id}{amt_str}",
-                callback_data=f"cleaner:pay:task:{t.id}",
-            )])
 
-    rows.append([InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")])
-    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
-
-    # Обрезаем текст если слишком длинный (Telegram limit 4096)
     text = "\n".join(lines)
     if len(text) > 4000:
         text = text[:3990] + "\n…"
 
+    rows = [
+        [InlineKeyboardButton(text="🔍 Детали уборки", callback_data="cleaner:pay:history:ask_detail")],
+        [InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+    ]
+
     await callback.message.edit_text(
         text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows[:30]),  # макс 30 кнопок
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
         parse_mode="HTML",
     )
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("cleaner:pay:task:"))
-async def cleaner_pay_task_detail(callback: CallbackQuery):
-    task_id = int(callback.data.split(":")[3])
+@router.callback_query(F.data == "cleaner:pay:history:ask_detail")
+async def cleaner_pay_history_ask_detail(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    _awaiting_task_detail.add(callback.from_user.id)
+    await callback.message.edit_text(
+        "🔍 <b>Детали уборки</b>\n\nВведите номер уборки (например: <code>23</code>)",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:pay:history")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_task_detail and m.text)
+async def cleaner_pay_history_detail_input(message: Message):
+    tg_id = message.from_user.id
+    _awaiting_task_detail.discard(tg_id)
+
+    raw = (message.text or "").strip().lstrip("#")
+    if not raw.isdigit():
+        await message.answer("❌ Введите число — номер уборки.")
+        return
+
+    task_id = int(raw)
+    db_user_id = await resolve_user_db_id(None, tg_id)
 
     async with AsyncSessionLocal() as s:
         task = await s.get(CleaningTask, task_id)
-        if not task:
-            await callback.answer("Задача не найдена", show_alert=True)
+        if not task or (db_user_id and task.assigned_to_user_id != db_user_id):
+            await message.answer(
+                f"❌ Уборка #{task_id} не найдена.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
+                ]),
+            )
             return
+
+        checks_q = await s.execute(
+            select(CleaningTaskCheck).where(CleaningTaskCheck.task_id == task_id).order_by(CleaningTaskCheck.id)
+        )
+        checks = list(checks_q.scalars().all())
+
+        media_q = await s.execute(
+            select(CleaningTaskMedia).where(CleaningTaskMedia.task_id == task_id)
+        )
+        media = list(media_q.scalars().all())
 
         ledger_q = await s.execute(
             select(CleaningPaymentLedger).where(CleaningPaymentLedger.task_id == task_id)
         )
-        entries = list(ledger_q.scalars().all())
-
-        claims_q = await s.execute(
-            select(SupplyExpenseClaim).where(SupplyExpenseClaim.task_id == task_id)
-        )
-        claims = list(claims_q.scalars().all())
+        ledger = list(ledger_q.scalars().all())
 
     duration = ""
     if task.started_at and task.completed_at:
         mins = int((task.completed_at - task.started_at).total_seconds() / 60)
-        duration = f"\n⏱ Длительность: {mins} мин."
+        start = task.started_at.strftime("%H:%M")
+        end = task.completed_at.strftime("%H:%M")
+        duration = f"\n⏱ {start} → {end} ({mins} мин.)"
 
-    entries_text = ""
-    for e in entries:
+    checklist_lines = []
+    for c in checks:
+        mark = "✅" if c.is_checked else "⬜"
+        checklist_lines.append(f"  {mark} {c.label}")
+
+    notes_line = f"\n\n📝 Заметки: {task.notes}" if task.notes else ""
+
+    pay_lines = []
+    for e in ledger:
+        type_label = {
+            CleaningPaymentEntryType.CLEANING_FEE: "Уборка",
+            CleaningPaymentEntryType.ADJUSTMENT: "Доп. работа",
+            CleaningPaymentEntryType.SUPPLY_REIMBURSEMENT: "Расходники",
+        }.get(e.entry_type, e.entry_type.value)
         status_mark = "✅" if e.status == PaymentStatus.PAID else "⏳"
-        entries_text += f"\n{status_mark} {e.entry_type.value}: {float(e.amount):.0f} ₽ [{e.status.value}]"
+        pay_lines.append(f"  {status_mark} {type_label}: {float(e.amount):.0f} ₽")
 
-    claims_text = ""
-    for c in claims:
-        claims_text += f"\n🧾 Чек #{c.id}: {float(c.amount_total):.0f} ₽ [{c.status.value}]"
+    lines = [
+        f"🧹 <b>Уборка #{task.id}</b>",
+        f"📅 {task.scheduled_date.strftime('%d.%m.%Y')} | 🏠 Дом {task.house_id}",
+        f"📌 Статус: {task.status.value}" + duration,
+    ]
+    if checklist_lines:
+        lines.append(f"\n☑️ <b>Чеклист:</b>")
+        lines.extend(checklist_lines)
+    if notes_line:
+        lines.append(notes_line)
+    if pay_lines:
+        lines.append(f"\n💵 <b>Начисления:</b>")
+        lines.extend(pay_lines)
+    if media:
+        lines.append(f"\n📸 Фото: {len(media)} шт. (отправлены ниже)")
 
-    text = (
-        f"🧹 <b>Уборка #{task.id}</b>\n"
-        f"📅 {task.scheduled_date.strftime('%d.%m.%Y')} | 🏠 Дом {task.house_id}"
-        f"{duration}\n"
-        f"<b>Начисления:</b>{entries_text if entries_text else ' нет'}"
-        + (f"\n<b>Чеки:</b>{claims_text}" if claims_text else "")
-    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+    ])
+    await message.answer("\n".join(lines), reply_markup=kb, parse_mode="HTML")
 
-    await callback.message.edit_text(
-        text,
-        reply_markup=_payments_back_kb(),
-        parse_mode="HTML",
-    )
-    await callback.answer()
+    # Отправляем фото отдельно
+    if media:
+        from aiogram.types import InputMediaPhoto
+        if len(media) == 1:
+            await message.answer_photo(media[0].telegram_file_id)
+        else:
+            album = [InputMediaPhoto(media=m.telegram_file_id) for m in media[:10]]
+            await message.answer_media_group(album)
 
 
 # ---------------------------------------------------------------------------

@@ -28,6 +28,8 @@ from app.telegram.auth.admin import is_admin
 _awaiting_rate_input: dict[int, int] = {}
 # admin telegram_id → "add" | "edit:{idx}" (ждём строку доп. услуги)
 _awaiting_extra_input: dict[int, str] = {}
+# admin telegram_id → cleaner_user_id (ждём номер задачи для детализации)
+_awaiting_admin_task_detail: dict[int, int] = {}
 
 EXTRAS_KEY = "cleaning_extras"  # GlobalSetting key
 
@@ -375,13 +377,12 @@ async def admin_cleaning_cleaner(callback: CallbackQuery):
 
     rows = [
         [InlineKeyboardButton(
-            text=f"{STATUS_ICON.get(t.status,'•')} #{t.id} {t.scheduled_date.strftime('%d.%m')}",
-            callback_data=f"admin:cleaning:task:{t.id}",
-        )]
-        for t in tasks[:15]
+            text="🔍 Детали задачи",
+            callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:ask_detail",
+        )],
+        [InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")],
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
     ]
-    rows.append([InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")])
-    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
 
     await callback.message.edit_text(
         "\n".join(lines),
@@ -389,6 +390,122 @@ async def admin_cleaning_cleaner(callback: CallbackQuery):
         parse_mode="HTML",
     )
     await callback.answer()
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:ask_detail$"))
+async def admin_cleaning_ask_detail(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    cleaner_user_id = int(callback.data.split(":")[3])
+    _awaiting_admin_task_detail[callback.from_user.id] = cleaner_user_id
+    await callback.message.edit_text(
+        "🔍 <b>Детали задачи</b>\n\nВведите номер задачи (например: <code>23</code>)",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="❌ Отмена",
+                callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}",
+            )],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_admin_task_detail and m.text)
+async def admin_cleaning_detail_input(message: Message):
+    tg_id = message.from_user.id
+    cleaner_user_id = _awaiting_admin_task_detail.pop(tg_id, None)
+
+    raw = (message.text or "").strip().lstrip("#")
+    if not raw.isdigit():
+        await message.answer("❌ Введите число — номер задачи.")
+        return
+
+    task_id = int(raw)
+    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}" if cleaner_user_id else "admin:cleaning"
+
+    async with AsyncSessionLocal() as session:
+        task = await session.get(CleaningTask, task_id)
+        if not task:
+            await message.answer(f"❌ Задача #{task_id} не найдена.")
+            return
+
+        checks_q = await session.execute(
+            select(CleaningTaskCheck).where(CleaningTaskCheck.task_id == task_id).order_by(CleaningTaskCheck.id)
+        )
+        checks = list(checks_q.scalars().all())
+
+        photo_count = await session.scalar(
+            select(func.count()).where(CleaningTaskMedia.task_id == task_id)
+        )
+
+        media_q = await session.execute(
+            select(CleaningTaskMedia).where(CleaningTaskMedia.task_id == task_id)
+        )
+        media = list(media_q.scalars().all())
+
+        claims_q = await session.execute(
+            select(SupplyExpenseClaim).where(SupplyExpenseClaim.task_id == task_id)
+        )
+        claims = list(claims_q.scalars().all())
+
+        cleaner = await session.get(User, task.assigned_to_user_id) if task.assigned_to_user_id else None
+
+    checked = sum(1 for c in checks if c.is_checked)
+    duration = ""
+    if task.started_at and task.completed_at:
+        mins = int((task.completed_at - task.started_at).total_seconds() / 60)
+        start = task.started_at.strftime("%H:%M")
+        end = task.completed_at.strftime("%H:%M")
+        duration = f"\n⏱ {start} → {end} ({mins} мин.)"
+
+    checklist_lines = [
+        f"  {'✅' if c.is_checked else '⬜'} {c.label}"
+        for c in checks
+    ]
+
+    notes_line = f"\n\n📝 Заметки: {task.notes}" if task.notes else ""
+
+    claims_line = ""
+    if claims:
+        total_amount = sum(float(c.amount_total) for c in claims)
+        claims_line = f"\n🧾 Чеки: {len(claims)} шт. на {total_amount:.0f} ₽"
+
+    lines = [
+        f"🧹 <b>Задача #{task.id}</b>",
+        f"📅 {task.scheduled_date.strftime('%d.%m.%Y')} | 🏠 Дом {task.house_id}",
+        f"📌 Статус: {STATUS_ICON.get(task.status,'')} {task.status.value}",
+        f"👤 Уборщик: {cleaner.name if cleaner else '—'}" + duration,
+    ]
+    if checklist_lines:
+        lines.append(f"\n☑️ <b>Чеклист:</b> {checked}/{len(checks)}")
+        lines.extend(checklist_lines)
+    if notes_line:
+        lines.append(notes_line)
+    if claims_line:
+        lines.append(claims_line)
+    if media:
+        lines.append(f"\n📸 Фото: {len(media)} шт. (отправлены ниже)")
+
+    rows = []
+    for c in claims[:3]:
+        rows.append([InlineKeyboardButton(
+            text=f"🧾 Чек #{c.id} — {float(c.amount_total):.0f} ₽ [{c.status.value}]",
+            callback_data=f"admin:cleaning:claim:{c.id}",
+        )])
+    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)])
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+
+    await message.answer("\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+
+    if media:
+        from aiogram.types import InputMediaPhoto
+        if len(media) == 1:
+            await message.answer_photo(media[0].telegram_file_id)
+        else:
+            album = [InputMediaPhoto(media=m.telegram_file_id) for m in media[:10]]
+            await message.answer_media_group(album)
 
 
 @router.callback_query(F.data.startswith("admin:cleaning:task:") & ~F.data.contains(":photos"))
