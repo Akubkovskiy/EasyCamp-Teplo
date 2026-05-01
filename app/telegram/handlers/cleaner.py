@@ -99,28 +99,30 @@ async def get_nearest_checkouts() -> str:
 def get_cleaner_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            # Мои ЗАДАЧИ — назначенные CleaningTask (принять/начать/завершить)
             [
                 InlineKeyboardButton(
-                    text="📅 Сегодня", callback_data="cleaner:schedule:today"
+                    text="✅ Задачи сегодня", callback_data="cleaner:tasks:today"
                 ),
                 InlineKeyboardButton(
-                    text="📅 Завтра", callback_data="cleaner:schedule:tomorrow"
+                    text="✅ Задачи/7д", callback_data="cleaner:tasks:week"
+                ),
+            ],
+            # Расписание ВЫЕЗДОВ гостей — информация о предстоящих уборках
+            [
+                InlineKeyboardButton(
+                    text="📅 Выезды сегодня", callback_data="cleaner:schedule:today"
+                ),
+                InlineKeyboardButton(
+                    text="📅 Выезды завтра", callback_data="cleaner:schedule:tomorrow"
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="📌 Мои задачи", callback_data="cleaner:tasks:today"
+                    text="📅 Выезды/7д", callback_data="cleaner:schedule:week"
                 ),
                 InlineKeyboardButton(
-                    text="🗓 Мои задачи/7д", callback_data="cleaner:tasks:week"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🗓 На неделю", callback_data="cleaner:schedule:week"
-                ),
-                InlineKeyboardButton(
-                    text="📆 На месяц", callback_data="cleaner:schedule:month"
+                    text="📆 Выезды/месяц", callback_data="cleaner:schedule:month"
                 ),
             ],
             [
@@ -245,7 +247,7 @@ async def show_schedule(callback: CallbackQuery):
         await callback.answer()
         return
 
-    text = f"🧹 <b>График: {title}</b>\n\n"
+    text = f"📅 <b>Выезды гостей {title}</b>\n<i>(информация о предстоящих уборках)</i>\n\n"
 
     # Режим списка всех броней (Компактно)
     if is_list_view:

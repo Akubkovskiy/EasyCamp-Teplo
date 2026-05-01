@@ -420,7 +420,14 @@ async def _do_transition(callback: CallbackQuery, task_id: int, target: Cleaning
             decline_reason=decline_reason,
         )
         if not ok:
-            await callback.answer("Переход статуса недоступен или не выполнены условия", show_alert=True)
+            # Показываем текущий статус задачи и предлагаем обновить
+            current_status = task.status.value
+            await callback.answer(
+                f"Кнопка устарела — статус уже: {current_status}\nОбновите карточку задачи.",
+                show_alert=True,
+            )
+            # Перерисовываем карточку с актуальным состоянием
+            await _render_task_view(callback, task_id)
             return
         await session.commit()
 
