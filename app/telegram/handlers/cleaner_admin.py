@@ -336,7 +336,7 @@ async def admin_cleaning_overview(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("admin:cleaning:cleaner:"))
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+$"))
 async def admin_cleaning_cleaner(callback: CallbackQuery):
     if not callback.from_user or not is_admin(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
