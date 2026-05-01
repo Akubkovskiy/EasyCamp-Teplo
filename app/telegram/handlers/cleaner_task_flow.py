@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from app.database import AsyncSessionLocal
 from app.models import CleaningTask, CleaningTaskCheck, CleaningTaskMedia, CleaningTaskStatus
 from app.services.cleaning_task_service import CleaningTaskService
+from app.services.notification_service import send_safe
 from app.telegram.auth.admin import resolve_user_db_id
 
 router = Router()
@@ -296,10 +297,7 @@ async def _notify_admins_supply_alert(bot, *, task_id: int, house_id: int | None
         "Откройте задачу, уточните позиции и запланируйте закупку."
     )
     for aid in admin_ids:
-        try:
-            await bot.send_message(aid, text, parse_mode="HTML")
-        except Exception:
-            pass
+        await send_safe(bot, aid, text, context=f"supply_alert task={task_id}")
 
 
 @router.callback_query(F.data.startswith("cleaner:task:photo:"))
@@ -537,16 +535,13 @@ async def cleaner_task_quickpay(callback: CallbackQuery):
     admin_ids.add(settings.telegram_chat_id)
     name = callback.from_user.first_name or "Уборщица"
     for aid in admin_ids:
-        try:
-            await callback.bot.send_message(
-                aid,
-                f"💰 <b>Доп. оплата начислена</b>\n\n"
-                f"👤 {name} | 🧹 Задача #{task_id}\n"
-                f"📝 {label}: <b>{amount} ₽</b>",
-                parse_mode="HTML",
-            )
-        except Exception:
-            pass
+        await send_safe(
+            callback.bot, aid,
+            f"💰 <b>Доп. оплата начислена</b>\n\n"
+            f"👤 {name} | 🧹 Задача #{task_id}\n"
+            f"📝 {label}: <b>{amount} ₽</b>",
+            context=f"bonus_payment task={task_id}",
+        )
 
     await callback.message.edit_text(
         f"✅ <b>Начислено: {label} — {amount} ₽</b>\n\nОтражено в выплатах.",
@@ -645,10 +640,7 @@ async def cleaner_task_extra_amount_received(message: Message):
     ])
 
     for aid in admin_ids:
-        try:
-            await message.bot.send_message(aid, admin_text, reply_markup=admin_kb, parse_mode="HTML")
-        except Exception:
-            pass
+        await send_safe(message.bot, aid, admin_text, reply_markup=admin_kb, context="expense_request")
 
     await message.answer(
         f"✅ Запрос отправлен администратору.\n\n"
