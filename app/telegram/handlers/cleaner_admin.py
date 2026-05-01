@@ -422,21 +422,39 @@ async def admin_cleaning_cleaner(callback: CallbackQuery):
     await callback.answer()
 
 
+async def _admin_append_detail_prompt(callback: CallbackQuery, cleaner_user_id: int, cancel_cb: str) -> None:
+    current_text = callback.message.text or ""
+    prompt_suffix = "\n\n🔍 <b>Введите номер задачи (например: <code>23</code>)</b>"
+    new_text = current_text + prompt_suffix
+    if len(new_text) > 4096:
+        new_text = current_text[:4050] + "\n…" + prompt_suffix
+    await callback.message.edit_text(
+        new_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=cancel_cb)],
+        ]),
+        parse_mode="HTML",
+    )
+    _awaiting_admin_task_detail[callback.from_user.id] = (cleaner_user_id, callback.message.message_id)
+
+
 @router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:ask_detail$"))
 async def admin_cleaning_ask_detail(callback: CallbackQuery):
     if not callback.from_user or not is_admin(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
     cleaner_user_id = int(callback.data.split(":")[3])
-    # Отправляем НОВЫМ сообщением — список остаётся видимым выше
-    sent = await callback.message.answer(
-        "🔍 <b>Детали задачи</b>\n\nВведите номер задачи (например: <code>23</code>)",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:detail:close")],
-        ]),
-        parse_mode="HTML",
-    )
-    _awaiting_admin_task_detail[callback.from_user.id] = (cleaner_user_id, sent.message_id)
+    await _admin_append_detail_prompt(callback, cleaner_user_id, f"admin:cleaning:cleaner:{cleaner_user_id}")
+    await callback.answer()
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:history:ask_detail$"))
+async def admin_cleaning_history_ask_detail(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    cleaner_user_id = int(callback.data.split(":")[3])
+    await _admin_append_detail_prompt(callback, cleaner_user_id, f"admin:cleaning:cleaner:{cleaner_user_id}:history")
     await callback.answer()
 
 
@@ -464,24 +482,28 @@ async def admin_cleaning_detail_input(message: Message):
     except Exception:
         pass
 
-    if not raw.isdigit():
+    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}" if cleaner_user_id else "admin:cleaning"
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ К уборщику", callback_data=back_cb)],
+    ])
+
+    async def _reply_err(text: str):
         if prompt_msg_id:
-            await bot.edit_message_text("❌ Введите число — номер задачи.", chat_id=message.chat.id, message_id=prompt_msg_id)
+            await bot.edit_message_text(text, chat_id=message.chat.id, message_id=prompt_msg_id,
+                                        reply_markup=back_kb, parse_mode="HTML")
         else:
-            await message.answer("❌ Введите число — номер задачи.")
+            await message.answer(text, reply_markup=back_kb, parse_mode="HTML")
+
+    if not raw.isdigit():
+        await _reply_err("❌ Введите число — номер задачи.")
         return
 
     task_id = int(raw)
-    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}" if cleaner_user_id else "admin:cleaning"
 
     async with AsyncSessionLocal() as session:
         task = await session.get(CleaningTask, task_id)
         if not task:
-            err = f"❌ Задача #{task_id} не найдена."
-            if prompt_msg_id:
-                await bot.edit_message_text(err, chat_id=message.chat.id, message_id=prompt_msg_id)
-            else:
-                await message.answer(err)
+            await _reply_err(f"❌ Задача #{task_id} не найдена.")
             return
 
         checks_q = await session.execute(
@@ -547,7 +569,7 @@ async def admin_cleaning_detail_input(message: Message):
             text=f"🧾 Чек #{c.id} — {float(c.amount_total):.0f} ₽ [{c.status.value}]",
             callback_data=f"admin:cleaning:claim:{c.id}",
         )])
-    rows.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="admin:detail:close")])
+    rows.append([InlineKeyboardButton(text="⬅️ К уборщику", callback_data=back_cb)])
 
     result_text = "\n".join(lines)
     result_markup = InlineKeyboardMarkup(inline_keyboard=rows)
@@ -638,7 +660,7 @@ async def admin_cleaner_task_history(callback: CallbackQuery):
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text="🔍 Детали уборки",
-                callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:ask_detail",
+                callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:history:ask_detail",
             )],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)],
             [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],

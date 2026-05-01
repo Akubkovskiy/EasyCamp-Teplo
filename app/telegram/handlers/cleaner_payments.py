@@ -249,15 +249,19 @@ async def cleaner_pay_history_ask_detail(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
-    # Новым сообщением — список уборок остаётся видимым выше
-    sent = await callback.message.answer(
-        "🔍 <b>Детали уборки</b>\n\nВведите номер уборки (например: <code>23</code>)",
+    current_text = callback.message.text or ""
+    prompt_suffix = "\n\n🔍 <b>Введите номер уборки (например: <code>23</code>)</b>"
+    new_text = current_text + prompt_suffix
+    if len(new_text) > 4096:
+        new_text = current_text[:4050] + "\n…" + prompt_suffix
+    await callback.message.edit_text(
+        new_text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:detail:close")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:pay:history")],
         ]),
         parse_mode="HTML",
     )
-    _awaiting_task_detail[callback.from_user.id] = sent.message_id
+    _awaiting_task_detail[callback.from_user.id] = callback.message.message_id
     await callback.answer()
 
 
@@ -289,8 +293,12 @@ async def cleaner_pay_history_detail_input(message: Message):
         else:
             await message.answer(text, reply_markup=markup, parse_mode="HTML")
 
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
+    ])
+
     if not raw.isdigit():
-        await _reply("❌ Введите число — номер уборки.")
+        await _reply("❌ Введите число — номер уборки.", back_kb)
         return
 
     task_id = int(raw)
@@ -299,12 +307,7 @@ async def cleaner_pay_history_detail_input(message: Message):
     async with AsyncSessionLocal() as s:
         task = await s.get(CleaningTask, task_id)
         if not task or (db_user_id and task.assigned_to_user_id != db_user_id):
-            await _reply(
-                f"❌ Уборка #{task_id} не найдена.",
-                InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
-                ]),
-            )
+            await _reply(f"❌ Уборка #{task_id} не найдена.", back_kb)
             return
 
         checks_q = await s.execute(
@@ -363,7 +366,7 @@ async def cleaner_pay_history_detail_input(message: Message):
         lines.append(f"\n📸 Фото: {len(media)} шт. (отправлены ниже)")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Закрыть", callback_data="cleaner:detail:close")],
+        [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
     ])
     await _reply("\n".join(lines), kb)
 
