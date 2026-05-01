@@ -55,7 +55,9 @@ async def start_handler(message: Message):
 async def back_to_menu(callback: CallbackQuery):
     logger.info("Back to admin menu")
 
-    if callback.message:
+    if callback.from_user and callback.message:
+        from app.telegram.handlers.cleaner_admin import _cleanup_photos
+        await _cleanup_photos(callback.bot, callback.message.chat.id, callback.from_user.id)
         await callback.message.edit_text(
             messages.ADMIN_PANEL_TITLE,
             reply_markup=admin_menu_keyboard(),

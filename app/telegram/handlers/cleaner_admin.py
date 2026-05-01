@@ -292,6 +292,7 @@ async def admin_cleaning_overview(callback: CallbackQuery):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
+    await _cleanup_photos(callback.bot, callback.message.chat.id, callback.from_user.id)
     since = date.today().replace(day=1)  # начало месяца
 
     async with AsyncSessionLocal() as session:

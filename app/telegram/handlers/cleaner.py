@@ -142,6 +142,12 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
 
 @router.callback_query(F.data == "cleaner:menu")
 async def cleaner_menu_callback(callback: CallbackQuery):
+    from app.telegram.handlers.cleaner_payments import _cleaner_photo_msgs
+    for msg_id in _cleaner_photo_msgs.pop(callback.from_user.id, []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
     await show_cleaner_menu(callback, callback.from_user.id)
     # await callback.answer() # answer is handled in show_cleaner_menu if it's a callback
 
