@@ -89,7 +89,12 @@ async def cleaner_tasks_list(callback: CallbackQuery):
     done = [t for t in tasks if t.status == CleaningTaskStatus.DONE]
 
     if not tasks:
-        await callback.message.edit_text("📌 Задач нет.")
+        await callback.message.edit_text(
+            "📌 Задач нет.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")]
+            ]),
+        )
         await callback.answer()
         return
 
@@ -112,15 +117,15 @@ async def cleaner_tasks_list(callback: CallbackQuery):
         for t in done:
             lines.append(f"✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')}")
 
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"{STATUS_ICON.get(t.status, '•')} #{t.id} {t.scheduled_date.strftime('%d.%m')}",
-                callback_data=f"cleaner:task:view:{t.id}"
-            )]
-            for t in tasks[:10]
-        ]
-    )
+    task_rows = [
+        [InlineKeyboardButton(
+            text=f"{STATUS_ICON.get(t.status, '•')} #{t.id} {t.scheduled_date.strftime('%d.%m')}",
+            callback_data=f"cleaner:task:view:{t.id}"
+        )]
+        for t in tasks[:10]
+    ]
+    task_rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
+    kb = InlineKeyboardMarkup(inline_keyboard=task_rows)
     await callback.message.edit_text("\n".join(lines), reply_markup=kb, parse_mode="HTML")
     await callback.answer()
 

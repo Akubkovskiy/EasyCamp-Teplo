@@ -35,6 +35,7 @@ from app.telegram.handlers import (
     cleaner,
     cleaner_admin,
     cleaner_expenses,
+    cleaner_payments,
     cleaner_task_flow,
     guest,
     guest_booking,
@@ -132,6 +133,7 @@ dp.include_router(settings_users.router)
 dp.include_router(cleaner.router)
 dp.include_router(cleaner_admin.router)
 dp.include_router(cleaner_expenses.router)
+dp.include_router(cleaner_payments.router)
 dp.include_router(cleaner_task_flow.router)
 # guest_booking ДОЛЖЕН идти раньше guest, иначе F.contact из login-flow
 # в guest.py перехватит контакт от self-service потока.

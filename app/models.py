@@ -316,3 +316,16 @@ class SupplyExpenseClaim(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class CleanerPaymentProfile(Base):
+    """Реквизиты уборщицы для выплат по СБП."""
+    __tablename__ = "cleaner_payment_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    sbp_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    sbp_bank: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )

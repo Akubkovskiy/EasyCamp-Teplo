@@ -1,0 +1,600 @@
+"""Cleaner payments panel: balance, task history, payment requests, profile."""
+from datetime import date
+from decimal import Decimal
+
+from aiogram import F, Router
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from sqlalchemy import func, select
+
+from app.database import AsyncSessionLocal
+from app.models import (
+    CleanerPaymentProfile,
+    CleaningPaymentLedger,
+    CleaningTask,
+    CleaningTaskStatus,
+    CleaningPaymentEntryType,
+    PaymentStatus,
+    SupplyExpenseClaim,
+    SupplyClaimStatus,
+    User,
+    UserRole,
+)
+from app.telegram.auth.admin import resolve_user_db_id, is_cleaner
+
+router = Router()
+
+BANKS = ["Сбербанк", "Тинькофф", "ВТБ", "Альфа-Банк", "Райффайзен", "Другой"]
+
+# telegram_id → ожидаем телефон
+_awaiting_phone: set[int] = set()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+async def _get_profile(db_user_id: int):
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleanerPaymentProfile).where(CleanerPaymentProfile.user_id == db_user_id)
+        )
+        return q.scalar_one_or_none()
+
+
+async def _get_balance(db_user_id: int) -> tuple[Decimal, int, Decimal, Decimal]:
+    """Возвращает (начислено, кол-во уборок, одобрено возмещений, последняя_выплата)."""
+    async with AsyncSessionLocal() as s:
+        # Начисления CLEANING_FEE которые ещё не выплачены
+        accrued = await s.scalar(
+            select(func.sum(CleaningPaymentLedger.amount)).where(
+                CleaningPaymentLedger.cleaner_user_id == db_user_id,
+                CleaningPaymentLedger.entry_type == CleaningPaymentEntryType.CLEANING_FEE,
+                CleaningPaymentLedger.status.in_([PaymentStatus.ACCRUED, PaymentStatus.APPROVED]),
+            )
+        ) or Decimal(0)
+
+        task_count = await s.scalar(
+            select(func.count()).where(
+                CleaningPaymentLedger.cleaner_user_id == db_user_id,
+                CleaningPaymentLedger.entry_type == CleaningPaymentEntryType.CLEANING_FEE,
+                CleaningPaymentLedger.status.in_([PaymentStatus.ACCRUED, PaymentStatus.APPROVED]),
+            )
+        ) or 0
+
+        # Одобренные возмещения расходников (ещё не выплачены)
+        reimbursements = await s.scalar(
+            select(func.sum(SupplyExpenseClaim.amount_total)).where(
+                SupplyExpenseClaim.cleaner_user_id == db_user_id,
+                SupplyExpenseClaim.status == SupplyClaimStatus.APPROVED,
+            )
+        ) or Decimal(0)
+
+        # Последняя выплата
+        last_paid = await s.scalar(
+            select(func.sum(CleaningPaymentLedger.amount)).where(
+                CleaningPaymentLedger.cleaner_user_id == db_user_id,
+                CleaningPaymentLedger.status == PaymentStatus.PAID,
+            )
+        ) or Decimal(0)
+
+    return Decimal(accrued), int(task_count), Decimal(reimbursements), Decimal(last_paid)
+
+
+def _payments_back_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+    ])
+
+
+# ---------------------------------------------------------------------------
+# Main payments screen
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data == "cleaner:pay")
+async def cleaner_pay_screen(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    accrued, task_count, reimbursements, last_paid = await _get_balance(db_user_id)
+    total = accrued + reimbursements
+    profile = await _get_profile(db_user_id)
+
+    month = date.today().strftime("%B %Y")
+    reimbursement_line = f"\n🧾 Возмещения расходников: {reimbursements:.0f} ₽" if reimbursements else ""
+    last_paid_line = f"\n\n💳 Всего выплачено ранее: {last_paid:.0f} ₽" if last_paid else ""
+
+    profile_line = ""
+    if profile and profile.sbp_phone:
+        profile_line = f"\n\n🏦 Реквизиты: {profile.sbp_bank or '—'} · {profile.sbp_phone}"
+    else:
+        profile_line = "\n\n⚠️ Реквизиты не заданы — настройте перед запросом"
+
+    text = (
+        f"💰 <b>Выплаты</b>\n\n"
+        f"🧹 Уборок к оплате: <b>{task_count}</b>\n"
+        f"💵 Начислено: <b>{accrued:.0f} ₽</b>"
+        f"{reimbursement_line}\n"
+        f"📦 <b>Итого к получению: {total:.0f} ₽</b>"
+        f"{last_paid_line}"
+        f"{profile_line}"
+    )
+
+    rows = []
+    if total > 0:
+        rows.append([InlineKeyboardButton(
+            text=f"💸 Запросить выплату {total:.0f} ₽",
+            callback_data="cleaner:pay:request",
+        )])
+    rows.append([InlineKeyboardButton(text="📋 История уборок", callback_data="cleaner:pay:history")])
+    rows.append([InlineKeyboardButton(text="⚙️ Мои реквизиты", callback_data="cleaner:pay:profile")])
+    rows.append([InlineKeyboardButton(text="⬅️ Главное меню", callback_data="cleaner:menu")])
+
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+# ---------------------------------------------------------------------------
+# Task history
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data == "cleaner:pay:history")
+async def cleaner_pay_history(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as s:
+        tasks_q = await s.execute(
+            select(CleaningTask).where(
+                CleaningTask.assigned_to_user_id == db_user_id,
+                CleaningTask.status == CleaningTaskStatus.DONE,
+            ).order_by(CleaningTask.scheduled_date.desc()).limit(20)
+        )
+        tasks = list(tasks_q.scalars().all())
+
+        # Суммы из ledger по каждой задаче
+        amounts: dict[int, Decimal] = {}
+        for t in tasks:
+            amt = await s.scalar(
+                select(func.sum(CleaningPaymentLedger.amount)).where(
+                    CleaningPaymentLedger.task_id == t.id,
+                    CleaningPaymentLedger.entry_type == CleaningPaymentEntryType.CLEANING_FEE,
+                )
+            )
+            amounts[t.id] = Decimal(amt or 0)
+
+    if not tasks:
+        await callback.message.edit_text(
+            "📋 <b>История уборок</b>\n\nВыполненных задач пока нет.",
+            reply_markup=_payments_back_kb(),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    lines = ["📋 <b>История уборок</b>\n"]
+    rows = []
+    for t in tasks:
+        amt = amounts[t.id]
+        amt_str = f" — {amt:.0f} ₽" if amt else ""
+        lines.append(f"✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')} | дом {t.house_id}{amt_str}")
+        rows.append([InlineKeyboardButton(
+            text=f"✅ #{t.id} {t.scheduled_date.strftime('%d.%m')}{amt_str}",
+            callback_data=f"cleaner:pay:task:{t.id}",
+        )])
+
+    rows.append([InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:pay:task:"))
+async def cleaner_pay_task_detail(callback: CallbackQuery):
+    task_id = int(callback.data.split(":")[3])
+
+    async with AsyncSessionLocal() as s:
+        task = await s.get(CleaningTask, task_id)
+        if not task:
+            await callback.answer("Задача не найдена", show_alert=True)
+            return
+
+        ledger_q = await s.execute(
+            select(CleaningPaymentLedger).where(CleaningPaymentLedger.task_id == task_id)
+        )
+        entries = list(ledger_q.scalars().all())
+
+        claims_q = await s.execute(
+            select(SupplyExpenseClaim).where(SupplyExpenseClaim.task_id == task_id)
+        )
+        claims = list(claims_q.scalars().all())
+
+    duration = ""
+    if task.started_at and task.completed_at:
+        mins = int((task.completed_at - task.started_at).total_seconds() / 60)
+        duration = f"\n⏱ Длительность: {mins} мин."
+
+    entries_text = ""
+    for e in entries:
+        status_mark = "✅" if e.status == PaymentStatus.PAID else "⏳"
+        entries_text += f"\n{status_mark} {e.entry_type.value}: {float(e.amount):.0f} ₽ [{e.status.value}]"
+
+    claims_text = ""
+    for c in claims:
+        claims_text += f"\n🧾 Чек #{c.id}: {float(c.amount_total):.0f} ₽ [{c.status.value}]"
+
+    text = (
+        f"🧹 <b>Уборка #{task.id}</b>\n"
+        f"📅 {task.scheduled_date.strftime('%d.%m.%Y')} | 🏠 Дом {task.house_id}"
+        f"{duration}\n"
+        f"<b>Начисления:</b>{entries_text if entries_text else ' нет'}"
+        + (f"\n<b>Чеки:</b>{claims_text}" if claims_text else "")
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=_payments_back_kb(),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+# ---------------------------------------------------------------------------
+# Payment request
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data == "cleaner:pay:request")
+async def cleaner_pay_request_confirm(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    profile = await _get_profile(db_user_id)
+    if not profile or not profile.sbp_phone:
+        await callback.message.edit_text(
+            "⚠️ <b>Реквизиты не заданы</b>\n\nСначала укажите банк и номер телефона для СБП.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⚙️ Задать реквизиты", callback_data="cleaner:pay:profile")],
+                [InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")],
+            ]),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    accrued, task_count, reimbursements, _ = await _get_balance(db_user_id)
+    total = accrued + reimbursements
+
+    text = (
+        f"💸 <b>Подтвердите запрос на выплату</b>\n\n"
+        f"🧹 Уборок: {task_count}\n"
+        f"💵 Начислено: {accrued:.0f} ₽\n"
+        + (f"🧾 Возмещения: {reimbursements:.0f} ₽\n" if reimbursements else "")
+        + f"📦 <b>Итого: {total:.0f} ₽</b>\n\n"
+        f"🏦 {profile.sbp_bank or '—'}\n"
+        f"📱 {profile.sbp_phone}"
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Отправить запрос", callback_data="cleaner:pay:request:send")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:pay")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "cleaner:pay:request:send")
+async def cleaner_pay_request_send(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+
+    accrued, task_count, reimbursements, _ = await _get_balance(db_user_id)
+    total = accrued + reimbursements
+    profile = await _get_profile(db_user_id)
+
+    async with AsyncSessionLocal() as s:
+        user = await s.get(User, db_user_id)
+        cleaner_name = user.name if user else "—"
+
+    if total <= 0:
+        await callback.answer("Нечего запрашивать — баланс 0 ₽", show_alert=True)
+        return
+
+    # Уведомление всем админам
+    from app.core.config import settings
+    from app.telegram.auth.admin import get_all_users
+
+    admin_users = await get_all_users()
+    admin_ids = {u.telegram_id for u in admin_users if u.role in {UserRole.ADMIN}}
+    admin_ids.add(settings.telegram_chat_id)
+
+    period = date.today().strftime("%Y-%m")
+    reimbursement_line = f"\n🧾 Возмещения: {reimbursements:.0f} ₽" if reimbursements else ""
+    profile_line = ""
+    if profile and profile.sbp_phone:
+        profile_line = f"\n\n🏦 {profile.sbp_bank or '—'}\n📱 {profile.sbp_phone}"
+
+    admin_text = (
+        f"💸 <b>Запрос на выплату</b>\n\n"
+        f"👤 {cleaner_name}\n"
+        f"📅 Период: {period}\n"
+        f"🧹 Уборок: {task_count}\n"
+        f"💵 Начислено: {accrued:.0f} ₽"
+        f"{reimbursement_line}\n"
+        f"📦 <b>Итого: {total:.0f} ₽</b>"
+        f"{profile_line}"
+    )
+    admin_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Оплатить", callback_data=f"admin:pay:approve:{db_user_id}:{period}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"admin:pay:reject:{db_user_id}:{period}"),
+        ]
+    ])
+
+    for aid in admin_ids:
+        try:
+            await callback.bot.send_message(aid, admin_text, reply_markup=admin_kb, parse_mode="HTML")
+        except Exception:
+            pass
+
+    await callback.message.edit_text(
+        "✅ <b>Запрос отправлен администратору.</b>\n\nВы получите уведомление после подтверждения.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+# ---------------------------------------------------------------------------
+# Admin approves / rejects payment
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data.startswith("admin:pay:approve:"))
+async def admin_pay_approve(callback: CallbackQuery):
+    from app.telegram.auth.admin import is_admin
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    _, _, _, cleaner_user_id_str, period = callback.data.split(":", 4)
+    cleaner_user_id = int(cleaner_user_id_str)
+
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleaningPaymentLedger).where(
+                CleaningPaymentLedger.cleaner_user_id == cleaner_user_id,
+                CleaningPaymentLedger.status.in_([PaymentStatus.ACCRUED, PaymentStatus.APPROVED]),
+            )
+        )
+        entries = list(q.scalars().all())
+
+        claims_q = await s.execute(
+            select(SupplyExpenseClaim).where(
+                SupplyExpenseClaim.cleaner_user_id == cleaner_user_id,
+                SupplyExpenseClaim.status == SupplyClaimStatus.APPROVED,
+            )
+        )
+        claims = list(claims_q.scalars().all())
+
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        total = Decimal(0)
+
+        for e in entries:
+            e.status = PaymentStatus.PAID
+            e.paid_at = now
+            total += Decimal(e.amount)
+
+        for c in claims:
+            c.status = SupplyClaimStatus.PAID
+            c.paid_at = now
+            total += Decimal(c.amount_total)
+
+        cleaner = await s.get(User, cleaner_user_id)
+        cleaner_tg_id = cleaner.telegram_id if cleaner else None
+        await s.commit()
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n✅ <b>Оплачено {total:.0f} ₽</b> — {callback.from_user.first_name}",
+        parse_mode="HTML",
+    )
+    await callback.answer(f"Отмечено как оплачено: {total:.0f} ₽")
+
+    if cleaner_tg_id:
+        try:
+            await callback.bot.send_message(
+                cleaner_tg_id,
+                f"✅ <b>Выплата подтверждена!</b>\n\n"
+                f"💵 Сумма: <b>{total:.0f} ₽</b>\n"
+                f"Деньги будут переведены на ваши реквизиты.",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data.startswith("admin:pay:reject:"))
+async def admin_pay_reject(callback: CallbackQuery):
+    from app.telegram.auth.admin import is_admin
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    _, _, _, cleaner_user_id_str, period = callback.data.split(":", 4)
+    cleaner_user_id = int(cleaner_user_id_str)
+
+    async with AsyncSessionLocal() as s:
+        cleaner = await s.get(User, cleaner_user_id)
+        cleaner_tg_id = cleaner.telegram_id if cleaner else None
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n❌ <b>Отклонено</b> — {callback.from_user.first_name}",
+        parse_mode="HTML",
+    )
+    await callback.answer("Запрос отклонён")
+
+    if cleaner_tg_id:
+        try:
+            await callback.bot.send_message(
+                cleaner_tg_id,
+                "❌ <b>Запрос на выплату отклонён администратором.</b>\n\n"
+                "Свяжитесь с администратором для уточнения.",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Payment profile
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data == "cleaner:pay:profile")
+async def cleaner_pay_profile(callback: CallbackQuery):
+    if not callback.from_user or not is_cleaner(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    profile = await _get_profile(db_user_id) if db_user_id else None
+
+    bank = profile.sbp_bank if profile else "не задан"
+    phone = profile.sbp_phone if profile else "не задан"
+
+    text = (
+        f"⚙️ <b>Реквизиты для выплат (СБП)</b>\n\n"
+        f"🏦 Банк: <b>{bank}</b>\n"
+        f"📱 Телефон: <b>{phone}</b>"
+    )
+    rows = [
+        [InlineKeyboardButton(text="🏦 Изменить банк", callback_data="cleaner:pay:profile:bank")],
+        [InlineKeyboardButton(text="📱 Изменить телефон", callback_data="cleaner:pay:profile:phone")],
+        [InlineKeyboardButton(text="⬅️ Выплаты", callback_data="cleaner:pay")],
+    ]
+    await callback.message.edit_text(
+        text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "cleaner:pay:profile:bank")
+async def cleaner_pay_profile_bank_choose(callback: CallbackQuery):
+    rows = [
+        [InlineKeyboardButton(text=b, callback_data=f"cleaner:pay:profile:bank:{b}")]
+        for b in BANKS
+    ]
+    rows.append([InlineKeyboardButton(text="⬅️ Реквизиты", callback_data="cleaner:pay:profile")])
+    await callback.message.edit_text(
+        "🏦 Выберите банк:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:pay:profile:bank:"))
+async def cleaner_pay_profile_bank_save(callback: CallbackQuery):
+    bank = callback.data[len("cleaner:pay:profile:bank:"):]
+    db_user_id = await resolve_user_db_id(None, callback.from_user.id)
+    if not db_user_id:
+        await callback.answer("Ошибка", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleanerPaymentProfile).where(CleanerPaymentProfile.user_id == db_user_id)
+        )
+        profile = q.scalar_one_or_none()
+        if profile:
+            profile.sbp_bank = bank
+        else:
+            s.add(CleanerPaymentProfile(user_id=db_user_id, sbp_bank=bank))
+        await s.commit()
+
+    await callback.answer(f"Банк сохранён: {bank}")
+    # Вернуть в профиль через edit
+    await callback.message.edit_text(
+        f"✅ Банк сохранён: <b>{bank}</b>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Реквизиты", callback_data="cleaner:pay:profile")],
+        ]),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "cleaner:pay:profile:phone")
+async def cleaner_pay_profile_phone_ask(callback: CallbackQuery):
+    if callback.from_user:
+        _awaiting_phone.add(callback.from_user.id)
+    await callback.message.edit_text(
+        "📱 Отправьте номер телефона для СБП в формате <code>+7XXXXXXXXXX</code>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:pay:profile")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_phone and m.text)
+async def cleaner_pay_profile_phone_save(message: Message):
+    phone = (message.text or "").strip()
+    if not phone.startswith("+7") or len(phone) < 11:
+        await message.answer("❌ Неверный формат. Отправьте номер в виде <code>+7XXXXXXXXXX</code>", parse_mode="HTML")
+        return
+
+    _awaiting_phone.discard(message.from_user.id)
+    db_user_id = await resolve_user_db_id(None, message.from_user.id)
+    if not db_user_id:
+        return
+
+    async with AsyncSessionLocal() as s:
+        q = await s.execute(
+            select(CleanerPaymentProfile).where(CleanerPaymentProfile.user_id == db_user_id)
+        )
+        profile = q.scalar_one_or_none()
+        if profile:
+            profile.sbp_phone = phone
+        else:
+            s.add(CleanerPaymentProfile(user_id=db_user_id, sbp_phone=phone))
+        await s.commit()
+
+    await message.answer(
+        f"✅ Телефон сохранён: <b>{phone}</b>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Реквизиты", callback_data="cleaner:pay:profile")],
+        ]),
+        parse_mode="HTML",
+    )

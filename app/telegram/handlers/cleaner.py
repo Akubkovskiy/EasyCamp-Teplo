@@ -131,6 +131,9 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(text="🧾 Чек расходников", callback_data="cleaner:expense:new")
             ],
+            [
+                InlineKeyboardButton(text="💰 Мои выплаты", callback_data="cleaner:pay")
+            ],
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="cleaner:menu")],
         ]
     )
