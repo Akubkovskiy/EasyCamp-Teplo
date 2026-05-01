@@ -7,6 +7,7 @@ from aiogram import Bot
 
 from app.core.config import settings
 from app.services.avito_sync_service import sync_all_avito_items
+from app.services.notification_service import send_safe
 
 logger = logging.getLogger(__name__)
 
@@ -148,16 +149,12 @@ async def verify_local_bookings_in_avito(item_house_mapping: dict):
 
 async def notify_new_bookings(bookings: list):
     """Отправить уведомление о новых бронях"""
+    from app.services.cleaner_notify import notify_cleaners_new_booking
+
+    bot = Bot(token=settings.telegram_bot_token)
     try:
-        bot = Bot(token=settings.telegram_bot_token)
-
-        from app.services.cleaner_notify import notify_cleaners_new_booking
-
         for booking in bookings:
-            house_name = (
-                booking.house.name if booking.house else f"House {booking.house_id}"
-            )
-
+            house_name = booking.house.name if booking.house else f"House {booking.house_id}"
             text = (
                 f"🆕 <b>Новая бронь (Avito)</b>\n\n"
                 f"🏠 <b>{house_name}</b>\n"
@@ -166,42 +163,31 @@ async def notify_new_bookings(bookings: list):
                 f"📅 {booking.check_in.strftime('%d.%m')} - {booking.check_out.strftime('%d.%m')}\n"
                 f"💰 {booking.total_price}₽ (Предоплата: {booking.advance_amount}₽)"
             )
-
-            try:
-                await bot.send_message(
-                    chat_id=settings.telegram_chat_id, text=text, parse_mode="HTML"
-                )
-            except Exception as msg_err:
-                logger.error(
-                    f"Failed to send individual booking notification: {msg_err}"
-                )
-
+            await send_safe(bot, settings.telegram_chat_id, text, context=f"avito_new booking={booking.id}")
             await notify_cleaners_new_booking(bot, booking)
 
-        await bot.session.close()
         logger.info(f"Sent notifications about {len(bookings)} new bookings")
-
-    except Exception as e:
-        logger.error(f"Failed to send notification: {e}")
+    finally:
+        await bot.session.close()
 
 
 async def notify_updated_bookings(bookings: list):
     """Отправить уведомление об обновлении броней"""
+    from app.models import BookingStatus
+    from app.services.cleaner_notify import notify_cleaners_booking_cancelled
+
+    _status_map = {
+        "confirmed": "✅ Подтверждено",
+        "cancelled": "❌ Отменено",
+        "new": "⏳ Требуется подтверждение!",
+        "paid": "💰 Оплачено",
+    }
+
+    bot = Bot(token=settings.telegram_bot_token)
     try:
-        bot = Bot(token=settings.telegram_bot_token)
-
         for booking in bookings:
-            house_name = (
-                booking.house.name if booking.house else f"House {booking.house_id}"
-            )
-            status_map = {
-                "confirmed": "✅ Подтверждено",
-                "cancelled": "❌ Отменено",
-                "new": "⏳ Требуется подтверждение!",
-                "paid": "💰 Оплачено",
-            }
-            status_text = status_map.get(booking.status.value, booking.status.value)
-
+            house_name = booking.house.name if booking.house else f"House {booking.house_id}"
+            status_text = _status_map.get(booking.status.value, booking.status.value)
             text = (
                 f"🔄 <b>Бронь обновлена (Avito)</b>\n\n"
                 f"🏠 <b>{house_name}</b>\n"
@@ -210,22 +196,9 @@ async def notify_updated_bookings(bookings: list):
                 f"Статус: {status_text}\n"
                 f"Предоплата: {booking.advance_amount}₽"
             )
+            await send_safe(bot, settings.telegram_chat_id, text, context=f"avito_updated booking={booking.id}")
 
-            try:
-                await bot.send_message(
-                    chat_id=settings.telegram_chat_id, text=text, parse_mode="HTML"
-                )
-            except Exception as msg_err:
-                logger.error(
-                    f"Failed to send individual booking notification: {msg_err}"
-                )
-
-            from app.models import BookingStatus
             if booking.status == BookingStatus.CANCELLED:
-                from app.services.cleaner_notify import notify_cleaners_booking_cancelled
                 await notify_cleaners_booking_cancelled(bot, booking)
-
+    finally:
         await bot.session.close()
-
-    except Exception as e:
-        logger.error(f"Failed to send notification: {e}")
