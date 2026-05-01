@@ -16,6 +16,8 @@ PHOTO_HINT_RE = re.compile(r"#task(\d+)")
 
 # telegram_id → task_id (ждём описание доп. работы)
 _awaiting_extra_desc: dict[int, int] = {}
+# telegram_id → (task_id, description) (ждём сумму от уборщицы)
+_awaiting_extra_amount: dict[int, tuple[int, str]] = {}
 
 
 def _task_actions_keyboard(task: CleaningTask) -> InlineKeyboardMarkup:
@@ -579,9 +581,38 @@ async def cleaner_task_extra_desc_received(message: Message):
         return
 
     description = message.text.strip()[:300]
-    db_user_id = await resolve_user_db_id(None, tg_id)
+    _awaiting_extra_amount[tg_id] = (task_id, description)
 
-    # Уведомляем всех администраторов
+    await message.answer(
+        f"✅ Описание принято.\n\n"
+        f"💵 Теперь укажите сумму за эту работу (целое число ₽):",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=f"cleaner:task:view:{task_id}")],
+        ]),
+    )
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_extra_amount and m.text)
+async def cleaner_task_extra_amount_received(message: Message):
+    tg_id = message.from_user.id
+    state = _awaiting_extra_amount.pop(tg_id, None)
+    if state is None:
+        return
+
+    task_id, description = state
+
+    try:
+        amount = int(message.text.strip().replace(",", ".").split(".")[0])
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("❌ Введите целое положительное число.")
+        _awaiting_extra_amount[tg_id] = state
+        return
+
+    db_user_id = await resolve_user_db_id(None, tg_id)
+    name = message.from_user.first_name or "Уборщица"
+
     from app.core.config import settings
     from app.models import UserRole
     from app.telegram.auth.admin import get_all_users
@@ -590,18 +621,24 @@ async def cleaner_task_extra_desc_received(message: Message):
     admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
     admin_ids.add(settings.telegram_chat_id)
 
-    name = message.from_user.first_name or "Уборщица"
     admin_text = (
         f"💰 <b>Запрос доп. оплаты</b>\n\n"
         f"👤 {name}\n"
         f"🧹 Задача #{task_id}\n"
-        f"📝 {description}"
+        f"📝 {description}\n"
+        f"💵 Запрошено: <b>{amount} ₽</b>"
     )
     admin_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="💵 Назначить сумму",
-            callback_data=f"admin:pay:adj:{task_id}:{db_user_id or 0}",
-        )],
+        [
+            InlineKeyboardButton(
+                text=f"✅ Одобрить {amount} ₽",
+                callback_data=f"admin:pay:adj_approve:{task_id}:{db_user_id or 0}:{amount}",
+            ),
+            InlineKeyboardButton(
+                text="❌ Оспорить",
+                callback_data=f"admin:pay:adj_reject:{task_id}:{db_user_id or 0}",
+            ),
+        ]
     ])
 
     for aid in admin_ids:
@@ -611,7 +648,9 @@ async def cleaner_task_extra_desc_received(message: Message):
             pass
 
     await message.answer(
-        "✅ Запрос отправлен администратору. Он назначит сумму и вы получите уведомление.",
+        f"✅ Запрос отправлен администратору.\n\n"
+        f"📝 {description}\n💵 {amount} ₽\n\n"
+        f"Вы получите уведомление после решения.",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📋 К задаче", callback_data=f"cleaner:task:view:{task_id}")],
             [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],

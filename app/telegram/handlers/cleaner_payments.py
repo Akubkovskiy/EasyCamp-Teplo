@@ -28,8 +28,8 @@ BANKS = ["Сбербанк", "Тинькофф", "ВТБ", "Альфа-Банк"
 # telegram_id → ожидаем телефон
 _awaiting_phone: set[int] = set()
 
-# admin telegram_id → (task_id, cleaner_db_id) — ждём сумму доп. оплаты
-_awaiting_adj_amount: dict[int, tuple[int, int]] = {}
+# admin telegram_id → (task_id, cleaner_db_id) — ждём комментарий при оспаривании
+_awaiting_adj_dispute: dict[int, tuple[int, int]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -627,11 +627,12 @@ async def cleaner_pay_profile_phone_save(message: Message):
 
 
 # ---------------------------------------------------------------------------
-# Admin: extra adjustment payment
+# Admin: approve / dispute extra adjustment payment
 # ---------------------------------------------------------------------------
 
-@router.callback_query(F.data.startswith("admin:pay:adj:"))
-async def admin_pay_adj_ask(callback: CallbackQuery):
+@router.callback_query(F.data.startswith("admin:pay:adj_approve:"))
+async def admin_pay_adj_approve(callback: CallbackQuery):
+    from datetime import datetime, timezone
     from app.telegram.auth.admin import is_admin
     if not callback.from_user or not is_admin(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
@@ -640,48 +641,7 @@ async def admin_pay_adj_ask(callback: CallbackQuery):
     parts = callback.data.split(":")
     task_id = int(parts[3])
     cleaner_db_id = int(parts[4])
-    _awaiting_adj_amount[callback.from_user.id] = (task_id, cleaner_db_id)
-
-    await callback.message.edit_text(
-        callback.message.text + "\n\n💵 <b>Введите сумму доп. оплаты (целое число ₽):</b>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:pay:adj:cancel")],
-        ]),
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data == "admin:pay:adj:cancel")
-async def admin_pay_adj_cancel(callback: CallbackQuery):
-    if callback.from_user:
-        _awaiting_adj_amount.pop(callback.from_user.id, None)
-    await callback.answer("Отменено")
-    await callback.message.edit_reply_markup(reply_markup=None)
-
-
-@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_adj_amount and m.text)
-async def admin_pay_adj_amount_received(message: Message):
-    from datetime import datetime, timezone
-    from app.telegram.auth.admin import is_admin
-
-    if not message.from_user or not is_admin(message.from_user.id):
-        return
-
-    tg_id = message.from_user.id
-    state = _awaiting_adj_amount.pop(tg_id, None)
-    if not state:
-        return
-
-    task_id, cleaner_db_id = state
-    try:
-        amount = Decimal(message.text.strip().replace(",", "."))
-        if amount <= 0:
-            raise ValueError
-    except (ValueError, Exception):
-        await message.answer("❌ Некорректная сумма. Введите целое положительное число.")
-        _awaiting_adj_amount[tg_id] = state
-        return
+    amount = Decimal(parts[5])
 
     period_key = date.today().strftime("%Y-%m")
     async with AsyncSessionLocal() as s:
@@ -692,26 +652,146 @@ async def admin_pay_adj_amount_received(message: Message):
             amount=amount,
             period_key=period_key,
             status=PaymentStatus.ACCRUED,
-            comment=f"Доп. работа по задаче #{task_id} — назначено {message.from_user.first_name}",
+            comment=f"Доп. работа по задаче #{task_id} — одобрено {callback.from_user.first_name}",
             created_at=datetime.now(timezone.utc),
         ))
         cleaner = await s.get(User, cleaner_db_id)
         cleaner_tg_id = cleaner.telegram_id if cleaner else None
         await s.commit()
 
-    await message.answer(
-        f"✅ <b>Начислено {amount:.0f} ₽</b> по задаче #{task_id} (доп. работа)",
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n✅ <b>Одобрено {amount:.0f} ₽</b> — {callback.from_user.first_name}",
         parse_mode="HTML",
     )
+    await callback.answer(f"Одобрено: {amount:.0f} ₽")
 
     if cleaner_tg_id:
         try:
-            await message.bot.send_message(
+            await callback.bot.send_message(
                 cleaner_tg_id,
-                f"✅ <b>Доп. оплата начислена!</b>\n\n"
+                f"✅ <b>Доп. оплата одобрена!</b>\n\n"
                 f"🧹 Задача #{task_id}\n"
-                f"💵 Сумма: <b>{amount:.0f} ₽</b>",
+                f"💵 Сумма: <b>{amount:.0f} ₽</b>\n\n"
+                f"Отражено в разделе «Мои выплаты».",
                 parse_mode="HTML",
             )
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data.startswith("admin:pay:adj_reject:"))
+async def admin_pay_adj_reject(callback: CallbackQuery):
+    from app.telegram.auth.admin import is_admin
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    parts = callback.data.split(":")
+    task_id = int(parts[3])
+    cleaner_db_id = int(parts[4])
+    _awaiting_adj_dispute[callback.from_user.id] = (task_id, cleaner_db_id)
+
+    await callback.message.edit_text(
+        callback.message.text + "\n\n❌ <b>Оспорить — укажите причину или предложите другую сумму:</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Просто отклонить (без комментария)", callback_data=f"admin:pay:adj_reject_confirm:{task_id}:{cleaner_db_id}")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin:pay:adj_reject_confirm:"))
+async def admin_pay_adj_reject_confirm(callback: CallbackQuery):
+    from app.telegram.auth.admin import is_admin
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    parts = callback.data.split(":")
+    task_id = int(parts[3])
+    cleaner_db_id = int(parts[4])
+    _awaiting_adj_dispute.pop(callback.from_user.id, None)
+
+    async with AsyncSessionLocal() as s:
+        cleaner = await s.get(User, cleaner_db_id)
+        cleaner_tg_id = cleaner.telegram_id if cleaner else None
+
+    await callback.message.edit_text(
+        callback.message.text.split("\n\n❌")[0] + f"\n\n❌ <b>Отклонено</b> — {callback.from_user.first_name}",
+        parse_mode="HTML",
+    )
+    await callback.answer("Отклонено")
+
+    if cleaner_tg_id:
+        try:
+            await callback.bot.send_message(
+                cleaner_tg_id,
+                f"❌ <b>Запрос доп. оплаты отклонён.</b>\n\n"
+                f"🧹 Задача #{task_id}\n\n"
+                f"Свяжитесь с администратором для уточнения.",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_adj_dispute and m.text)
+async def admin_pay_adj_dispute_comment(message: Message):
+    from datetime import datetime, timezone
+    from app.telegram.auth.admin import is_admin
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+
+    tg_id = message.from_user.id
+    state = _awaiting_adj_dispute.pop(tg_id, None)
+    if not state:
+        return
+
+    task_id, cleaner_db_id = state
+    comment = message.text.strip()
+
+    # Проверяем: это число (встречная сумма) или текст (причина отказа)?
+    try:
+        counter_amount = Decimal(comment.replace(",", ".").split(".")[0])
+        is_counter = counter_amount > 0
+    except Exception:
+        is_counter = False
+
+    async with AsyncSessionLocal() as s:
+        if is_counter:
+            period_key = date.today().strftime("%Y-%m")
+            s.add(CleaningPaymentLedger(
+                task_id=task_id,
+                cleaner_user_id=cleaner_db_id,
+                entry_type=CleaningPaymentEntryType.ADJUSTMENT,
+                amount=counter_amount,
+                period_key=period_key,
+                status=PaymentStatus.ACCRUED,
+                comment=f"Доп. работа #{task_id} — встречное предложение {message.from_user.first_name}",
+                created_at=datetime.now(timezone.utc),
+            ))
+        cleaner = await s.get(User, cleaner_db_id)
+        cleaner_tg_id = cleaner.telegram_id if cleaner else None
+        await s.commit()
+
+    if is_counter:
+        await message.answer(f"✅ Начислено встречное предложение: {counter_amount:.0f} ₽ по задаче #{task_id}", parse_mode="HTML")
+        cleaner_msg = (
+            f"💰 <b>Администратор предложил другую сумму</b>\n\n"
+            f"🧹 Задача #{task_id}\n"
+            f"💵 Начислено: <b>{counter_amount:.0f} ₽</b>"
+        )
+    else:
+        await message.answer(f"Запрос отклонён с комментарием: {comment}")
+        cleaner_msg = (
+            f"❌ <b>Запрос доп. оплаты отклонён.</b>\n\n"
+            f"🧹 Задача #{task_id}\n"
+            f"💬 Комментарий: {comment}"
+        )
+
+    if cleaner_tg_id:
+        try:
+            await message.bot.send_message(cleaner_tg_id, cleaner_msg, parse_mode="HTML")
         except Exception:
             pass
