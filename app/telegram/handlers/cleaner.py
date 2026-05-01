@@ -51,12 +51,9 @@ async def get_cleaning_schedule(start_date: date, end_date: date) -> list[Bookin
 async def get_nearest_checkouts() -> str:
     """Формирует строку с ближайшими выездами по домам"""
     today = date.today()
+    prospect_date = today + timedelta(days=7)
 
     async with AsyncSessionLocal() as session:
-        # Ищем ближайший выезд для каждого дома
-        # Для простоты берем все выезды на неделю вперед
-        prospect_date = today + timedelta(days=7)
-
         query = (
             select(Booking)
             .options(joinedload(Booking.house))
@@ -69,31 +66,20 @@ async def get_nearest_checkouts() -> str:
             )
             .order_by(Booking.check_out)
         )
-
         result = await session.execute(query)
         bookings = list(result.scalars().all())
 
     if not bookings:
-        return "Нет выездов на ближайшую неделю."
+        return "  Нет выездов на ближайшую неделю."
 
-    # Группируем по датам, чтобы найти ближайшую уникальную дату выезда
-    summary_lines = []
+    confirmed = {BookingStatus.CONFIRMED, BookingStatus.PAID}
+    lines = []
+    for b in bookings[:5]:
+        icon = "✅" if b.status in confirmed else "🏠"
+        house_name = b.house.name if b.house else f"Дом {b.house_id}"
+        lines.append(f"  {icon} #{b.id} | {b.check_out.strftime('%d.%m')} | {house_name}")
 
-    # Сделаем просто список ближайших 3-5 выездов
-    seen_houses = set()
-    count = 0
-
-    for b in bookings:
-        if b.house_id in seen_houses:
-            continue
-
-        summary_lines.append(f"{b.house.name} ({b.check_out.strftime('%d.%m')})")
-        seen_houses.add(b.house_id)
-        count += 1
-        if count >= 3:  # Показываем макс 3 дома в саммари
-            break
-
-    return ", ".join(summary_lines)
+    return "\n".join(lines)
 
 
 def get_cleaner_keyboard() -> InlineKeyboardMarkup:
