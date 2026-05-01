@@ -1234,8 +1234,10 @@ async def _admin_approve_payment(
 
         await session.commit()
 
-    from app.services.cleaner_notify import notify_cleaners_new_booking
-    await notify_cleaners_new_booking(callback.bot, booking)
+    from app.models import BookingStatus as BS
+    if booking.status == BS.PAID:
+        from app.services.cleaner_notify import notify_cleaners_new_booking
+        await notify_cleaners_new_booking(callback.bot, booking)
 
     pay_kb = InlineKeyboardMarkup(
         inline_keyboard=[

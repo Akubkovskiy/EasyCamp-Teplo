@@ -221,28 +221,20 @@ async def show_schedule(callback: CallbackQuery):
 
     text = f"📅 <b>Выезды гостей {title}</b>\n<i>(информация о предстоящих уборках)</i>\n\n"
 
-    # Режим списка всех броней (Компактно)
+    # Режим списка всех броней (компактно, сгруппировано по месяцу выезда)
     if is_list_view:
-        current_month = None
         months_ru = {
-            1: "Январь",
-            2: "Февраль",
-            3: "Март",
-            4: "Апрель",
-            5: "Май",
-            6: "Июнь",
-            7: "Июль",
-            8: "Август",
-            9: "Сентябрь",
-            10: "Октябрь",
-            11: "Ноябрь",
-            12: "Декабрь",
+            1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
+            5: "Май", 6: "Июнь", 7: "Июль", 8: "Август",
+            9: "Сентябрь", 10: "Октябрь", 11: "Ноябрь", 12: "Декабрь",
         }
+        # Сортируем по дате ВЫЕЗДА (когда нужна уборка)
+        bookings = sorted(bookings, key=lambda b: b.check_out)
+        current_month = None
 
         for b in bookings:
-            # Группировка по месяцам
-            if b.check_in.month != current_month:
-                current_month = b.check_in.month
+            if b.check_out.month != current_month:
+                current_month = b.check_out.month
                 month_name = months_ru.get(current_month, "")
                 text += f"\n📅 <b>{month_name}</b>\n"
 

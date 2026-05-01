@@ -220,6 +220,11 @@ async def notify_updated_bookings(bookings: list):
                     f"Failed to send individual booking notification: {msg_err}"
                 )
 
+            from app.models import BookingStatus
+            if booking.status == BookingStatus.CANCELLED:
+                from app.services.cleaner_notify import notify_cleaners_booking_cancelled
+                await notify_cleaners_booking_cancelled(bot, booking)
+
         await bot.session.close()
 
     except Exception as e:
