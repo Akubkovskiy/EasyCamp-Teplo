@@ -1234,6 +1234,9 @@ async def _admin_approve_payment(
 
         await session.commit()
 
+    from app.services.cleaner_notify import notify_cleaners_new_booking
+    await notify_cleaners_new_booking(callback.bot, booking)
+
     pay_kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🏠 Моя бронь", callback_data="guest:my_booking")],

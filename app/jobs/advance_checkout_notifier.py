@@ -32,7 +32,7 @@ async def send_advance_checkout_notifications():
 
         for cleaner in cleaners:
             setting = await s.get(GlobalSetting, f"cleaner_notify_days_{cleaner.id}")
-            notify_days = 7
+            notify_days = 0  # off by default; cleaner can enable in Settings
             if setting and setting.value:
                 try:
                     notify_days = int(setting.value)

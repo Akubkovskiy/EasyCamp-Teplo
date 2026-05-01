@@ -504,6 +504,9 @@ async def guest_book_admin_confirm(callback: CallbackQuery):
         booking.updated_at = datetime.now(timezone.utc)
         await session.commit()
 
+    from app.services.cleaner_notify import notify_cleaners_new_booking
+    await notify_cleaners_new_booking(callback.bot, booking)
+
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except Exception:
@@ -609,6 +612,9 @@ async def site_lead_confirm(callback: CallbackQuery):
         booking.status = BookingStatus.CONFIRMED
         booking.updated_at = datetime.now(timezone.utc)
         await session.commit()
+
+    from app.services.cleaner_notify import notify_cleaners_new_booking
+    await notify_cleaners_new_booking(callback.bot, booking)
 
     try:
         await callback.message.edit_reply_markup(reply_markup=None)

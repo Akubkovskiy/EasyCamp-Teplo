@@ -151,6 +151,8 @@ async def notify_new_bookings(bookings: list):
     try:
         bot = Bot(token=settings.telegram_bot_token)
 
+        from app.services.cleaner_notify import notify_cleaners_new_booking
+
         for booking in bookings:
             house_name = (
                 booking.house.name if booking.house else f"House {booking.house_id}"
@@ -173,6 +175,8 @@ async def notify_new_bookings(bookings: list):
                 logger.error(
                     f"Failed to send individual booking notification: {msg_err}"
                 )
+
+            await notify_cleaners_new_booking(bot, booking)
 
         await bot.session.close()
         logger.info(f"Sent notifications about {len(bookings)} new bookings")
