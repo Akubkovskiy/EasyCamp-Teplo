@@ -23,13 +23,6 @@ router = Router()
 async def show_settings(event):
     """Показать настройки"""
 
-    # Определяем тип события
-    if isinstance(event, CallbackQuery):
-        message = event.message
-        await event.answer()
-    else:
-        message = event
-
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -67,11 +60,12 @@ async def show_settings(event):
         ]
     )
 
-    await message.answer(
-        "⚙️ <b>Настройки</b>\n\nВыберите раздел:",
-        reply_markup=keyboard,
-        parse_mode="HTML",
-    )
+    text = "⚙️ <b>Настройки</b>\n\nВыберите раздел:"
+    if isinstance(event, CallbackQuery):
+        await event.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await event.answer()
+    else:
+        await event.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(F.data == "settings_sync")
