@@ -14,6 +14,9 @@ router = Router()
 
 PHOTO_HINT_RE = re.compile(r"#task(\d+)")
 
+# telegram_id → task_id (ждём описание доп. работы)
+_awaiting_extra_desc: dict[int, int] = {}
+
 
 def _task_actions_keyboard(task: CleaningTask) -> InlineKeyboardMarkup:
     rows = []
@@ -33,6 +36,13 @@ def _task_actions_keyboard(task: CleaningTask) -> InlineKeyboardMarkup:
         ])
         rows.append([
             InlineKeyboardButton(text="✅ Завершить", callback_data=f"cleaner:task:done:{task.id}"),
+        ])
+        rows.append([
+            InlineKeyboardButton(text="💰 Доп. работа", callback_data=f"cleaner:task:extra:{task.id}"),
+        ])
+    elif task.status == CleaningTaskStatus.DONE:
+        rows.append([
+            InlineKeyboardButton(text="💰 Доп. работа", callback_data=f"cleaner:task:extra:{task.id}"),
         ])
 
     rows.append([InlineKeyboardButton(text="⬅️ К задачам", callback_data="cleaner:tasks:today")])
@@ -436,3 +446,68 @@ async def cleaner_task_start(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("cleaner:task:done:"))
 async def cleaner_task_done(callback: CallbackQuery):
     await _do_transition(callback, int(callback.data.split(":")[3]), CleaningTaskStatus.DONE)
+
+
+@router.callback_query(F.data.startswith("cleaner:task:extra:"))
+async def cleaner_task_extra_ask(callback: CallbackQuery):
+    task_id = int(callback.data.split(":")[3])
+    if callback.from_user:
+        _awaiting_extra_desc[callback.from_user.id] = task_id
+    await callback.message.edit_text(
+        f"💰 <b>Доп. работа по задаче #{task_id}</b>\n\n"
+        "Напишите что именно было сделано дополнительно (кратко, 1-2 предложения).\n"
+        "Администратор рассмотрит и назначит сумму.",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=f"cleaner:task:view:{task_id}")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_extra_desc and m.text)
+async def cleaner_task_extra_desc_received(message: Message):
+    tg_id = message.from_user.id
+    task_id = _awaiting_extra_desc.pop(tg_id, None)
+    if task_id is None:
+        return
+
+    description = message.text.strip()[:300]
+    db_user_id = await resolve_user_db_id(None, tg_id)
+
+    # Уведомляем всех администраторов
+    from app.core.config import settings
+    from app.models import UserRole
+    from app.telegram.auth.admin import get_all_users
+
+    users = await get_all_users()
+    admin_ids = {u.telegram_id for u in users if u.role in {UserRole.ADMIN, UserRole.OWNER} and u.telegram_id}
+    admin_ids.add(settings.telegram_chat_id)
+
+    name = message.from_user.first_name or "Уборщица"
+    admin_text = (
+        f"💰 <b>Запрос доп. оплаты</b>\n\n"
+        f"👤 {name}\n"
+        f"🧹 Задача #{task_id}\n"
+        f"📝 {description}"
+    )
+    admin_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="💵 Назначить сумму",
+            callback_data=f"admin:pay:adj:{task_id}:{db_user_id or 0}",
+        )],
+    ])
+
+    for aid in admin_ids:
+        try:
+            await message.bot.send_message(aid, admin_text, reply_markup=admin_kb, parse_mode="HTML")
+        except Exception:
+            pass
+
+    await message.answer(
+        "✅ Запрос отправлен администратору. Он назначит сумму и вы получите уведомление.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 К задаче", callback_data=f"cleaner:task:view:{task_id}")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+        ]),
+    )

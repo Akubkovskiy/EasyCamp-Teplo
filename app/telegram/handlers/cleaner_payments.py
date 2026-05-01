@@ -28,6 +28,9 @@ BANKS = ["Сбербанк", "Тинькофф", "ВТБ", "Альфа-Банк"
 # telegram_id → ожидаем телефон
 _awaiting_phone: set[int] = set()
 
+# admin telegram_id → (task_id, cleaner_db_id) — ждём сумму доп. оплаты
+_awaiting_adj_amount: dict[int, tuple[int, int]] = {}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -598,3 +601,94 @@ async def cleaner_pay_profile_phone_save(message: Message):
         ]),
         parse_mode="HTML",
     )
+
+
+# ---------------------------------------------------------------------------
+# Admin: extra adjustment payment
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data.startswith("admin:pay:adj:"))
+async def admin_pay_adj_ask(callback: CallbackQuery):
+    from app.telegram.auth.admin import is_admin
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    parts = callback.data.split(":")
+    task_id = int(parts[3])
+    cleaner_db_id = int(parts[4])
+    _awaiting_adj_amount[callback.from_user.id] = (task_id, cleaner_db_id)
+
+    await callback.message.edit_text(
+        callback.message.text + "\n\n💵 <b>Введите сумму доп. оплаты (целое число ₽):</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:pay:adj:cancel")],
+        ]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin:pay:adj:cancel")
+async def admin_pay_adj_cancel(callback: CallbackQuery):
+    if callback.from_user:
+        _awaiting_adj_amount.pop(callback.from_user.id, None)
+    await callback.answer("Отменено")
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+
+@router.message(lambda m: m.from_user and m.from_user.id in _awaiting_adj_amount and m.text)
+async def admin_pay_adj_amount_received(message: Message):
+    from datetime import datetime, timezone
+    from app.telegram.auth.admin import is_admin
+
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+
+    tg_id = message.from_user.id
+    state = _awaiting_adj_amount.pop(tg_id, None)
+    if not state:
+        return
+
+    task_id, cleaner_db_id = state
+    try:
+        amount = Decimal(message.text.strip().replace(",", "."))
+        if amount <= 0:
+            raise ValueError
+    except (ValueError, Exception):
+        await message.answer("❌ Некорректная сумма. Введите целое положительное число.")
+        _awaiting_adj_amount[tg_id] = state
+        return
+
+    period_key = date.today().strftime("%Y-%m")
+    async with AsyncSessionLocal() as s:
+        s.add(CleaningPaymentLedger(
+            task_id=task_id,
+            cleaner_user_id=cleaner_db_id,
+            entry_type=CleaningPaymentEntryType.ADJUSTMENT,
+            amount=amount,
+            period_key=period_key,
+            status=PaymentStatus.ACCRUED,
+            comment=f"Доп. работа по задаче #{task_id} — назначено {message.from_user.first_name}",
+            created_at=datetime.now(timezone.utc),
+        ))
+        cleaner = await s.get(User, cleaner_db_id)
+        cleaner_tg_id = cleaner.telegram_id if cleaner else None
+        await s.commit()
+
+    await message.answer(
+        f"✅ <b>Начислено {amount:.0f} ₽</b> по задаче #{task_id} (доп. работа)",
+        parse_mode="HTML",
+    )
+
+    if cleaner_tg_id:
+        try:
+            await message.bot.send_message(
+                cleaner_tg_id,
+                f"✅ <b>Доп. оплата начислена!</b>\n\n"
+                f"🧹 Задача #{task_id}\n"
+                f"💵 Сумма: <b>{amount:.0f} ₽</b>",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
