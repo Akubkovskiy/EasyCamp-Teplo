@@ -22,6 +22,7 @@ from app.models import (
     UserRole,
 )
 from app.telegram.auth.admin import resolve_user_db_id, is_cleaner
+from app.services.notification_service import send_safe
 
 router = Router()
 
@@ -611,10 +612,7 @@ async def cleaner_pay_request_send(callback: CallbackQuery):
     ])
 
     for aid in admin_ids:
-        try:
-            await callback.bot.send_message(aid, admin_text, reply_markup=admin_kb, parse_mode="HTML")
-        except Exception:
-            pass
+        await send_safe(callback.bot, aid, admin_text, reply_markup=admin_kb, context=f"pay_request admin={aid}")
 
     await callback.message.edit_text(
         "✅ <b>Запрос отправлен администратору.</b>\n\nВы получите уведомление после подтверждения.",
@@ -682,16 +680,13 @@ async def admin_pay_approve(callback: CallbackQuery):
     await callback.answer(f"Отмечено как оплачено: {total:.0f} ₽")
 
     if cleaner_tg_id:
-        try:
-            await callback.bot.send_message(
-                cleaner_tg_id,
-                f"💸 <b>Оплата переведена!</b>\n\n"
-                f"💵 Сумма: <b>{total:.0f} ₽</b>\n"
-                f"Проверьте поступление на реквизиты СБП.",
-                parse_mode="HTML",
-            )
-        except Exception:
-            pass
+        await send_safe(
+            callback.bot, cleaner_tg_id,
+            f"💸 <b>Оплата переведена!</b>\n\n"
+            f"💵 Сумма: <b>{total:.0f} ₽</b>\n"
+            f"Проверьте поступление на реквизиты СБП.",
+            context=f"pay_approve cleaner={cleaner_tg_id}",
+        )
 
 
 @router.callback_query(F.data.startswith("admin:pay:reject:"))
@@ -715,15 +710,12 @@ async def admin_pay_reject(callback: CallbackQuery):
     await callback.answer("Запрос отклонён")
 
     if cleaner_tg_id:
-        try:
-            await callback.bot.send_message(
-                cleaner_tg_id,
-                "❌ <b>Запрос на выплату отклонён администратором.</b>\n\n"
-                "Свяжитесь с администратором для уточнения.",
-                parse_mode="HTML",
-            )
-        except Exception:
-            pass
+        await send_safe(
+            callback.bot, cleaner_tg_id,
+            "❌ <b>Запрос на выплату отклонён администратором.</b>\n\n"
+            "Свяжитесь с администратором для уточнения.",
+            context=f"pay_reject cleaner={cleaner_tg_id}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -888,17 +880,14 @@ async def admin_pay_adj_approve(callback: CallbackQuery):
     await callback.answer(f"Одобрено: {amount:.0f} ₽")
 
     if cleaner_tg_id:
-        try:
-            await callback.bot.send_message(
-                cleaner_tg_id,
-                f"✅ <b>Доп. оплата одобрена!</b>\n\n"
-                f"🧹 Задача #{task_id}\n"
-                f"💵 Сумма: <b>{amount:.0f} ₽</b>\n\n"
-                f"Отражено в разделе «Мои выплаты».",
-                parse_mode="HTML",
-            )
-        except Exception:
-            pass
+        await send_safe(
+            callback.bot, cleaner_tg_id,
+            f"✅ <b>Доп. оплата одобрена!</b>\n\n"
+            f"🧹 Задача #{task_id}\n"
+            f"💵 Сумма: <b>{amount:.0f} ₽</b>\n\n"
+            f"Отражено в разделе «Мои выплаты».",
+            context=f"adj_approve cleaner={cleaner_tg_id}",
+        )
 
 
 @router.callback_query(F.data.startswith("admin:pay:adj_reject:"))
@@ -946,16 +935,13 @@ async def admin_pay_adj_reject_confirm(callback: CallbackQuery):
     await callback.answer("Отклонено")
 
     if cleaner_tg_id:
-        try:
-            await callback.bot.send_message(
-                cleaner_tg_id,
-                f"❌ <b>Запрос доп. оплаты отклонён.</b>\n\n"
-                f"🧹 Задача #{task_id}\n\n"
-                f"Свяжитесь с администратором для уточнения.",
-                parse_mode="HTML",
-            )
-        except Exception:
-            pass
+        await send_safe(
+            callback.bot, cleaner_tg_id,
+            f"❌ <b>Запрос доп. оплаты отклонён.</b>\n\n"
+            f"🧹 Задача #{task_id}\n\n"
+            f"Свяжитесь с администратором для уточнения.",
+            context=f"adj_reject cleaner={cleaner_tg_id}",
+        )
 
 
 @router.message(lambda m: m.from_user and m.from_user.id in _awaiting_adj_dispute and m.text)
@@ -1013,7 +999,4 @@ async def admin_pay_adj_dispute_comment(message: Message):
         )
 
     if cleaner_tg_id:
-        try:
-            await message.bot.send_message(cleaner_tg_id, cleaner_msg, parse_mode="HTML")
-        except Exception:
-            pass
+        await send_safe(message.bot, cleaner_tg_id, cleaner_msg, context=f"adj_dispute cleaner={cleaner_tg_id}")
