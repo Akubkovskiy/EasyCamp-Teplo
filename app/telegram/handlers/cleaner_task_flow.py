@@ -267,11 +267,35 @@ async def cleaner_task_photo_hint(callback: CallbackQuery):
 
 
 def _is_task_photo(message: Message) -> bool:
-    """Filter: только фото с caption `#taskN`. Без этого фильтра handler
-    проглатывает фото гостя и оплата-чек handler в guest.py не получает
-    событие."""
+    """Filter: фото с явным тегом `#taskN` в подписи."""
     caption = message.caption or ""
     return bool(PHOTO_HINT_RE.search(caption))
+
+
+def _is_cleaner_photo(message: Message) -> bool:
+    """Filter: фото от уборщицы БЕЗ тега — для авто-прикрепления к активной задаче.
+    Гостевые фото (оплата и т.п.) не перехватываем: гости не в _db_cleaners."""
+    from app.telegram.auth.admin import is_cleaner
+    return (
+        message.from_user is not None
+        and is_cleaner(message.from_user.id)
+        and not _is_task_photo(message)
+    )
+
+
+async def _get_active_task_id(telegram_id: int) -> int | None:
+    """Возвращает id задачи IN_PROGRESS, назначенной на уборщицу, если есть."""
+    db_user_id = await resolve_user_db_id(None, telegram_id)
+    if db_user_id is None:
+        return None
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(CleaningTask.id).where(
+                CleaningTask.assigned_to_user_id == db_user_id,
+                CleaningTask.status == CleaningTaskStatus.IN_PROGRESS,
+            ).order_by(CleaningTask.scheduled_date.desc()).limit(1)
+        )
+        return result.scalar_one_or_none()
 
 
 @router.message(F.photo, _is_task_photo)
@@ -289,7 +313,6 @@ async def cleaner_receive_photo(message: Message):
         if not task:
             await message.answer("Задача не найдена")
             return
-        # FK на users.id, НЕ на telegram_id.
         cleaner_db_id = (
             await resolve_user_db_id(session, message.from_user.id)
             if message.from_user
@@ -299,6 +322,26 @@ async def cleaner_receive_photo(message: Message):
         await session.commit()
 
     await message.answer(f"✅ Фото прикреплено к задаче #{task_id}")
+
+
+@router.message(F.photo, _is_cleaner_photo)
+async def cleaner_receive_photo_auto(message: Message):
+    """Любое фото от уборщицы без тега → к активной задаче IN_PROGRESS."""
+    if not message.from_user:
+        return
+
+    task_id = await _get_active_task_id(message.from_user.id)
+    if task_id is None:
+        await message.answer("Нет активной задачи. Сначала нажмите «🚿 Начать уборку».")
+        return
+
+    file_id = message.photo[-1].file_id
+    async with AsyncSessionLocal() as session:
+        cleaner_db_id = await resolve_user_db_id(session, message.from_user.id)
+        await CleaningTaskService.add_photo(session, task_id, file_id, user_id=cleaner_db_id)
+        await session.commit()
+
+    await message.answer(f"✅ Фото сохранено (задача #{task_id})")
 
 
 async def _do_transition(callback: CallbackQuery, task_id: int, target: CleaningTaskStatus, decline_reason: str | None = None):
