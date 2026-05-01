@@ -11,9 +11,18 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus
-from app.telegram.auth.admin import get_user_name, is_admin
+from app.models import Booking, BookingStatus, GlobalSetting
+from app.telegram.auth.admin import get_user_name, is_admin, resolve_user_db_id
 from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
+
+# Статусы броней которые видит уборщица в расписании
+ACTIVE_BOOKING_STATUSES = [
+    BookingStatus.CONFIRMED,
+    BookingStatus.PAID,
+    BookingStatus.CHECKING_IN,
+    BookingStatus.CHECKED_IN,
+    BookingStatus.COMPLETED,
+]
 
 router = Router()
 
@@ -26,13 +35,7 @@ async def get_cleaning_schedule(start_date: date, end_date: date) -> list[Bookin
             .options(joinedload(Booking.house))
             .where(
                 and_(
-                    Booking.status.in_(
-                        [
-                            BookingStatus.CONFIRMED,
-                            BookingStatus.PAID,
-                            BookingStatus.COMPLETED,
-                        ]
-                    ),
+                    Booking.status.in_(ACTIVE_BOOKING_STATUSES),
                     Booking.check_out >= start_date,
                     Booking.check_out <= end_date,
                 )
@@ -59,13 +62,7 @@ async def get_nearest_checkouts() -> str:
             .options(joinedload(Booking.house))
             .where(
                 and_(
-                    Booking.status.in_(
-                        [
-                            BookingStatus.CONFIRMED,
-                            BookingStatus.PAID,
-                            BookingStatus.COMPLETED,
-                        ]
-                    ),
+                    Booking.status.in_(ACTIVE_BOOKING_STATUSES),
                     Booking.check_out >= today,
                     Booking.check_out <= prospect_date,
                 )
@@ -121,12 +118,10 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="🗓 На неделю", callback_data="cleaner:schedule:week"
-                )
-            ],
-            [
+                ),
                 InlineKeyboardButton(
-                    text="📋 Все брони", callback_data="cleaner:schedule:all"
-                )
+                    text="📆 На месяц", callback_data="cleaner:schedule:month"
+                ),
             ],
             [
                 InlineKeyboardButton(text="🧾 Чек расходников", callback_data="cleaner:expense:new")
@@ -135,7 +130,8 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="💰 Мои выплаты", callback_data="cleaner:pay")
             ],
             [
-                InlineKeyboardButton(text="❓ Помощь", callback_data="cleaner:help")
+                InlineKeyboardButton(text="❓ Помощь", callback_data="cleaner:help"),
+                InlineKeyboardButton(text="⚙️ Настройки", callback_data="cleaner:settings"),
             ],
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="cleaner:menu")],
         ]
@@ -195,13 +191,7 @@ async def get_all_upcoming_bookings() -> list[Booking]:
             .options(joinedload(Booking.house))
             .where(
                 and_(
-                    Booking.status.in_(
-                        [
-                            BookingStatus.CONFIRMED,
-                            BookingStatus.PAID,
-                            BookingStatus.COMPLETED,
-                        ]
-                    ),
+                    Booking.status.in_(ACTIVE_BOOKING_STATUSES),
                     Booking.check_out >= today,
                 )
             )
@@ -233,6 +223,11 @@ async def show_schedule(callback: CallbackQuery):
     elif mode == "week":
         bookings = await get_cleaning_schedule(today, today + timedelta(days=7))
         title = "на НЕДЕЛЮ"
+    elif mode == "month":
+        days = await _get_cleaner_schedule_days(callback.from_user.id)
+        bookings = await get_cleaning_schedule(today, today + timedelta(days=days))
+        title = f"на {days} дней"
+        is_list_view = True
     elif mode == "all":
         bookings = await get_all_upcoming_bookings()
         title = "ВСЕ БРОНИ"
@@ -365,6 +360,62 @@ async def decline_cleaning(callback: CallbackQuery):
             pass
 
     await callback.answer("Администратор оповещен", show_alert=True)
+
+
+async def _get_cleaner_schedule_days(telegram_id: int) -> int:
+    db_id = await resolve_user_db_id(None, telegram_id)
+    if not db_id:
+        return 30
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, f"cleaner_schedule_days_{db_id}")
+        if setting and setting.value:
+            try:
+                return int(setting.value)
+            except ValueError:
+                pass
+    return 30
+
+
+@router.callback_query(F.data == "cleaner:settings")
+async def cleaner_settings_menu(callback: CallbackQuery):
+    if not callback.from_user:
+        return
+    days = await _get_cleaner_schedule_days(callback.from_user.id)
+    text = (
+        f"⚙️ <b>Мои настройки</b>\n\n"
+        f"📆 Расписание «На месяц»: <b>{days} дней</b>\n\n"
+        "Выберите на сколько дней вперёд показывать уборки:"
+    )
+    rows = [
+        [
+            InlineKeyboardButton(text="7 дней", callback_data="cleaner:settings:days:7"),
+            InlineKeyboardButton(text="14 дней", callback_data="cleaner:settings:days:14"),
+            InlineKeyboardButton(text="30 дней", callback_data="cleaner:settings:days:30"),
+            InlineKeyboardButton(text="60 дней", callback_data="cleaner:settings:days:60"),
+        ],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+    ]
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:settings:days:"))
+async def cleaner_settings_days_save(callback: CallbackQuery):
+    if not callback.from_user:
+        return
+    days = int(callback.data.split(":")[-1])
+    db_id = await resolve_user_db_id(None, callback.from_user.id)
+    if db_id:
+        async with AsyncSessionLocal() as s:
+            key = f"cleaner_schedule_days_{db_id}"
+            setting = await s.get(GlobalSetting, key)
+            if setting:
+                setting.value = str(days)
+            else:
+                s.add(GlobalSetting(key=key, value=str(days), description=f"Schedule days for cleaner {db_id}"))
+            await s.commit()
+    await callback.answer(f"Сохранено: {days} дней")
+    await cleaner_settings_menu(callback)
 
 
 HELP_TEXT = """❓ <b>Как работает ваш личный кабинет</b>
