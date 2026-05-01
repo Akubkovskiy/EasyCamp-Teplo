@@ -43,6 +43,11 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
     start = date.today()
     end = start + timedelta(days=days)
 
+    # user_id here is telegram_id; resolve to DB PK for FK comparison
+    db_user_id = await resolve_user_db_id(None, user_id)
+    if db_user_id is None:
+        return []
+
     async with AsyncSessionLocal() as session:
         date_filter = (
             and_(CleaningTask.scheduled_date >= start, CleaningTask.scheduled_date <= end)
@@ -52,7 +57,7 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
         stmt = select(CleaningTask).where(
             and_(
                 or_(
-                    CleaningTask.assigned_to_user_id == user_id,
+                    CleaningTask.assigned_to_user_id == db_user_id,
                     and_(
                         CleaningTask.assigned_to_user_id.is_(None),
                         CleaningTask.status == CleaningTaskStatus.PENDING,
