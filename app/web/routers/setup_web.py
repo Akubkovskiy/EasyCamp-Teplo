@@ -10,7 +10,7 @@ templates = Jinja2Templates(directory="app/web/templates")
 
 router = APIRouter(prefix="/admin-web/setup", tags=["web-setup"])
 
-SETUP_SECRET = settings.setup_secret or "easycamp_secret"  # Fallback only for DEV
+SETUP_SECRET = settings.setup_secret
 
 @router.get("/", response_class=HTMLResponse)
 async def setup_page(request: Request):

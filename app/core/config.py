@@ -175,3 +175,13 @@ settings = Settings(
     admin_web_username=os.environ.get("ADMIN_WEB_USERNAME", ""),
     admin_web_password=os.environ.get("ADMIN_WEB_PASSWORD", ""),
 )
+
+# Startup security warnings — log once at import time
+import logging as _logging
+_sec_log = _logging.getLogger("easycamp.security")
+
+if settings.secret_key in ("dev_secret", "dev_secret_key_change_me"):
+    _sec_log.warning("SECRET_KEY is using an insecure default — set SECRET_KEY in .env")
+
+if settings.setup_secret == "easycamp_secret":
+    _sec_log.warning("SETUP_SECRET is using an insecure default — set SETUP_SECRET in .env")
