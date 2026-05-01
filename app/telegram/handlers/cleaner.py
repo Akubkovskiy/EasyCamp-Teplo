@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload
 from app.database import AsyncSessionLocal
 from app.models import Booking, BookingStatus, GlobalSetting
 from app.telegram.auth.admin import get_user_name, is_admin, resolve_user_db_id
+from app.services.checkout_ack import get_ack_status, set_ack_status
 from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
 
 # Статусы броней которые видит уборщица в расписании
@@ -259,15 +260,104 @@ async def show_schedule(callback: CallbackQuery):
                 f"   🕒 Выезд до 12:00\n"
             )
 
+    reply_markup = (
+        await _week_full_keyboard(bookings) if mode == "week_full" else get_cleaner_keyboard()
+    )
+
     try:
-        await callback.message.edit_text(
-            text, reply_markup=get_cleaner_keyboard(), parse_mode="HTML"
-        )
+        await callback.message.edit_text(text, reply_markup=reply_markup, parse_mode="HTML")
     except Exception:
         await callback.answer("✅ Данные актуальны")
         return
 
     await callback.answer()
+
+
+async def _week_full_keyboard(bookings: list) -> InlineKeyboardMarkup:
+    """Build week_full keyboard: accept buttons for unacked bookings + main menu."""
+    rows = []
+    async with AsyncSessionLocal() as session:
+        for b in bookings:
+            ack = await get_ack_status(session, b.id)
+            if ack not in ("acked", "declined"):
+                house_name = b.house.name if b.house else f"Дом {b.house_id}"
+                rows.append([InlineKeyboardButton(
+                    text=f"✅ Принять: {house_name} {b.check_out.strftime('%d.%m')}",
+                    callback_data=f"cleaner:preaccept:{b.id}",
+                )])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.callback_query(F.data.startswith("cleaner:preaccept:"))
+async def preaccept_booking_callback(callback: CallbackQuery):
+    """Pre-accept checkout from week view — skips day-before reminder chain."""
+    booking_id = int(callback.data.split(":")[-1])
+    async with AsyncSessionLocal() as session:
+        await set_ack_status(session, booking_id, "acked")
+
+    today = date.today()
+    bookings = await get_cleaning_schedule(today, today + timedelta(days=7))
+    new_kb = await _week_full_keyboard(bookings)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=new_kb)
+    except Exception:
+        pass
+    await callback.answer("✅ Принято! Напоминание отменено.", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("cleaner:ack_checkout:"))
+async def ack_checkout_callback(callback: CallbackQuery):
+    """Cleaner confirmed checkout ack from job notification message."""
+    booking_id = int(callback.data.split(":")[-1])
+    async with AsyncSessionLocal() as session:
+        await set_ack_status(session, booking_id, "acked")
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.reply(
+            "✅ <b>Уборка принята! Спасибо.</b>", parse_mode="HTML"
+        )
+    except Exception:
+        pass
+    await callback.answer("✅ Принято!")
+
+
+@router.callback_query(F.data.startswith("cleaner:decline_checkout:"))
+async def decline_checkout_callback(callback: CallbackQuery):
+    """Cleaner declined checkout ack from job notification message."""
+    booking_id = int(callback.data.split(":")[-1])
+
+    async with AsyncSessionLocal() as session:
+        await set_ack_status(session, booking_id, "declined")
+        from sqlalchemy import select as sa_select
+        q = await session.execute(
+            sa_select(Booking).options(joinedload(Booking.house)).where(Booking.id == booking_id)
+        )
+        booking = q.scalar_one_or_none()
+        house_name = booking.house.name if booking and booking.house else f"Бронь #{booking_id}"
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.reply(
+            "😷 <b>Понял(а). Администратор уведомлён.</b>", parse_mode="HTML"
+        )
+    except Exception:
+        pass
+
+    from app.core.config import settings
+    cleaner_name = callback.from_user.first_name or "Уборщица"
+    alert = (
+        f"⚠️ <b>Уборщица не может принять уборку!</b>\n\n"
+        f"👤 {cleaner_name}\n"
+        f"🏠 {house_name}\n\n"
+        "Требуется организация замены."
+    )
+    try:
+        await callback.bot.send_message(settings.telegram_chat_id, alert, parse_mode="HTML")
+    except Exception:
+        pass
+    await callback.answer("Администратор уведомлён", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("cleaner:confirm:"))

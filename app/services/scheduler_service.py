@@ -84,6 +84,12 @@ class SchedulerService:
         from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
         from app.jobs.cleaning_sla_monitor import run_cleaning_sla_monitor
         from app.jobs.advance_checkout_notifier import send_advance_checkout_notifications
+        from app.jobs.checkout_ack_job import (
+            send_morning_checkout_briefing,
+            send_checkout_ack_reminders,
+            retry_checkout_ack,
+            alert_admin_no_ack,
+        )
         from apscheduler.triggers.cron import CronTrigger
 
         try:
@@ -110,6 +116,37 @@ class SchedulerService:
                     replace_existing=True,
                 )
                 logger.info("Registered advance checkout reminder job (at 09:00)")
+
+                # Checkout acknowledgment chain
+                self.scheduler.add_job(
+                    send_morning_checkout_briefing,
+                    CronTrigger(hour=9, minute=5),
+                    id="checkout_morning_briefing",
+                    name="Morning checkout briefing (today's checkouts)",
+                    replace_existing=True,
+                )
+                self.scheduler.add_job(
+                    send_checkout_ack_reminders,
+                    CronTrigger(hour=12, minute=0),
+                    id="checkout_ack_remind",
+                    name="Day-before checkout ack reminder",
+                    replace_existing=True,
+                )
+                self.scheduler.add_job(
+                    retry_checkout_ack,
+                    CronTrigger(hour=13, minute=0),
+                    id="checkout_ack_retry",
+                    name="Checkout ack retry reminder",
+                    replace_existing=True,
+                )
+                self.scheduler.add_job(
+                    alert_admin_no_ack,
+                    CronTrigger(hour=14, minute=0),
+                    id="checkout_ack_admin_alert",
+                    name="Admin alert: no checkout ack",
+                    replace_existing=True,
+                )
+                logger.info("Registered checkout ack chain jobs (09:05 / 12:00 / 13:00 / 14:00)")
 
                 self.scheduler.add_job(
                     run_cleaning_tasks_cycle,
