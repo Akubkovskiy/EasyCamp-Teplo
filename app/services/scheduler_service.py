@@ -83,6 +83,7 @@ class SchedulerService:
         from app.jobs.cleaning_notifier import check_and_notify_cleaners
         from app.jobs.cleaning_tasks_job import run_cleaning_tasks_cycle
         from app.jobs.cleaning_sla_monitor import run_cleaning_sla_monitor
+        from app.jobs.advance_checkout_notifier import send_advance_checkout_notifications
         from apscheduler.triggers.cron import CronTrigger
 
         try:
@@ -100,6 +101,15 @@ class SchedulerService:
                     replace_existing=True,
                 )
                 logger.info(f"Registered cleaner notification job (at {time_str})")
+
+                self.scheduler.add_job(
+                    send_advance_checkout_notifications,
+                    CronTrigger(hour=9, minute=0),
+                    id="cleaner_advance_notify",
+                    name="Advance checkout reminders for cleaners",
+                    replace_existing=True,
+                )
+                logger.info("Registered advance checkout reminder job (at 09:00)")
 
                 self.scheduler.add_job(
                     run_cleaning_tasks_cycle,

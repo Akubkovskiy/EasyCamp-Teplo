@@ -378,26 +378,51 @@ async def _get_cleaner_schedule_days(telegram_id: int) -> int:
     return 30
 
 
+async def _get_cleaner_notify_days(db_id: int) -> int:
+    """0 = выкл, иначе кол-во дней до выезда для заблаговременного уведомления."""
+    async with AsyncSessionLocal() as s:
+        setting = await s.get(GlobalSetting, f"cleaner_notify_days_{db_id}")
+        if setting and setting.value:
+            try:
+                return int(setting.value)
+            except ValueError:
+                pass
+    return 7  # по умолчанию за 7 дней
+
+
 @router.callback_query(F.data == "cleaner:settings")
 async def cleaner_settings_menu(callback: CallbackQuery):
     if not callback.from_user:
         return
+    db_id = await resolve_user_db_id(None, callback.from_user.id)
     days = await _get_cleaner_schedule_days(callback.from_user.id)
+    notify_days = await _get_cleaner_notify_days(db_id) if db_id else 7
+
+    notify_label = "выкл" if notify_days == 0 else f"за {notify_days} дн."
     text = (
         f"⚙️ <b>Мои настройки</b>\n\n"
-        f"📆 Расписание «На месяц»: <b>{days} дней</b>\n\n"
-        "Выберите на сколько дней вперёд показывать уборки:"
+        f"📆 Расписание «Выезды/месяц»: <b>{days} дней</b>\n"
+        f"🔔 Заблаговременные уведомления: <b>{notify_label}</b>\n\n"
+        "— — — — — — — — —\n"
+        "<b>Расписание: на сколько дней вперёд</b>"
     )
     rows = [
         [
-            InlineKeyboardButton(text="7 дней", callback_data="cleaner:settings:days:7"),
-            InlineKeyboardButton(text="14 дней", callback_data="cleaner:settings:days:14"),
-            InlineKeyboardButton(text="30 дней", callback_data="cleaner:settings:days:30"),
-            InlineKeyboardButton(text="60 дней", callback_data="cleaner:settings:days:60"),
+            InlineKeyboardButton(text="7 дн", callback_data="cleaner:settings:days:7"),
+            InlineKeyboardButton(text="14 дн", callback_data="cleaner:settings:days:14"),
+            InlineKeyboardButton(text="30 дн", callback_data="cleaner:settings:days:30"),
+            InlineKeyboardButton(text="60 дн", callback_data="cleaner:settings:days:60"),
         ],
+        [InlineKeyboardButton(text="— — — — — — — — — — —", callback_data="cleaner:noop")],
+        [InlineKeyboardButton(text="🔔 Уведомления о выездах", callback_data="cleaner:settings:notify")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
     ]
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "cleaner:noop")
+async def cleaner_noop(callback: CallbackQuery):
     await callback.answer()
 
 
@@ -417,6 +442,53 @@ async def cleaner_settings_days_save(callback: CallbackQuery):
                 s.add(GlobalSetting(key=key, value=str(days), description=f"Schedule days for cleaner {db_id}"))
             await s.commit()
     await callback.answer(f"Сохранено: {days} дней")
+    await cleaner_settings_menu(callback)
+
+
+@router.callback_query(F.data == "cleaner:settings:notify")
+async def cleaner_settings_notify_menu(callback: CallbackQuery):
+    if not callback.from_user:
+        return
+    db_id = await resolve_user_db_id(None, callback.from_user.id)
+    notify_days = await _get_cleaner_notify_days(db_id) if db_id else 7
+    notify_label = "выкл" if notify_days == 0 else f"за {notify_days} дн."
+    text = (
+        f"🔔 <b>Уведомления о предстоящих выездах</b>\n\n"
+        f"Текущий режим: <b>{notify_label}</b>\n\n"
+        "Бот пришлёт напоминание когда через N дней будет выезд из домика.\n"
+        "Выберите когда предупреждать:"
+    )
+    rows = [
+        [
+            InlineKeyboardButton(text="За 1 день", callback_data="cleaner:settings:notify:1"),
+            InlineKeyboardButton(text="За 3 дня", callback_data="cleaner:settings:notify:3"),
+            InlineKeyboardButton(text="За 7 дней", callback_data="cleaner:settings:notify:7"),
+            InlineKeyboardButton(text="За 14 дней", callback_data="cleaner:settings:notify:14"),
+        ],
+        [InlineKeyboardButton(text="🔕 Выключить", callback_data="cleaner:settings:notify:0")],
+        [InlineKeyboardButton(text="⬅️ Настройки", callback_data="cleaner:settings")],
+    ]
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:settings:notify:"))
+async def cleaner_settings_notify_save(callback: CallbackQuery):
+    if not callback.from_user:
+        return
+    val = int(callback.data.split(":")[-1])
+    db_id = await resolve_user_db_id(None, callback.from_user.id)
+    if db_id:
+        async with AsyncSessionLocal() as s:
+            key = f"cleaner_notify_days_{db_id}"
+            setting = await s.get(GlobalSetting, key)
+            if setting:
+                setting.value = str(val)
+            else:
+                s.add(GlobalSetting(key=key, value=str(val), description=f"Notify days for cleaner {db_id}"))
+            await s.commit()
+    label = "выключены" if val == 0 else f"за {val} дн."
+    await callback.answer(f"Уведомления: {label}")
     await cleaner_settings_menu(callback)
 
 
