@@ -3,10 +3,10 @@ from datetime import date, timedelta
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app.database import AsyncSessionLocal
-from app.models import CleaningTask, CleaningTaskCheck, CleaningTaskStatus
+from app.models import CleaningTask, CleaningTaskCheck, CleaningTaskMedia, CleaningTaskStatus
 from app.services.cleaning_task_service import CleaningTaskService
 from app.telegram.auth.admin import resolve_user_db_id
 
@@ -70,6 +70,7 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
                         CleaningTaskStatus.ACCEPTED,
                         CleaningTaskStatus.IN_PROGRESS,
                         CleaningTaskStatus.ESCALATED,
+                        CleaningTaskStatus.DONE,
                     ]
                 ),
             )
@@ -84,18 +85,39 @@ async def cleaner_tasks_list(callback: CallbackQuery):
     days = 7 if mode == "week" else 0
     tasks = await _get_tasks(callback.from_user.id, days=days)
 
+    active = [t for t in tasks if t.status != CleaningTaskStatus.DONE]
+    done = [t for t in tasks if t.status == CleaningTaskStatus.DONE]
+
     if not tasks:
-        await callback.message.edit_text("📌 Активных задач нет.")
+        await callback.message.edit_text("📌 Задач нет.")
         await callback.answer()
         return
 
-    lines = ["🧹 <b>Мои задачи</b>\n"]
-    for t in tasks:
-        lines.append(f"• #{t.id} | {t.scheduled_date.strftime('%d.%m')} | {t.status.value}")
+    STATUS_ICON = {
+        CleaningTaskStatus.PENDING: "⏳",
+        CleaningTaskStatus.ACCEPTED: "👍",
+        CleaningTaskStatus.IN_PROGRESS: "🚿",
+        CleaningTaskStatus.ESCALATED: "🚨",
+        CleaningTaskStatus.DONE: "✅",
+    }
+
+    lines = ["🧹 <b>Мои задачи</b>"]
+    if active:
+        lines.append("")
+        for t in active:
+            icon = STATUS_ICON.get(t.status, "•")
+            lines.append(f"{icon} #{t.id} | {t.scheduled_date.strftime('%d.%m')}")
+    if done:
+        lines.append("\n<b>Выполненные:</b>")
+        for t in done:
+            lines.append(f"✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')}")
 
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"Открыть #{t.id}", callback_data=f"cleaner:task:view:{t.id}")]
+            [InlineKeyboardButton(
+                text=f"{STATUS_ICON.get(t.status, '•')} #{t.id} {t.scheduled_date.strftime('%d.%m')}",
+                callback_data=f"cleaner:task:view:{t.id}"
+            )]
             for t in tasks[:10]
         ]
     )
@@ -111,12 +133,17 @@ async def _render_task_view(callback: CallbackQuery, task_id: int):
         if not task:
             await callback.answer("Задача не найдена", show_alert=True)
             return
+        photo_count = await session.scalar(
+            select(func.count()).where(CleaningTaskMedia.task_id == task_id)
+        )
 
+    photo_line = f"\n📸 Фото: {photo_count}" if photo_count else ""
     text = (
         f"🧹 <b>Задача #{task.id}</b>\n"
         f"📅 Дата: {task.scheduled_date.strftime('%d.%m.%Y')}\n"
         f"🏠 Домик ID: {task.house_id}\n"
         f"📌 Статус: <b>{task.status.value}</b>"
+        f"{photo_line}"
     )
     await callback.message.edit_text(text, reply_markup=_task_actions_keyboard(task), parse_mode="HTML")
 
@@ -214,6 +241,12 @@ async def cleaner_toggle_check(callback: CallbackQuery):
     if supply_alert_opened:
         await _notify_admins_supply_alert(
             callback.bot, task_id=task_id, house_id=house_id_for_alert
+        )
+        await callback.message.answer(
+            "🧴 <b>Алерт отправлен администратору.</b>\n\n"
+            "Если есть фото нехватки — отправьте его прямо в этот чат, "
+            "оно прикрепится к задаче и администратор сможет его увидеть.",
+            parse_mode="HTML",
         )
 
     if supply_alert_resolved:
