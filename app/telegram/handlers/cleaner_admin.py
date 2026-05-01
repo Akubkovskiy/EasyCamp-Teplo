@@ -526,7 +526,7 @@ async def _render_cleaning_settings(callback: CallbackQuery):
         amt = f"{int(rate.base_amount)} ₽" if rate else "не задан"
         lines.append(f"🏠 {h.name}: <b>{amt}</b>")
 
-    lines.append("\n<b>Стандартные доп. услуги:</b>")
+    lines.append("\n<b>Регулярные услуги (фикс. цена, без одобрения):</b>")
     if extras:
         for i, (label, amount) in enumerate(extras):
             lines.append(f"• {label}: <b>{amount} ₽</b>")
@@ -542,7 +542,7 @@ async def _render_cleaning_settings(callback: CallbackQuery):
             callback_data=f"admin:cleaning:settings:rate:{h.id}",
         )])
 
-    rows.append([InlineKeyboardButton(text="✏️ Доп. услуги", callback_data="admin:cleaning:settings:extras")])
+    rows.append([InlineKeyboardButton(text="✏️ Регулярные услуги", callback_data="admin:cleaning:settings:extras")])
     rows.append([InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")])
 
     await callback.message.edit_text(
@@ -654,7 +654,7 @@ async def admin_cleaning_settings_extras(callback: CallbackQuery):
     rows.append([InlineKeyboardButton(text="➕ Добавить услугу", callback_data="admin:cleaning:settings:extra:add")])
     rows.append([InlineKeyboardButton(text="⬅️ Настройки", callback_data="admin:cleaning:settings")])
 
-    text = "📋 <b>Стандартные доп. услуги</b>\n\nФормат при добавлении: <code>Название | 300</code>"
+    text = "📋 <b>Регулярные услуги (фикс. цена)</b>\n\nЭти кнопки уборщица видит в задаче и нажимает сама — сумма начисляется сразу без одобрения.\n\nФормат: <code>Название | сумма</code>"
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
     await callback.answer()
 

@@ -40,11 +40,11 @@ def _task_actions_keyboard(task: CleaningTask) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="✅ Завершить", callback_data=f"cleaner:task:done:{task.id}"),
         ])
         rows.append([
-            InlineKeyboardButton(text="💰 Доп. работа", callback_data=f"cleaner:task:extra:{task.id}"),
+            InlineKeyboardButton(text="💰 Доп. услуги / расходы", callback_data=f"cleaner:task:extra:{task.id}"),
         ])
     elif task.status == CleaningTaskStatus.DONE:
         rows.append([
-            InlineKeyboardButton(text="💰 Доп. работа", callback_data=f"cleaner:task:extra:{task.id}"),
+            InlineKeyboardButton(text="💰 Доп. услуги / расходы", callback_data=f"cleaner:task:extra:{task.id}"),
         ])
 
     rows.append([InlineKeyboardButton(text="⬅️ К задачам", callback_data="cleaner:tasks:today")])
@@ -474,11 +474,14 @@ async def cleaner_task_extra_ask(callback: CallbackQuery):
             text=f"{label} (+{amount} ₽)",
             callback_data=f"cleaner:task:quickpay:{task_id}:{i}",
         )])
-    rows.append([InlineKeyboardButton(text="✏️ Описать своё", callback_data=f"cleaner:task:extracustom:{task_id}")])
+    rows.append([InlineKeyboardButton(text="💸 Разовый расход (заправка газа, ремонт...)", callback_data=f"cleaner:task:extracustom:{task_id}")])
     rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=f"cleaner:task:view:{task_id}")])
 
     await callback.message.edit_text(
-        f"💰 <b>Доп. работа — задача #{task_id}</b>\n\nВыберите тип или опишите своё:",
+        f"💰 <b>Доп. услуги и расходы — задача #{task_id}</b>\n\n"
+        f"<b>Регулярные услуги</b> (цена фиксирована, начисляется сразу):\n"
+        + ("" if extras else "<i>— не настроены</i>\n")
+        + f"\n<b>Разовый расход</b> — если что-то не из списка (газ, ремонт и т.п.):",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
     )
@@ -562,9 +565,9 @@ async def cleaner_task_extracustom_ask(callback: CallbackQuery):
     if callback.from_user:
         _awaiting_extra_desc[callback.from_user.id] = task_id
     await callback.message.edit_text(
-        f"✏️ <b>Доп. работа по задаче #{task_id}</b>\n\n"
-        "Напишите что именно было сделано дополнительно (кратко, 1-2 предложения).\n"
-        "Администратор рассмотрит и назначит сумму.",
+        f"💸 <b>Разовый расход — задача #{task_id}</b>\n\n"
+        "Опишите что было сделано или куплено (кратко).\n"
+        "Затем укажете сумму — администратор одобрит или оспорит.",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"cleaner:task:view:{task_id}")],
