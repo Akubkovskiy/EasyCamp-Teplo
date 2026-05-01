@@ -383,7 +383,7 @@ async def cleaner_pay_request_send(callback: CallbackQuery):
     )
     admin_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Оплатить", callback_data=f"admin:pay:approve:{db_user_id}:{period}"),
+            InlineKeyboardButton(text="✅ Перевёл", callback_data=f"admin:pay:approve:{db_user_id}:{period}"),
             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"admin:pay:reject:{db_user_id}:{period}"),
         ]
     ])
@@ -463,9 +463,9 @@ async def admin_pay_approve(callback: CallbackQuery):
         try:
             await callback.bot.send_message(
                 cleaner_tg_id,
-                f"✅ <b>Выплата подтверждена!</b>\n\n"
+                f"💸 <b>Оплата переведена!</b>\n\n"
                 f"💵 Сумма: <b>{total:.0f} ₽</b>\n"
-                f"Деньги будут переведены на ваши реквизиты.",
+                f"Проверьте поступление на реквизиты СБП.",
                 parse_mode="HTML",
             )
         except Exception:
