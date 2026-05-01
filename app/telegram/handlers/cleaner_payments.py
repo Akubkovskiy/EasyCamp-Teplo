@@ -33,6 +33,9 @@ _awaiting_phone: set[int] = set()
 # cleaner telegram_id → prompt_message_id
 _awaiting_task_detail: dict[int, int] = {}
 
+# cleaner telegram_id → list of photo message_ids to clean up
+_cleaner_photo_msgs: dict[int, list[int]] = {}
+
 # admin telegram_id → (task_id, cleaner_db_id) — ждём комментарий при оспаривании
 _awaiting_adj_dispute: dict[int, tuple[int, int]] = {}
 
@@ -166,6 +169,13 @@ async def cleaner_pay_history(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
+
+    tg_id = callback.from_user.id
+    for msg_id in _cleaner_photo_msgs.pop(tg_id, []):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, msg_id)
+        except Exception:
+            pass
 
     db_user_id = await resolve_user_db_id(None, callback.from_user.id)
     if not db_user_id:
@@ -351,11 +361,16 @@ async def cleaner_pay_history_detail_input(message: Message):
     # Отправляем фото отдельно
     if media:
         from aiogram.types import InputMediaPhoto
+        photo_ids: list[int] = []
         if len(media) == 1:
-            await message.answer_photo(media[0].telegram_file_id)
+            sent = await message.answer_photo(media[0].telegram_file_id)
+            photo_ids = [sent.message_id]
         else:
             album = [InputMediaPhoto(media=m.telegram_file_id) for m in media[:10]]
-            await message.answer_media_group(album)
+            sent_list = await message.answer_media_group(album)
+            photo_ids = [m.message_id for m in sent_list]
+        if photo_ids:
+            _cleaner_photo_msgs[tg_id] = photo_ids
 
 
 # ---------------------------------------------------------------------------

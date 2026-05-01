@@ -32,6 +32,18 @@ MONTHS_RU = {
 }
 from app.telegram.auth.admin import is_admin
 
+# admin telegram_id → list of photo message_ids to clean up on back
+_admin_photo_msgs: dict[int, list[int]] = {}
+
+
+async def _cleanup_photos(bot, chat_id: int, tg_id: int) -> None:
+    for msg_id in _admin_photo_msgs.pop(tg_id, []):
+        try:
+            await bot.delete_message(chat_id, msg_id)
+        except Exception:
+            pass
+
+
 # admin telegram_id → house_id (ждём новый тариф)
 _awaiting_rate_input: dict[int, int] = {}
 # admin telegram_id → "add" | "edit:{idx}" (ждём строку доп. услуги)
@@ -351,6 +363,7 @@ async def admin_cleaning_cleaner(callback: CallbackQuery):
         return
 
     cleaner_user_id = int(callback.data.split(":")[3])
+    await _cleanup_photos(callback.bot, callback.message.chat.id, callback.from_user.id)
     since = date.today() - timedelta(days=30)
 
     async with AsyncSessionLocal() as session:
@@ -538,11 +551,16 @@ async def admin_cleaning_detail_input(message: Message):
 
     if media:
         from aiogram.types import InputMediaPhoto
+        photo_ids: list[int] = []
         if len(media) == 1:
-            await message.answer_photo(media[0].telegram_file_id)
+            sent = await message.answer_photo(media[0].telegram_file_id)
+            photo_ids = [sent.message_id]
         else:
             album = [InputMediaPhoto(media=m.telegram_file_id) for m in media[:10]]
-            await message.answer_media_group(album)
+            sent_list = await message.answer_media_group(album)
+            photo_ids = [m.message_id for m in sent_list]
+        if photo_ids:
+            _admin_photo_msgs[tg_id] = photo_ids
 
 
 @router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:history$"))
