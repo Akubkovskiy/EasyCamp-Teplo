@@ -103,9 +103,9 @@ async def cleaner_tasks_list(callback: CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("cleaner:task:view:"))
-async def cleaner_task_view(callback: CallbackQuery):
-    task_id = int(callback.data.split(":")[3])
+async def _render_task_view(callback: CallbackQuery, task_id: int):
+    """Отрисовывает карточку задачи в текущем сообщении. Принимает task_id явно
+    чтобы не мутировать замороженный объект CallbackQuery."""
     async with AsyncSessionLocal() as session:
         task = await session.get(CleaningTask, task_id)
         if not task:
@@ -119,6 +119,12 @@ async def cleaner_task_view(callback: CallbackQuery):
         f"📌 Статус: <b>{task.status.value}</b>"
     )
     await callback.message.edit_text(text, reply_markup=_task_actions_keyboard(task), parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("cleaner:task:view:"))
+async def cleaner_task_view(callback: CallbackQuery):
+    task_id = int(callback.data.split(":")[3])
+    await _render_task_view(callback, task_id)
     await callback.answer()
 
 
@@ -317,8 +323,7 @@ async def _do_transition(callback: CallbackQuery, task_id: int, target: Cleaning
         await session.commit()
 
     await callback.answer("Готово")
-    callback.data = f"cleaner:task:view:{task_id}"
-    await cleaner_task_view(callback)
+    await _render_task_view(callback, task_id)
 
 
 @router.callback_query(F.data.startswith("cleaner:task:accept:"))
