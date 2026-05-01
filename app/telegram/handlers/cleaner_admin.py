@@ -570,6 +570,7 @@ async def admin_cleaning_detail_input(message: Message):
             callback_data=f"admin:cleaning:claim:{c.id}",
         )])
     rows.append([InlineKeyboardButton(text="⬅️ К уборщику", callback_data=back_cb)])
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
 
     result_text = "\n".join(lines)
     result_markup = InlineKeyboardMarkup(inline_keyboard=rows)
