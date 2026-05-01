@@ -28,8 +28,8 @@ from app.telegram.auth.admin import is_admin
 _awaiting_rate_input: dict[int, int] = {}
 # admin telegram_id → "add" | "edit:{idx}" (ждём строку доп. услуги)
 _awaiting_extra_input: dict[int, str] = {}
-# admin telegram_id → cleaner_user_id (ждём номер задачи для детализации)
-_awaiting_admin_task_detail: dict[int, int] = {}
+# admin telegram_id → (cleaner_user_id, prompt_message_id)
+_awaiting_admin_task_detail: dict[int, tuple[int, int]] = {}
 
 EXTRAS_KEY = "cleaning_extras"  # GlobalSetting key
 
@@ -398,7 +398,6 @@ async def admin_cleaning_ask_detail(callback: CallbackQuery):
         await callback.answer("Нет доступа", show_alert=True)
         return
     cleaner_user_id = int(callback.data.split(":")[3])
-    _awaiting_admin_task_detail[callback.from_user.id] = cleaner_user_id
     await callback.message.edit_text(
         "🔍 <b>Детали задачи</b>\n\nВведите номер задачи (например: <code>23</code>)",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -409,17 +408,29 @@ async def admin_cleaning_ask_detail(callback: CallbackQuery):
         ]),
         parse_mode="HTML",
     )
+    _awaiting_admin_task_detail[callback.from_user.id] = (cleaner_user_id, callback.message.message_id)
     await callback.answer()
 
 
 @router.message(lambda m: m.from_user and m.from_user.id in _awaiting_admin_task_detail and m.text)
 async def admin_cleaning_detail_input(message: Message):
+    from app.telegram.bot import bot
     tg_id = message.from_user.id
-    cleaner_user_id = _awaiting_admin_task_detail.pop(tg_id, None)
+    stored = _awaiting_admin_task_detail.pop(tg_id, None)
+    cleaner_user_id = stored[0] if stored else None
+    prompt_msg_id = stored[1] if stored else None
 
     raw = (message.text or "").strip().lstrip("#")
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
     if not raw.isdigit():
-        await message.answer("❌ Введите число — номер задачи.")
+        if prompt_msg_id:
+            await bot.edit_message_text("❌ Введите число — номер задачи.", chat_id=message.chat.id, message_id=prompt_msg_id)
+        else:
+            await message.answer("❌ Введите число — номер задачи.")
         return
 
     task_id = int(raw)
@@ -428,7 +439,11 @@ async def admin_cleaning_detail_input(message: Message):
     async with AsyncSessionLocal() as session:
         task = await session.get(CleaningTask, task_id)
         if not task:
-            await message.answer(f"❌ Задача #{task_id} не найдена.")
+            err = f"❌ Задача #{task_id} не найдена."
+            if prompt_msg_id:
+                await bot.edit_message_text(err, chat_id=message.chat.id, message_id=prompt_msg_id)
+            else:
+                await message.answer(err)
             return
 
         checks_q = await session.execute(
@@ -497,7 +512,13 @@ async def admin_cleaning_detail_input(message: Message):
     rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)])
     rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
 
-    await message.answer("\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode="HTML")
+    result_text = "\n".join(lines)
+    result_markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    if prompt_msg_id:
+        await bot.edit_message_text(result_text, chat_id=message.chat.id, message_id=prompt_msg_id,
+                                    reply_markup=result_markup, parse_mode="HTML")
+    else:
+        await message.answer(result_text, reply_markup=result_markup, parse_mode="HTML")
 
     if media:
         from aiogram.types import InputMediaPhoto

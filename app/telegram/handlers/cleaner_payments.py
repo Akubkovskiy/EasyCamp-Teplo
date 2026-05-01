@@ -30,8 +30,8 @@ BANKS = ["Сбербанк", "Тинькофф", "ВТБ", "Альфа-Банк"
 # telegram_id → ожидаем телефон
 _awaiting_phone: set[int] = set()
 
-# cleaner telegram_id → ожидаем номер уборки для детализации
-_awaiting_task_detail: set[int] = set()
+# cleaner telegram_id → prompt_message_id
+_awaiting_task_detail: dict[int, int] = {}
 
 # admin telegram_id → (task_id, cleaner_db_id) — ждём комментарий при оспаривании
 _awaiting_adj_dispute: dict[int, tuple[int, int]] = {}
@@ -239,7 +239,6 @@ async def cleaner_pay_history_ask_detail(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
-    _awaiting_task_detail.add(callback.from_user.id)
     await callback.message.edit_text(
         "🔍 <b>Детали уборки</b>\n\nВведите номер уборки (например: <code>23</code>)",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -247,17 +246,31 @@ async def cleaner_pay_history_ask_detail(callback: CallbackQuery):
         ]),
         parse_mode="HTML",
     )
+    _awaiting_task_detail[callback.from_user.id] = callback.message.message_id
     await callback.answer()
 
 
 @router.message(lambda m: m.from_user and m.from_user.id in _awaiting_task_detail and m.text)
 async def cleaner_pay_history_detail_input(message: Message):
+    from app.telegram.bot import bot
     tg_id = message.from_user.id
-    _awaiting_task_detail.discard(tg_id)
+    prompt_msg_id = _awaiting_task_detail.pop(tg_id, None)
 
     raw = (message.text or "").strip().lstrip("#")
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    async def _reply(text, markup=None):
+        if prompt_msg_id:
+            await bot.edit_message_text(text, chat_id=message.chat.id, message_id=prompt_msg_id,
+                                        reply_markup=markup, parse_mode="HTML")
+        else:
+            await message.answer(text, reply_markup=markup, parse_mode="HTML")
+
     if not raw.isdigit():
-        await message.answer("❌ Введите число — номер уборки.")
+        await _reply("❌ Введите число — номер уборки.")
         return
 
     task_id = int(raw)
@@ -266,9 +279,9 @@ async def cleaner_pay_history_detail_input(message: Message):
     async with AsyncSessionLocal() as s:
         task = await s.get(CleaningTask, task_id)
         if not task or (db_user_id and task.assigned_to_user_id != db_user_id):
-            await message.answer(
+            await _reply(
                 f"❌ Уборка #{task_id} не найдена.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
                 ]),
             )
@@ -333,7 +346,7 @@ async def cleaner_pay_history_detail_input(message: Message):
         [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
     ])
-    await message.answer("\n".join(lines), reply_markup=kb, parse_mode="HTML")
+    await _reply("\n".join(lines), kb)
 
     # Отправляем фото отдельно
     if media:
