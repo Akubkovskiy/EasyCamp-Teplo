@@ -6,6 +6,8 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy import and_, func, select
 
 from app.database import AsyncSessionLocal
+from decimal import Decimal
+
 from app.models import (
     CleaningPaymentLedger,
     CleaningPaymentEntryType,
@@ -22,6 +24,12 @@ from app.models import (
     User,
     UserRole,
 )
+
+MONTHS_RU = {
+    1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
+    5: "Май", 6: "Июнь", 7: "Июль", 8: "Август",
+    9: "Сентябрь", 10: "Октябрь", 11: "Ноябрь", 12: "Декабрь",
+}
 from app.telegram.auth.admin import is_admin
 
 # admin telegram_id → house_id (ждём новый тариф)
@@ -380,6 +388,14 @@ async def admin_cleaning_cleaner(callback: CallbackQuery):
             text="🔍 Детали задачи",
             callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:ask_detail",
         )],
+        [InlineKeyboardButton(
+            text="📋 История уборок",
+            callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:history",
+        )],
+        [InlineKeyboardButton(
+            text="📊 История платежей",
+            callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:payments",
+        )],
         [InlineKeyboardButton(text="⬅️ Уборки", callback_data="admin:cleaning")],
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
     ]
@@ -527,6 +543,193 @@ async def admin_cleaning_detail_input(message: Message):
         else:
             album = [InputMediaPhoto(media=m.telegram_file_id) for m in media[:10]]
             await message.answer_media_group(album)
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:history$"))
+async def admin_cleaner_task_history(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    cleaner_user_id = int(callback.data.split(":")[3])
+
+    async with AsyncSessionLocal() as s:
+        cleaner = await s.get(User, cleaner_user_id)
+        tasks_q = await s.execute(
+            select(CleaningTask).where(
+                CleaningTask.assigned_to_user_id == cleaner_user_id,
+                CleaningTask.status == CleaningTaskStatus.DONE,
+            ).order_by(CleaningTask.scheduled_date.desc()).limit(60)
+        )
+        tasks = list(tasks_q.scalars().all())
+
+        amounts: dict[int, Decimal] = {}
+        for t in tasks:
+            amt = await s.scalar(
+                select(func.sum(CleaningPaymentLedger.amount)).where(
+                    CleaningPaymentLedger.task_id == t.id,
+                )
+            )
+            amounts[t.id] = Decimal(amt or 0)
+
+    name = cleaner.name if cleaner else f"#{cleaner_user_id}"
+    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}"
+
+    if not tasks:
+        await callback.message.edit_text(
+            f"📋 <b>История уборок — {name}</b>\n\nВыполненных задач пока нет.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)],
+            ]),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    from collections import defaultdict
+    by_month: dict[str, list] = defaultdict(list)
+    for t in tasks:
+        key = t.scheduled_date.strftime("%Y-%m")
+        by_month[key].append(t)
+
+    lines = [f"📋 <b>История уборок — {name}</b>\n"]
+    for month_key in sorted(by_month.keys(), reverse=True):
+        month_tasks = by_month[month_key]
+        year, mon = int(month_key[:4]), int(month_key[5:])
+        month_total = sum(amounts[t.id] for t in month_tasks)
+        lines.append(f"\n📅 <b>{MONTHS_RU[mon]} {year}</b> — {len(month_tasks)} уб. / {month_total:.0f} ₽")
+        for t in month_tasks:
+            amt = amounts[t.id]
+            amt_str = f" {amt:.0f} ₽" if amt else ""
+            lines.append(f"  ✅ #{t.id} | {t.scheduled_date.strftime('%d.%m')} | д.{t.house_id}{amt_str}")
+
+    text = "\n".join(lines)
+    if len(text) > 4000:
+        text = text[:3990] + "\n…"
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+async def _load_admin_paid_groups(cleaner_user_id: int) -> list[tuple[str, Decimal, list]]:
+    """Группы выплат для уборщицы (по day_key), для Admin-просмотра."""
+    async with AsyncSessionLocal() as s:
+        entries_q = await s.execute(
+            select(CleaningPaymentLedger).where(
+                CleaningPaymentLedger.cleaner_user_id == cleaner_user_id,
+                CleaningPaymentLedger.status == PaymentStatus.PAID,
+            ).order_by(CleaningPaymentLedger.paid_at.desc())
+        )
+        entries = list(entries_q.scalars().all())
+
+    from collections import defaultdict
+    groups: dict[str, list] = defaultdict(list)
+    for e in entries:
+        day_key = e.paid_at.strftime("%Y-%m-%d") if e.paid_at else (e.period_key or "unknown")
+        groups[day_key].append(e)
+
+    result = []
+    for day_key in sorted(groups.keys(), reverse=True):
+        total = sum(Decimal(str(e.amount)) for e in groups[day_key])
+        result.append((day_key, total, groups[day_key]))
+    return result
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:payments$"))
+async def admin_cleaner_payments(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    cleaner_user_id = int(callback.data.split(":")[3])
+    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}"
+
+    async with AsyncSessionLocal() as s:
+        cleaner = await s.get(User, cleaner_user_id)
+    name = cleaner.name if cleaner else f"#{cleaner_user_id}"
+
+    groups = await _load_admin_paid_groups(cleaner_user_id)
+
+    if not groups:
+        await callback.message.edit_text(
+            f"📊 <b>История платежей — {name}</b>\n\nОплаченных переводов пока нет.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)],
+            ]),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    total_all = sum(g[1] for g in groups)
+    rows = []
+    for idx, (day_key, total, _) in enumerate(groups):
+        num = f"#{idx + 1:02d}"
+        d_fmt = day_key[8:10] + "." + day_key[5:7] + "." + day_key[:4]
+        rows.append([InlineKeyboardButton(
+            text=f"{num} — 💸 {d_fmt} — {total:.0f} ₽",
+            callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}:payments:{day_key}",
+        )])
+
+    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)])
+    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+
+    await callback.message.edit_text(
+        f"📊 <b>История платежей — {name}</b>\n\n💰 Всего выплачено: <b>{total_all:.0f} ₽</b>\n\nНажмите на платёж для детализации:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.regexp(r"^admin:cleaning:cleaner:\d+:payments:\d{4}-\d{2}-\d{2}$"))
+async def admin_cleaner_payment_detail(callback: CallbackQuery):
+    if not callback.from_user or not is_admin(callback.from_user.id):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    parts = callback.data.split(":")
+    cleaner_user_id = int(parts[3])
+    day_key = parts[5]
+    back_cb = f"admin:cleaning:cleaner:{cleaner_user_id}:payments"
+
+    groups = await _load_admin_paid_groups(cleaner_user_id)
+    group = next(((d, t, e) for d, t, e in groups if d == day_key), None)
+    if not group:
+        await callback.answer("Платёж не найден", show_alert=True)
+        return
+
+    _, total, entries = group
+    idx = next(i for i, (d, _, _) in enumerate(groups) if d == day_key)
+    d_fmt = day_key[8:10] + "." + day_key[5:7] + "." + day_key[:4]
+    num = f"#{idx + 1:02d}"
+
+    lines = [f"💸 <b>Платёж {num} — {d_fmt}</b>\n<b>Итого: {total:.0f} ₽</b>\n"]
+    for e in sorted(entries, key=lambda x: x.task_id or 0):
+        type_label = {
+            CleaningPaymentEntryType.CLEANING_FEE: "Уборка",
+            CleaningPaymentEntryType.ADJUSTMENT: "Доп. работа",
+            CleaningPaymentEntryType.SUPPLY_REIMBURSEMENT: "Расходники",
+        }.get(e.entry_type, e.entry_type.value)
+        task_ref = f" #{e.task_id}" if e.task_id else ""
+        lines.append(f"  · {type_label}{task_ref}: {float(e.amount):.0f} ₽")
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ История платежей", callback_data=back_cb)],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")],
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("admin:cleaning:task:") & ~F.data.contains(":photos"))
