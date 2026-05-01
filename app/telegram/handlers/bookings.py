@@ -11,10 +11,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingStatus
+from app.models import Booking, BookingSource, BookingStatus
 from app.core.config import settings
 from app.jobs.avito_sync_job import sync_avito_job
-from app.telegram.ui.booking_format import BOOKING_STATUS_EMOJI
+from app.telegram.ui.booking_format import BOOKING_SOURCE_EMOJI, BOOKING_STATUS_EMOJI
 
 router = Router()
 
@@ -339,10 +339,7 @@ async def send_bookings_response(
     current_row = []
 
     for b in bookings:
-        # Определяем источник брони
-        from app.models import BookingSource
-
-        source_emoji = "🅰️" if b.source == BookingSource.AVITO else "🅣"
+        source_emoji = BOOKING_SOURCE_EMOJI.get(b.source, "❓")
 
         text += (
             f"#{b.id} {status_emoji.get(b.status, '❓')} {source_emoji} "

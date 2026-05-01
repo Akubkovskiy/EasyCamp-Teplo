@@ -12,8 +12,8 @@ from aiogram.types import (
 
 from app.database import AsyncSessionLocal
 from app.services.booking_service import BookingService
-from app.models import BookingStatus
-from app.telegram.ui.booking_format import BOOKING_STATUS_EMOJI, BOOKING_STATUS_NAMES
+from app.models import BookingSource, BookingStatus
+from app.telegram.ui.booking_format import BOOKING_SOURCE_EMOJI, BOOKING_STATUS_EMOJI, BOOKING_STATUS_NAMES
 
 router = Router()
 
@@ -65,7 +65,7 @@ async def render_booking_card(event: CallbackQuery | Message, booking_id: int):
         f"💵 Остаток: {remaining:,.0f} ₽\n"
         f"──────────────────\n"
         f"📊 Статус: {BOOKING_STATUS_EMOJI.get(booking.status, '❓')} <b>{status_display}</b>\n"
-        f"🔗 Источник: {booking.source.value}\n"
+        f"{BOOKING_SOURCE_EMOJI.get(booking.source, '❓')} Источник: {booking.source.value}\n"
     )
 
     keyboard = InlineKeyboardMarkup(

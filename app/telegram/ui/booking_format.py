@@ -1,6 +1,6 @@
-"""Shared display constants for booking status."""
+"""Shared display constants for booking status and source."""
 
-from app.models import BookingStatus
+from app.models import BookingSource, BookingStatus
 
 BOOKING_STATUS_EMOJI: dict[BookingStatus, str] = {
     BookingStatus.NEW: "🆕",
@@ -20,4 +20,10 @@ BOOKING_STATUS_NAMES: dict[BookingStatus, str] = {
     BookingStatus.CHECKED_IN: "Проживает",
     BookingStatus.CANCELLED: "Отменено",
     BookingStatus.COMPLETED: "Завершено",
+}
+
+BOOKING_SOURCE_EMOJI: dict[BookingSource, str] = {
+    BookingSource.AVITO: "🅰️",
+    BookingSource.TELEGRAM: "💬",
+    BookingSource.DIRECT: "🌐",
 }
