@@ -428,17 +428,25 @@ async def admin_cleaning_ask_detail(callback: CallbackQuery):
         await callback.answer("Нет доступа", show_alert=True)
         return
     cleaner_user_id = int(callback.data.split(":")[3])
-    await callback.message.edit_text(
+    # Отправляем НОВЫМ сообщением — список остаётся видимым выше
+    sent = await callback.message.answer(
         "🔍 <b>Детали задачи</b>\n\nВведите номер задачи (например: <code>23</code>)",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
-                text="❌ Отмена",
-                callback_data=f"admin:cleaning:cleaner:{cleaner_user_id}",
-            )],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:detail:close")],
         ]),
         parse_mode="HTML",
     )
-    _awaiting_admin_task_detail[callback.from_user.id] = (cleaner_user_id, callback.message.message_id)
+    _awaiting_admin_task_detail[callback.from_user.id] = (cleaner_user_id, sent.message_id)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin:detail:close")
+async def admin_detail_close(callback: CallbackQuery):
+    """Удаляет сообщение с деталями — список выше остаётся."""
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -539,8 +547,7 @@ async def admin_cleaning_detail_input(message: Message):
             text=f"🧾 Чек #{c.id} — {float(c.amount_total):.0f} ₽ [{c.status.value}]",
             callback_data=f"admin:cleaning:claim:{c.id}",
         )])
-    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data=back_cb)])
-    rows.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin:menu")])
+    rows.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="admin:detail:close")])
 
     result_text = "\n".join(lines)
     result_markup = InlineKeyboardMarkup(inline_keyboard=rows)

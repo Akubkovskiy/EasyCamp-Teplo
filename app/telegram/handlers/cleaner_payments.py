@@ -249,14 +249,24 @@ async def cleaner_pay_history_ask_detail(callback: CallbackQuery):
     if not callback.from_user or not is_cleaner(callback.from_user.id):
         await callback.answer("Нет доступа", show_alert=True)
         return
-    await callback.message.edit_text(
+    # Новым сообщением — список уборок остаётся видимым выше
+    sent = await callback.message.answer(
         "🔍 <b>Детали уборки</b>\n\nВведите номер уборки (например: <code>23</code>)",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:pay:history")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cleaner:detail:close")],
         ]),
         parse_mode="HTML",
     )
-    _awaiting_task_detail[callback.from_user.id] = callback.message.message_id
+    _awaiting_task_detail[callback.from_user.id] = sent.message_id
+    await callback.answer()
+
+
+@router.callback_query(F.data == "cleaner:detail:close")
+async def cleaner_detail_close(callback: CallbackQuery):
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -353,8 +363,7 @@ async def cleaner_pay_history_detail_input(message: Message):
         lines.append(f"\n📸 Фото: {len(media)} шт. (отправлены ниже)")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ История уборок", callback_data="cleaner:pay:history")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+        [InlineKeyboardButton(text="❌ Закрыть", callback_data="cleaner:detail:close")],
     ])
     await _reply("\n".join(lines), kb)
 
