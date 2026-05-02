@@ -21,6 +21,7 @@ class BookingSource(str, Enum):
     AVITO = "avito"
     TELEGRAM = "telegram"
     DIRECT = "direct"
+    YANDEX_TRAVEL = "yandex_travel"
     OTHER = "other"
 
 

@@ -225,6 +225,27 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Failed to register pricing jobs: {e}")
 
+        # Яндекс Путешествия sync
+        if (
+            settings.yandex_travel_oauth_token
+            and settings.enable_yandex_travel_sync
+            and settings.yandex_travel_sync_interval_minutes > 0
+        ):
+            from app.jobs.yandex_travel_sync_job import sync_yandex_travel_job
+
+            self.scheduler.add_job(
+                sync_yandex_travel_job,
+                IntervalTrigger(minutes=settings.yandex_travel_sync_interval_minutes),
+                id="yandex_travel_sync",
+                name="Sync Yandex Travel bookings",
+                replace_existing=True,
+            )
+            logger.info(
+                f"Registered Yandex Travel sync job (every {settings.yandex_travel_sync_interval_minutes} min)"
+            )
+        else:
+            logger.debug("Yandex Travel sync not registered (token/flag not set)")
+
         self._jobs_registered = True
 
     def start(self):

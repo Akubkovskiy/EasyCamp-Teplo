@@ -52,10 +52,68 @@ async def _sync_avito(db: AsyncSession, house_id: Optional[int], days_forward: i
     )
 
 
+async def _sync_yandex_travel(db: AsyncSession, house_id: Optional[int], days_forward: int) -> SyncResult:
+    """Синхронизация цен на Яндекс Путешествия."""
+    if not settings.enable_yandex_travel_price_sync:
+        return SyncResult(platform="yandex_travel", skipped=True)
+    if not settings.yandex_travel_oauth_token or not settings.yandex_travel_room_ids:
+        return SyncResult(platform="yandex_travel", skipped=True)
+
+    from app.services.yandex_travel_api_service import yandex_travel_api_service
+    from app.services.pricing_service import PricingService
+    from app.models import House
+    from sqlalchemy import select
+    from datetime import date, timedelta
+
+    mapping_str = settings.yandex_travel_room_ids
+    hotel_room_mapping = {}
+    for pair in mapping_str.split(","):
+        pair = pair.strip()
+        if ":" not in pair:
+            continue
+        key, hid_str = pair.rsplit(":", 1)
+        try:
+            hotel_id, _, room_id = key.strip().partition("/")
+            hotel_room_mapping[int(hid_str.strip())] = (hotel_id.strip(), room_id.strip())
+        except ValueError:
+            pass
+
+    synced = []
+    errors = []
+    today = date.today()
+
+    stmt = select(House)
+    if house_id:
+        stmt = stmt.where(House.id == house_id)
+    result = await db.execute(stmt)
+    houses = result.scalars().all()
+
+    for house in houses:
+        if house.id not in hotel_room_mapping:
+            continue
+        hotel_id, room_id = hotel_room_mapping[house.id]
+        price_entries = []
+        for i in range(days_forward):
+            target_date = today + timedelta(days=i)
+            info = await PricingService.get_price_for_date(db, house.id, target_date)
+            price_entries.append({
+                "date": target_date.isoformat(),
+                "price": info["final_price"],
+            })
+        ok = yandex_travel_api_service.update_prices(hotel_id, room_id, price_entries)
+        if ok:
+            synced.append({"house": house.name, "hotel_id": hotel_id, "room_id": room_id, "days": days_forward})
+        else:
+            errors.append(f"{house.name}: price update failed")
+
+    return SyncResult(platform="yandex_travel", synced=synced, errors=errors)
+
+
 # Реестр платформ. Ключ — имя, значение — coroutine factory.
 # Чтобы отключить площадку: уберите её из словаря или поставьте флаг в конфиге.
 _PLATFORMS = {
     "avito": _sync_avito,
+    "yandex_travel": _sync_yandex_travel,
     # "booking": _sync_booking,  # добавить когда появится
 }
 

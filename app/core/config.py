@@ -91,6 +91,19 @@ class Settings(BaseModel):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     setup_secret: str = "easycamp_secret"
 
+    # Яндекс Путешествия White Label Partner API
+    # Документация: https://yandex.ru/dev/travel-partners-api/doc/ru/
+    # Токен действует 1 год. Генерируется через OAuth:
+    #   https://oauth.yandex.ru/authorize?response_type=token&client_id=b0ca9cd48f66420c9995c0776f2243a8
+    yandex_travel_oauth_token: str = ""
+    # Маппинг номеров → домиков. Формат: "hotel_id/room_id:house_id,..."
+    # Пример: "YA1234/ROOM1:1,YA1234/ROOM2:2"
+    # hotel_id и room_id узнаются в Яндекс Путешествиях после активации доступа.
+    yandex_travel_room_ids: str = ""
+    yandex_travel_sync_interval_minutes: int = 15
+    enable_yandex_travel_sync: bool = True
+    enable_yandex_travel_price_sync: bool = True
+
     # Site lead intake (Phase S10) — публичный endpoint /api/leads
     # принимает заявки с teplo-v-arkhyze.ru. Token обязателен, иначе 401.
     site_lead_token: str = ""
@@ -173,6 +186,11 @@ settings = Settings(
     algorithm="HS256",
     access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
     setup_secret=os.environ.get("SETUP_SECRET", "easycamp_secret"),
+    yandex_travel_oauth_token=os.environ.get("YANDEX_TRAVEL_OAUTH_TOKEN", ""),
+    yandex_travel_room_ids=os.environ.get("YANDEX_TRAVEL_ROOM_IDS", ""),
+    yandex_travel_sync_interval_minutes=int(os.environ.get("YANDEX_TRAVEL_SYNC_INTERVAL_MINUTES", "15")),
+    enable_yandex_travel_sync=os.environ.get("ENABLE_YANDEX_TRAVEL_SYNC", "true").lower() == "true",
+    enable_yandex_travel_price_sync=os.environ.get("ENABLE_YANDEX_TRAVEL_PRICE_SYNC", "true").lower() == "true",
     site_lead_token=os.environ.get("SITE_LEAD_TOKEN", ""),
     admin_web_username=os.environ.get("ADMIN_WEB_USERNAME", ""),
     admin_web_password=os.environ.get("ADMIN_WEB_PASSWORD", ""),

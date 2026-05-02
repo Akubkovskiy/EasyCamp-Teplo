@@ -26,4 +26,5 @@ BOOKING_SOURCE_EMOJI: dict[BookingSource, str] = {
     BookingSource.AVITO: "🅰️",
     BookingSource.TELEGRAM: "💬",
     BookingSource.DIRECT: "🌐",
+    BookingSource.YANDEX_TRAVEL: "🟡",
 }
