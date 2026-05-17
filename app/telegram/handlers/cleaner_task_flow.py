@@ -92,7 +92,7 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
         return list(result.scalars().all())
 
 
-async def _get_unconfirmed_tasks(lookback_days: int = 30) -> list[CleaningTask]:
+async def _get_unconfirmed_tasks(lookback_days: int = 7) -> list[CleaningTask]:
     """Список незавершённых уборок (PENDING/ESCALATED), дата прошла или сегодня.
     Видимы всем уборщицам — любая может взять."""
     today = date.today()
