@@ -6,6 +6,7 @@ def get_cleaner_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="✅ Задачи сегодня", callback_data="cleaner:tasks:today")],
+            [InlineKeyboardButton(text="⚠️ Невыполненные (можно взять)", callback_data="cleaner:tasks:unconfirmed")],
             [
                 InlineKeyboardButton(text="📅 Брони на неделю", callback_data="cleaner:schedule:week_full"),
                 InlineKeyboardButton(text="📆 Брони на месяц", callback_data="cleaner:schedule:month"),

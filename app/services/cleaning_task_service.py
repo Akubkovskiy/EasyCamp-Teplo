@@ -58,6 +58,12 @@ class CleaningTaskService:
             CleaningTaskStatus.ESCALATED,
             CleaningTaskStatus.CANCELLED,
         },
+        # ESCALATED задачу можно поднять обратно (другая уборщица взяла)
+        # либо отменить если стала неактуальной
+        CleaningTaskStatus.ESCALATED: {
+            CleaningTaskStatus.ACCEPTED,
+            CleaningTaskStatus.CANCELLED,
+        },
     }
 
     @staticmethod
@@ -120,7 +126,9 @@ class CleaningTaskService:
 
         if target == CleaningTaskStatus.ACCEPTED:
             task.accepted_at = now
-            if cleaner_user_id and not task.assigned_to_user_id:
+            # Любое принятие (PENDING→ACCEPTED или ESCALATED→ACCEPTED через «Невыполненные»)
+            # перезаписывает assigned_to_user_id — текущая уборщица становится ответственной.
+            if cleaner_user_id:
                 task.assigned_to_user_id = cleaner_user_id
         elif target == CleaningTaskStatus.IN_PROGRESS:
             task.started_at = now

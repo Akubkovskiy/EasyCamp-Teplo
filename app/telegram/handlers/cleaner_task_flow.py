@@ -92,6 +92,119 @@ async def _get_tasks(user_id: int, days: int = 0) -> list[CleaningTask]:
         return list(result.scalars().all())
 
 
+async def _get_unconfirmed_tasks(lookback_days: int = 30) -> list[CleaningTask]:
+    """Список незавершённых уборок (PENDING/ESCALATED), дата прошла или сегодня.
+    Видимы всем уборщицам — любая может взять."""
+    today = date.today()
+    earliest = today - timedelta(days=lookback_days)
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(CleaningTask)
+            .where(
+                and_(
+                    CleaningTask.scheduled_date >= earliest,
+                    CleaningTask.scheduled_date <= today,
+                    CleaningTask.status.in_(
+                        [CleaningTaskStatus.PENDING, CleaningTaskStatus.ESCALATED]
+                    ),
+                )
+            )
+            .order_by(CleaningTask.scheduled_date)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+
+@router.callback_query(F.data == "cleaner:tasks:unconfirmed")
+async def cleaner_unconfirmed_tasks(callback: CallbackQuery):
+    """Список неподтверждённых/просроченных уборок — любая уборщица видит и может взять."""
+    tasks = await _get_unconfirmed_tasks()
+
+    if not tasks:
+        await callback.message.edit_text(
+            "✅ <b>Невыполненных уборок нет.</b>\n\n"
+            "Все задачи в работе или завершены.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")]
+            ]),
+        )
+        await callback.answer()
+        return
+
+    # Тексты домиков — загружаем все House разом.
+    from app.models import House as _House
+    async with AsyncSessionLocal() as session:
+        houses_q = await session.execute(select(_House))
+        houses = {h.id: h.name for h in houses_q.scalars().all()}
+
+    today = date.today()
+    lines = ["⚠️ <b>Невыполненные уборки</b>", "<i>(можешь взять любую — Возьми и убери)</i>", ""]
+    rows = []
+    for t in tasks:
+        delta = (today - t.scheduled_date).days
+        if delta == 0:
+            age = "сегодня"
+        elif delta == 1:
+            age = "вчера"
+        else:
+            age = f"{delta} дн. назад"
+        status_icon = "🚨" if t.status == CleaningTaskStatus.ESCALATED else "⏳"
+        house_name = houses.get(t.house_id, f"Дом #{t.house_id}")
+        lines.append(f"{status_icon} <b>{house_name}</b> — {t.scheduled_date.strftime('%d.%m')} ({age})")
+        rows.append([
+            InlineKeyboardButton(
+                text=f"🙋 Взять: {house_name} {t.scheduled_date.strftime('%d.%m')}",
+                callback_data=f"cleaner:task:claim:{t.id}",
+            )
+        ])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")])
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("cleaner:task:claim:"))
+async def cleaner_task_claim(callback: CallbackQuery):
+    """Уборщица берёт неподтверждённую задачу: ESCALATED/PENDING → ACCEPTED, assigned_to_user_id перезаписывается."""
+    task_id = int(callback.data.split(":")[3])
+
+    async with AsyncSessionLocal() as session:
+        task = await session.get(CleaningTask, task_id)
+        if not task:
+            await callback.answer("Задача не найдена", show_alert=True)
+            return
+
+        if task.status not in (CleaningTaskStatus.PENDING, CleaningTaskStatus.ESCALATED):
+            await callback.answer(
+                f"Эту уборку уже взяли (статус: {task.status.value})", show_alert=True
+            )
+            return
+
+        cleaner_db_id = await resolve_user_db_id(session, callback.from_user.id)
+        if not cleaner_db_id:
+            await callback.answer("Вы не зарегистрированы как уборщица", show_alert=True)
+            return
+
+        ok = await CleaningTaskService.transition_status(
+            session,
+            task,
+            CleaningTaskStatus.ACCEPTED,
+            cleaner_user_id=cleaner_db_id,
+        )
+        if not ok:
+            await callback.answer("Не удалось взять задачу — обновите список", show_alert=True)
+            return
+        await session.commit()
+
+    await callback.answer("✅ Взято! Открой задачу и начни уборку.", show_alert=True)
+    await _render_task_view(callback, task_id)
+
+
 @router.callback_query(F.data.startswith("cleaner:tasks:"))
 async def cleaner_tasks_list(callback: CallbackQuery):
     mode = callback.data.split(":")[2]
@@ -322,13 +435,18 @@ def _is_task_photo(message: Message) -> bool:
 
 def _is_cleaner_photo(message: Message) -> bool:
     """Filter: фото от уборщицы БЕЗ тега — для авто-прикрепления к активной задаче.
-    Гостевые фото (оплата и т.п.) не перехватываем: гости не в _db_cleaners."""
+    Гостевые фото (оплата и т.п.) не перехватываем: гости не в _db_cleaners.
+    Если уборщица в режиме «🧾 Расходники» — НЕ перехватываем, отдаём в cleaner_expenses."""
     from app.telegram.auth.admin import is_cleaner
-    return (
-        message.from_user is not None
-        and is_cleaner(message.from_user.id)
-        and not _is_task_photo(message)
-    )
+    from app.telegram.handlers.cleaner_expenses import is_cleaner_awaiting_receipt
+
+    if message.from_user is None or not is_cleaner(message.from_user.id):
+        return False
+    if _is_task_photo(message):
+        return False
+    if is_cleaner_awaiting_receipt(message.from_user.id):
+        return False
+    return True
 
 
 async def _get_active_task_id(telegram_id: int) -> int | None:
@@ -380,7 +498,15 @@ async def cleaner_receive_photo_auto(message: Message):
 
     task_id = await _get_active_task_id(message.from_user.id)
     if task_id is None:
-        await message.answer("Нет активной задачи. Сначала нажмите «🚿 Начать уборку».")
+        await message.answer(
+            "📌 Нет активной уборки.\n\n"
+            "Если это фото чека о расходах — нажми кнопку ниже и отправь фото "
+            "с подписью «сумма описание»:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🧾 Прикрепить чек", callback_data="cleaner:expense:new")],
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="cleaner:menu")],
+            ]),
+        )
         return
 
     file_id = message.photo[-1].file_id
