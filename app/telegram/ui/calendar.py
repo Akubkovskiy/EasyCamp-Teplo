@@ -46,13 +46,19 @@ def build_month_keyboard(
     )
 
     # 2. Дни недели
-    week_days = ["Пн", "Вт", "Ср", " Чт", "Пт", "Сб", "Вс"]
+    week_days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
     keyboard.append(
         [InlineKeyboardButton(text=day, callback_data="ignore") for day in week_days]
     )
 
     # 3. Дни месяца
+    # Pad начало первого ряда пустыми ячейками до правильного дня недели
+    # (date.weekday(): Mon=0 .. Sun=6 — совпадает с порядком week_days)
     row: list[InlineKeyboardButton] = []
+    if dates:
+        leading = dates[0].weekday()
+        for _ in range(leading):
+            row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
     for date in dates:
         # ⛔ Отсекаем даты раньше min_date (если задан)
         if min_date and date < min_date:
