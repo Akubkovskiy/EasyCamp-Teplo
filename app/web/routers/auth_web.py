@@ -101,6 +101,8 @@ async def login(
         key="admin_token",
         value=access_token,
         httponly=True,
+        secure=settings.app_env == "production",
+        samesite="strict",
         max_age=settings.access_token_expire_minutes * 60,
         expires=settings.access_token_expire_minutes * 60,
     )
@@ -110,5 +112,10 @@ async def login(
 async def logout():
     """Выход из системы"""
     response = RedirectResponse(url="/admin-web/login", status_code=status.HTTP_303_SEE_OTHER)
-    response.delete_cookie("admin_token")
+    response.delete_cookie(
+        "admin_token",
+        secure=settings.app_env == "production",
+        httponly=True,
+        samesite="strict",
+    )
     return response

@@ -1,14 +1,22 @@
-from fastapi import APIRouter, Request, Form, status
+import secrets
+
+from fastapi import APIRouter, Request, Form, status, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import settings
 from app.database import AsyncSessionLocal
 from app.services.setup_service import SetupStateService
+from app.core.security import create_setup_token, verify_setup_token
+from app.web.setup_guard import require_setup_open
 
 templates = Jinja2Templates(directory="app/web/templates")
 
-router = APIRouter(prefix="/admin-web/setup", tags=["web-setup"])
+router = APIRouter(
+    prefix="/admin-web/setup",
+    tags=["web-setup"],
+    dependencies=[Depends(require_setup_open)],
+)
 
 SETUP_SECRET = settings.setup_secret
 
@@ -30,7 +38,7 @@ async def check_secret(
     secret: str = Form(...)
 ):
     """Проверка секрета и старт сессии"""
-    if secret != SETUP_SECRET:
+    if not secrets.compare_digest(secret, SETUP_SECRET):
         return templates.TemplateResponse(
             "setup_intro.html",
             {
@@ -41,16 +49,21 @@ async def check_secret(
             status_code=403
         )
 
-    # Set setup_token cookie (simple hash of secret for now)
     response = RedirectResponse(url="/admin-web/setup/step1", status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie(key="setup_token", value="valid", httponly=True) 
+    response.set_cookie(
+        key="setup_token",
+        value=create_setup_token(),
+        httponly=True,
+        secure=settings.app_env == "production",
+        samesite="strict",
+        max_age=30 * 60,
+    )
     return response
 
 @router.get("/step1", response_class=HTMLResponse)
 async def step1_page(request: Request):
     """Шаг 1: Идентичность проекта"""
-    # Verify cookie (simple check)
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     return templates.TemplateResponse(
@@ -72,7 +85,7 @@ async def step1_save(
     contact_admin: str = Form(""),
 ):
     """Сохранение шага 1 -> Переход к Шагу 2"""
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     async with AsyncSessionLocal() as db:
@@ -100,7 +113,7 @@ async def step1_save(
 @router.get("/step2", response_class=HTMLResponse)
 async def step2_page(request: Request):
     """Шаг 2: AI Настройки"""
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     return templates.TemplateResponse(
@@ -119,7 +132,7 @@ async def step2_save(
     spreadsheet_id: str = Form("")
 ):
     """Сохранение шага 2 -> Завершение"""
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     async with AsyncSessionLocal() as db:
@@ -144,7 +157,7 @@ async def step2_save(
 @router.get("/step3", response_class=HTMLResponse)
 async def step3_page(request: Request):
     """Шаг 3: Создание Администратора"""
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     return templates.TemplateResponse(
@@ -163,7 +176,7 @@ async def step3_save(
     name: str = Form("Owner"),
 ):
     """Создание админа и Завершение"""
-    if request.cookies.get("setup_token") != "valid":
+    if not verify_setup_token(request.cookies.get("setup_token")):
         return RedirectResponse(url="/admin-web/setup", status_code=303)
 
     from app.models import User, UserRole

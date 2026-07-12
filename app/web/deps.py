@@ -36,10 +36,8 @@ async def get_current_admin(request: Request, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     # Check role
-    if user.role not in [UserRole.ADMIN, "owner"]: # Owner mapping if generic string
-        # Assuming UserRole.ADMIN covers owner for MVP, or we check role hierarchy
-        # Roadmap says OWNER/ADMIN. UserRole enum has ADMIN.
-        pass
+    if user.role not in {UserRole.ADMIN, UserRole.OWNER}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
 
     return user
 

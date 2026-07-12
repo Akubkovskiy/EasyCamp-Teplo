@@ -7,6 +7,7 @@ load_dotenv()
 
 
 class Settings(BaseModel):
+    app_env: str = "development"
     telegram_bot_token: str
     telegram_chat_id: int
     database_url: str = "sqlite+aiosqlite:///./easycamp.db"
@@ -116,6 +117,18 @@ class Settings(BaseModel):
     admin_web_password: str = ""
 
 
+def validate_security_settings(app_env: str, secret_key: str, setup_secret: str) -> None:
+    """Reject known development secrets when production mode is explicit."""
+    if app_env.lower() != "production":
+        return
+
+    insecure_values = {"", "dev_secret", "dev_secret_key_change_me", "easycamp_secret"}
+    if secret_key in insecure_values or setup_secret in insecure_values:
+        raise RuntimeError(
+            "Production requires strong, unique SECRET_KEY and SETUP_SECRET values"
+        )
+
+
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
 if not env_db_url or "./easycamp.db" in env_db_url:
@@ -126,7 +139,14 @@ if not env_db_url or "./easycamp.db" in env_db_url:
 else:
     final_db_url = env_db_url
 
+app_env = os.environ.get("APP_ENV", "development").strip().lower()
+secret_key = os.environ.get("SECRET_KEY", "dev_secret_key_change_me")
+setup_secret = os.environ.get("SETUP_SECRET", "easycamp_secret")
+validate_security_settings(app_env, secret_key, setup_secret)
+
+
 settings = Settings(
+    app_env=app_env,
     telegram_bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
     telegram_chat_id=int(os.environ["TELEGRAM_CHAT_ID"]),
     database_url=final_db_url,
@@ -182,10 +202,10 @@ settings = Settings(
     guest_feature_faq=os.environ.get("GUEST_FEATURE_FAQ", "true").lower() == "true",
     guest_feature_partners=os.environ.get("GUEST_FEATURE_PARTNERS", "true").lower() == "true",
     guest_feature_showcase_houses=os.environ.get("GUEST_FEATURE_SHOWCASE_HOUSES", "true").lower() == "true",
-    secret_key=os.environ.get("SECRET_KEY", "dev_secret_key_change_me"),
+    secret_key=secret_key,
     algorithm="HS256",
     access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
-    setup_secret=os.environ.get("SETUP_SECRET", "easycamp_secret"),
+    setup_secret=setup_secret,
     yandex_travel_oauth_token=os.environ.get("YANDEX_TRAVEL_OAUTH_TOKEN", ""),
     yandex_travel_room_ids=os.environ.get("YANDEX_TRAVEL_ROOM_IDS", ""),
     yandex_travel_sync_interval_minutes=int(os.environ.get("YANDEX_TRAVEL_SYNC_INTERVAL_MINUTES", "15")),

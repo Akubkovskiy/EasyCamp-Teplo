@@ -6,6 +6,7 @@ services:
     container_name: easycamp_bot
     restart: always
     environment:
+      - APP_ENV=${APP_ENV:-production}
       - TZ=Europe/Moscow
       - DATABASE_URL=sqlite+aiosqlite:////app/data/easycamp.db
       - PYTHONUTF8=1

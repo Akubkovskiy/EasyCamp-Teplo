@@ -1,4 +1,5 @@
 import bcrypt
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt
@@ -31,3 +32,18 @@ def decode_access_token(token: str) -> dict:
         return payload
     except Exception:
         return None
+
+
+def create_setup_token() -> str:
+    """Create a short-lived token that is valid only for the setup wizard."""
+    return create_access_token(
+        {"scope": "initial_setup", "nonce": secrets.token_urlsafe(16)},
+        expires_delta=timedelta(minutes=30),
+    )
+
+
+def verify_setup_token(token: Optional[str]) -> bool:
+    if not token:
+        return False
+    payload = decode_access_token(token)
+    return bool(payload and payload.get("scope") == "initial_setup")
