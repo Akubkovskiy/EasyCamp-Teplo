@@ -14,6 +14,7 @@ CRITICAL_PATHS = (
     "app/api/health.py",
     "app/api/site_leads.py",
     "app/avito/webhook.py",
+    "app/core/security.py",
     "app/services/backup_service.py",
     "app/services/booking_service.py",
     "app/services/readiness_service.py",
@@ -25,6 +26,7 @@ CRITICAL_PATHS = (
     "tests/test_sqlite_recovery.py",
     "tests/test_booking_integrity.py",
     "tests/test_site_leads.py",
+    "tests/test_security.py",
     "tests/test_yandex_booking_integrity.py",
     "tests/test_avito_overlap_guard.py",
 )
