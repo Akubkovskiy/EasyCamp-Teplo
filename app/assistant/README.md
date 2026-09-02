@@ -14,6 +14,11 @@ dependency that must delegate to existing EasyCamp business services:
 - `PricingService` for nightly prices and stay totals;
 - `BookingService` for availability and booking reads.
 
+`EasyCampBusinessReadBoundary` is the concrete composition adapter. It is not
+wired into `app/main.py`; a future runtime must instantiate it only behind an
+owner-only feature flag and pass it to the disabled-by-default
+`AssistantReadOnlyGateway`.
+
 The model must never receive an `AsyncSession`, SQLAlchemy object, database
 path or raw query capability. A future wiring module may build a boundary over
 those services, but it must remain outside the model/tool planner layer.
