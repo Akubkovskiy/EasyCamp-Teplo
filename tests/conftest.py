@@ -18,6 +18,9 @@ os.environ.setdefault(
     "1234567890:AAEhBP0av28cxuwxxxxxxxxxxxxxxxxxxxx",
 )
 os.environ.setdefault("TELEGRAM_CHAT_ID", "1")
+# Site-lead tests import the settings singleton during collection; keep their
+# synthetic token available regardless of test-module import order.
+os.environ.setdefault("SITE_LEAD_TOKEN", "test-token")
 
 
 @pytest.fixture(scope="session")

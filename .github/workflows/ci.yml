@@ -26,6 +26,8 @@ jobs:
       AVITO_CLIENT_ID: "test"
       AVITO_CLIENT_SECRET: "test"
       AVITO_REDIRECT_URI: "http://localhost"
+      SITE_LEAD_TOKEN: "test-token"
+      PYTHONUTF8: "1"
       TELEGRAM_CHAT_ID: "123456789"
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +35,13 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Verify isolated test runtime
+        run: >-
+          python -c "import sys; from importlib.metadata import version; from packaging.version import Version;
+          assert sys.version_info[:2] == (3, 11), sys.version;
+          assert Version(version('fastapi')) < Version('0.115.0');
+          assert Version(version('starlette')) < Version('0.39.0');
+          print('python=' + sys.version.split()[0] + ' fastapi=' + version('fastapi') + ' starlette=' + version('starlette'))"
       - run: pytest --cov=app --cov-report=xml tests/
       - uses: codecov/codecov-action@v3
         if: always()

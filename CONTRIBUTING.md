@@ -19,6 +19,30 @@ pip install -r requirements.txt -r requirements-dev.txt
 cp .env.example .env  # fill in your test credentials
 ```
 
+## Reproducible Tests
+
+Use Python 3.11 in a fresh environment. Do not run the suite with a global
+FastAPI/Starlette installation, and do not place a production `.env`, database
+or credentials in a clean test checkout. The CI guard verifies the supported
+runtime before pytest starts.
+
+PowerShell example with synthetic values:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
+$env:PYTHONUTF8 = "1"
+$env:TELEGRAM_BOT_TOKEN = "0000000000:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+$env:TELEGRAM_CHAT_ID = "123456789"
+$env:SITE_LEAD_TOKEN = "test-token"
+$env:DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+The same command is used in CI with Python 3.11. The checked-in dependency
+range resolves FastAPI `<0.115` and Starlette `<0.39`; an incompatible global
+environment is not a valid verification result.
+
 ## Running Tests
 
 ```bash
