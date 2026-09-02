@@ -35,6 +35,8 @@ async def readiness(response: Response):
         }
         if database_readiness.missing_tables:
             payload["missing_tables"] = list(database_readiness.missing_tables)
+        if database_readiness.missing_columns:
+            payload["missing_columns"] = list(database_readiness.missing_columns)
         if database_readiness.missing_index:
             payload["missing_index"] = database_readiness.missing_index
         return payload

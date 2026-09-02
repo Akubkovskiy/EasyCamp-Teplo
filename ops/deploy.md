@@ -22,6 +22,7 @@ Deploy is stateful because it depends on:
 ## Pre-deploy checks
 
 - complete `ops/release-gates.md`, including the Docker-capable build gate
+- complete the ordered `ops/pre-deploy-handoff.md` for the hardening candidate
 - confirm whether the change touches booking logic, scheduler behavior, or integrations
 - verify rollback path for DB-sensitive changes
 - treat duplicate-guard and overlap logic as business-critical

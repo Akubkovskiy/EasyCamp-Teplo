@@ -3,11 +3,10 @@
 import sqlite3
 
 import pytest
-from alembic import command
 from alembic.config import Config
 
+from alembic import command
 from app.core.config import settings
-
 
 PREVIOUS_REVISION = "a1b2c3d4e5f6"
 INDEX_NAME = "uq_bookings_source_external_id"
@@ -51,6 +50,11 @@ def _index_names(path) -> set[str]:
         connection.close()
 
 
+def _alembic_revision(path) -> str:
+    with sqlite3.connect(path) as connection:
+        return str(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0])
+
+
 def _alembic_config(path) -> Config:
     config = Config("alembic.ini")
     db_path = str(path).replace("\\", "/")
@@ -84,3 +88,22 @@ def test_external_identity_migration_refuses_legacy_duplicates(tmp_path, monkeyp
         command.upgrade(_alembic_config(db_path), "head")
 
     assert INDEX_NAME not in _index_names(db_path)
+    assert _alembic_revision(db_path) == PREVIOUS_REVISION
+
+
+def test_external_identity_migration_refuses_incompatible_named_index(tmp_path, monkeypatch):
+    db_path = tmp_path / "legacy-index-collision.db"
+    _legacy_database(db_path)
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            f"CREATE UNIQUE INDEX {INDEX_NAME} ON bookings(external_id)"
+        )
+        connection.commit()
+
+    db_path_text = str(db_path).replace("\\", "/")
+    monkeypatch.setattr(settings, "database_url", f"sqlite+aiosqlite:///{db_path_text}")
+
+    with pytest.raises(RuntimeError, match="Existing index .* is incompatible"):
+        command.upgrade(_alembic_config(db_path), "head")
+
+    assert _alembic_revision(db_path) == PREVIOUS_REVISION

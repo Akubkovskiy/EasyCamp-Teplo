@@ -67,13 +67,16 @@ them. Do not recreate the production container merely to test the YAML.
 ## 5. Post-start canaries
 
 - [ ] `/health` returns `200` (process liveness).
-- [ ] `/ready` returns `200` and reports the external-booking identity index.
+- [ ] `/ready` returns `200`, reports the external-booking identity index, and
+      has validated every ORM column used by the `House` and `Booking` models.
 - [ ] The container reaches `healthy` without a restart loop.
 - [ ] SQLite `PRAGMA integrity_check` returns `ok`.
 - [ ] Active booking counts/date ranges match the pre-change checkpoint.
 - [ ] Telegram responds in the intended private/admin context.
 - [ ] Logs show one scheduler and one polling process, not duplicates.
-- [ ] Re-enable external ingestion one source at a time and inspect replay results.
+- [ ] Keep scheduled sync flags off and hold Site/Avito HTTP ingress at the edge
+      during initial validation. Re-enable each independently controlled source
+      and inspect replay results. The app has no single global ingestion kill switch.
 
 ## 6. Rollback gate
 

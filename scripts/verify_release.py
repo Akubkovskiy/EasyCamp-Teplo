@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 CRITICAL_PATHS = (
+    "alembic/versions/c8b1a6f4d2e9_add_unique_external_booking_identity.py",
     "app/api/health.py",
     "app/api/site_leads.py",
     "app/avito/webhook.py",
@@ -25,6 +26,7 @@ CRITICAL_PATHS = (
     "tests/test_backup_service.py",
     "tests/test_sqlite_recovery.py",
     "tests/test_booking_integrity.py",
+    "tests/test_external_identity_migration.py",
     "tests/test_site_leads.py",
     "tests/test_security.py",
     "tests/test_yandex_booking_integrity.py",

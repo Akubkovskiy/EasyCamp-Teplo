@@ -40,6 +40,7 @@ Enter through `STATUS.md` and `INDEX.md`, then only read the booking pipeline sl
 ## Branch-only release readiness
 
 The current Codex branch adds booking-integrity, safe SQLite recovery, CI, and
-DB-aware readiness gates. These changes are not deployed. Before first use,
-complete `ops/release-gates.md`, resolve the dependency-audit findings, and run
-the Docker-capable build/Compose gate on a host with Docker.
+DB-aware readiness gates. These changes are not deployed. The branch-local
+dependency audit is clean as of commit `0c8c98f`. Before first use, complete
+`ops/release-gates.md` and run the Docker-capable build/Compose gate on a host
+with Docker.

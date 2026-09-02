@@ -11,18 +11,22 @@ from app.services import readiness_service
 from app.services.readiness_service import DatabaseNotReadyError
 
 
-def _create_readiness_database(path: Path, *, include_index: bool) -> None:
+def _create_readiness_database(
+    path: Path,
+    *,
+    include_index: bool,
+    omitted_column: str | None = None,
+) -> None:
     with closing(sqlite3.connect(path)) as connection:
-        connection.execute("CREATE TABLE houses (id INTEGER PRIMARY KEY)")
-        connection.execute(
-            """
-            CREATE TABLE bookings (
-                id INTEGER PRIMARY KEY,
-                source TEXT NOT NULL,
-                external_id TEXT
-            )
-            """
-        )
+        for table, columns in readiness_service.REQUIRED_TABLE_COLUMNS.items():
+            definitions = []
+            for column in sorted(columns):
+                qualified_name = f"{table}.{column}"
+                if qualified_name == omitted_column:
+                    continue
+                definition = f'"{column}" INTEGER PRIMARY KEY' if column == "id" else f'"{column}" TEXT'
+                definitions.append(definition)
+            connection.execute(f'CREATE TABLE "{table}" ({", ".join(definitions)})')
         if include_index:
             connection.execute(
                 "CREATE UNIQUE INDEX uq_bookings_source_external_id "
@@ -51,6 +55,34 @@ async def test_readiness_is_green_for_required_schema(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert result["status"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_readiness_rejects_missing_booking_writer_column(tmp_path, monkeypatch):
+    database_path = tmp_path / "incomplete-schema.db"
+    _create_readiness_database(
+        database_path,
+        include_index=True,
+        omitted_column="bookings.guest_name",
+    )
+    test_engine = create_async_engine(_database_url(database_path))
+    monkeypatch.setattr(readiness_service, "engine", test_engine)
+    monkeypatch.setattr(health.settings, "restore_maintenance_mode", False)
+
+    try:
+        response = Response()
+        result = await health.readiness(response)
+        with pytest.raises(DatabaseNotReadyError, match="schema_missing_columns"):
+            await readiness_service.assert_database_ready(test_engine)
+    finally:
+        await test_engine.dispose()
+
+    assert response.status_code == 503
+    assert result == {
+        "status": "not_ready",
+        "reason": "schema_missing_columns",
+        "missing_columns": ["bookings.guest_name"],
+    }
 
 
 @pytest.mark.asyncio
@@ -90,8 +122,7 @@ async def test_readiness_is_disabled_during_restore_maintenance(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_startup_does_not_start_scheduler_when_database_is_not_ready(monkeypatch):
-    import app.database as database
-    import app.main as main
+    from app import database, main
     from app.services.scheduler_service import scheduler_service
 
     calls = []
