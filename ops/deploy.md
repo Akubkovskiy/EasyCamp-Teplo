@@ -24,6 +24,8 @@ Deploy is stateful because it depends on:
 - confirm whether the change touches booking logic, scheduler behavior, or integrations
 - verify rollback path for DB-sensitive changes
 - treat duplicate-guard and overlap logic as business-critical
+- confirm all `RESTORE_*` flags are false and `RESTORE_DRIVE_FILE_ID` is empty
+  for a normal application boot
 
 ## Post-deploy checks
 
@@ -31,6 +33,9 @@ Deploy is stateful because it depends on:
 - bot responds
 - startup sync does not produce duplicate or conflicting reservations
 - credentials paths still resolve correctly
+
+Database recovery is a separate maintenance deployment. Follow
+`ops/restore.md`; never enable restore flags during a normal rolling restart.
 
 ## Revision `c8b1a6f4d2e9`
 
