@@ -21,6 +21,7 @@ Deploy is stateful because it depends on:
 
 ## Pre-deploy checks
 
+- complete `ops/release-gates.md`, including the Docker-capable build gate
 - confirm whether the change touches booking logic, scheduler behavior, or integrations
 - verify rollback path for DB-sensitive changes
 - treat duplicate-guard and overlap logic as business-critical
@@ -29,7 +30,8 @@ Deploy is stateful because it depends on:
 
 ## Post-deploy checks
 
-- container healthy
+- `/health` is live and `/ready` confirms DB/schema readiness
+- container reaches `healthy` without a restart loop
 - bot responds
 - startup sync does not produce duplicate or conflicting reservations
 - credentials paths still resolve correctly

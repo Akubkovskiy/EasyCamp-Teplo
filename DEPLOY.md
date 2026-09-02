@@ -1,105 +1,18 @@
-# 🚀 Инструкция по деплою EasyCamp Bot
+# EasyCamp deployment pointer
 
-## 1. Подготовка сервера (Ubuntu/Debian)
+This former quick-start document is superseded because EasyCamp deployment is
+stateful and cannot safely be reduced to `git pull`, `restart`, or a raw copy of
+the live SQLite file.
 
-Убедитесь, что на сервере установлены Git, Docker и Docker Compose.
+Use these canonical runbooks:
 
-```bash
-# Обновляем систему
-sudo apt update && sudo apt upgrade -y
+1. [`ops/release-gates.md`](ops/release-gates.md) — tests, CI, image, migration,
+   and canary gates
+2. [`ops/deploy.md`](ops/deploy.md) — bounded deployment entrypoint
+3. [`ops/backup.md`](ops/backup.md) — consistent SQLite snapshots
+4. [`ops/restore.md`](ops/restore.md) — maintenance-only atomic restore
+5. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — first-time integration setup
 
-# Устанавливаем Git и Docker
-sudo apt install -y git docker.io docker-compose
-
-# Включаем автозапуск Docker
-sudo systemctl enable --now docker
-```
-
-## 2. Установка бота
-
-```bash
-# 1. Клонируем репозиторий (замените URL на ваш)
-git clone <ВАШ_РЕПОЗИТОРИЙ> easycamp-bot
-cd easycamp-bot
-
-# 2. Создаем папку для данных
-mkdir -p data logs
-
-# 3. Настраиваем переменные окружения
-# Создайте файл .env и вставьте туда содержимое вашего локального .env
-nano .env
-
-# 4. Загружаем файл учетных данных Google
-# Скопируйте ваш google-credentials.json в папку с ботом
-# (Можно использовать sftp, scp или просто создать файл и вставить контент)
-# ⚠️ ВАЖНО: Включите Google Drive API в консоли разработчика для работы бэкапов!
-nano google-credentials.json
-```
-
-## 3. Запуск
-
-```bash
-# Сборка и запуск в фоновом режиме
-sudo docker-compose up -d --build
-
-# Проверка логов
-sudo docker-compose logs -f
-
-# 🚑 Быстрая проверка
-# Статус контейнеров (должен быть Up)
-docker ps
-
-# Последние 50 строк логов
-docker logs --tail 50 easycamp_bot
-
-# Перезапуск бота
-docker-compose restart
-```
-
-## 4. Обслуживание
-
-### Обновление версии
-```bash
-git pull
-sudo docker-compose up -d --build
-```
-
-### Бэкап базы данных
-База данных находится в папке `data/easycamp.db` на хосте.
-Вы можете скопировать этот файл для бэкапа.
-
-```bash
-cp data/easycamp.db data/easycamp_backup_$(date +%Y%m%d).db
-```
-
-### Перезагрузка
-```bash
-sudo docker-compose restart
-```
-
-## 5. Rate Limiting (Rate Limit)
-
-Webhook `/avito/webhook` защищён rate limiting (30 запросов/минута на IP по умолчанию).
-
-### ⚠️ Важно: Работа за reverse proxy (nginx/Cloudflare)
-
-Если бот работает за nginx или Cloudflare, все запросы могут приходить с одного IP прокси.
-Это приведёт к ложным блокировкам.
-
-**Решение:**
-1. Настройте forwarded headers в nginx:
-   ```nginx
-   proxy_set_header X-Real-IP $remote_addr;
-   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-   ```
-
-2. Или временно отключите rate limit:
-   ```bash
-   RATE_LIMIT_ENABLED=false
-   ```
-
-### Настройки
-```bash
-RATE_LIMIT_ENABLED=true      # Killswitch
-RATE_LIMIT_WEBHOOK=30/minute # Лимит (можно: 10/second, 100/hour и т.д.)
-```
+Passing the repository checks does not authorize a production deployment.
+Before changing the FI runtime, require a separate approved plan with exact
+commit/image, verified backup, migration preflight, canaries, and rollback.

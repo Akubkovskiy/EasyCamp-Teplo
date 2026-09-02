@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
 import asyncio
+import json
 import logging
 import tempfile
 from datetime import datetime, timezone
@@ -207,3 +209,31 @@ async def restore_drive_backup() -> RestoreResult:
     except Exception:
         logger.exception("SQLite maintenance restore failed")
         raise
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="EasyCamp backup and restore operations")
+    parser.add_argument(
+        "command",
+        choices=("restore-drive",),
+        help="run one explicit maintenance operation and exit",
+    )
+    args = parser.parse_args(argv)
+
+    if args.command == "restore-drive":
+        result = asyncio.run(restore_drive_backup())
+        print(
+            json.dumps(
+                {
+                    "target_path": str(result.target_path),
+                    "installed_sha256": result.installed_sha256,
+                    "rollback_path": (str(result.rollback_path) if result.rollback_path else None),
+                },
+                sort_keys=True,
+            )
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

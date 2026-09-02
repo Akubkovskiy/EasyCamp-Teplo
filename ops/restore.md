@@ -17,9 +17,11 @@ The implementation fails closed unless all of these are true:
 - no `easycamp.db-wal`, `easycamp.db-shm`, or `easycamp.db-journal` exists
 - Drive checksum, SQLite integrity, foreign keys, and minimum schema validate
 
-The maintenance process exposes only `/health`; every other HTTP route returns
-503. It does not initialize the DB, scheduler, sync middleware, startup sync,
-user cache, bot commands, or Telegram polling.
+The recommended Compose `restore` service is a portless one-shot process with
+`restart: "no"`; it exits after one attempt and never initializes FastAPI,
+the scheduler, sync middleware, bot commands, or Telegram polling. If the main
+app is started with maintenance flags instead, only `/health` remains exposed
+and every other HTTP route returns 503.
 
 ## Required operator decisions
 
@@ -64,24 +66,23 @@ Do not choose a backup merely because it is the newest file.
    of a non-empty target. That path first creates a validated rollback snapshot
    named `easycamp.pre-restore-<UTC timestamp>-<id>.db` beside the target.
 
-4. Start only the app service in maintenance mode and inspect its logs:
+4. Run the dedicated one-shot maintenance service:
 
    ```sh
-   docker compose up -d --no-deps app
-   docker compose logs --tail=200 app
+   docker compose --profile maintenance run --rm restore
    ```
 
-   Success logs include the selected Drive ID, installed SHA-256, and rollback
-   path. Any exception aborts startup; do not enable normal flags after a failed
-   run.
+   A successful exit prints the selected Drive ID, installed SHA-256, and
+   rollback path. Any exception returns non-zero. Do not enable normal flags
+   after a failed run, and do not run the command while `app` is active.
 
-5. Stop the maintenance container. Set every restore flag back to `false` and
-   clear `RESTORE_DRIVE_FILE_ID`. Keep sync flags off for validation.
+5. Set every restore flag back to `false` and clear
+   `RESTORE_DRIVE_FILE_ID`. Keep sync flags off for validation.
 
 6. Validate the installed file while no application process is running:
 
    ```sh
-   docker compose run --rm --no-deps app \
+   docker compose --profile maintenance run --rm restore \
      python -m app.services.sqlite_recovery validate /app/data/easycamp.db
    ```
 
@@ -107,7 +108,7 @@ candidate. The command creates another rollback snapshot before replacing the
 current target:
 
 ```sh
-docker compose run --rm --no-deps app \
+docker compose --profile maintenance run --rm restore \
   python -m app.services.sqlite_recovery restore-local \
   /app/data/easycamp.pre-restore-<timestamp>-<id>.db \
   /app/data/easycamp.db \

@@ -36,3 +36,10 @@ Runs on: `FI-RZ-4`
 ## Current Working Rule
 
 Enter through `STATUS.md` and `INDEX.md`, then only read the booking pipeline slice involved in the task.
+
+## Branch-only release readiness
+
+The current Codex branch adds booking-integrity, safe SQLite recovery, CI, and
+DB-aware readiness gates. These changes are not deployed. Before first use,
+complete `ops/release-gates.md`, resolve the dependency-audit findings, and run
+the Docker-capable build/Compose gate on a host with Docker.

@@ -1,6 +1,7 @@
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from starlette.requests import Request
@@ -173,3 +174,21 @@ async def test_maintenance_http_guard_blocks_non_health_routes(monkeypatch):
     response = await main.maintenance_mode_guard(request, forbidden_call_next)
 
     assert response.status_code == 503
+
+
+def test_restore_drive_cli_runs_exactly_one_operation(monkeypatch, capsys):
+    calls = []
+
+    async def fake_restore():
+        calls.append("restore")
+        return SimpleNamespace(
+            target_path=Path("target.db"),
+            installed_sha256="abc123",
+            rollback_path=Path("rollback.db"),
+        )
+
+    monkeypatch.setattr(backup_service, "restore_drive_backup", fake_restore)
+
+    assert backup_service.main(["restore-drive"]) == 0
+    assert calls == ["restore"]
+    assert '"installed_sha256": "abc123"' in capsys.readouterr().out

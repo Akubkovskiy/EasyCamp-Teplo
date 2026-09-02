@@ -184,6 +184,11 @@ async def on_startup():
 
     await init_db()
 
+    # Do not start schedulers, sync, or polling against an older/incomplete schema.
+    from app.services.readiness_service import assert_database_ready
+
+    await assert_database_ready()
+
     # Start scheduler
     from app.services.scheduler_service import scheduler_service
 

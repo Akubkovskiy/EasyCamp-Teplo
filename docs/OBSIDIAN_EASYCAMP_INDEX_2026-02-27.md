@@ -1,5 +1,9 @@
 # EasyCamp-Teplo — индекс контекста (для Obsidian)
 
+> HISTORICAL SNAPSHOT: restore/startup details below are not current. Use
+> `INDEX.md`, `ops/release-gates.md`, `ops/backup.md`, and `ops/restore.md` for
+> current operator behavior.
+
 Дата: 2026-02-27
 Источник: текущий код/доки репозитория `/root/easycamp-bot`
 

@@ -15,22 +15,27 @@ Thank you for your interest in contributing to EasyCamp! This project aims to be
 git clone https://github.com/Akubkovskiy/EasyCamp-Teplo.git
 cd EasyCamp-Teplo
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
+pip install -r requirements-dev.txt
 cp .env.example .env  # fill in your test credentials
 ```
 
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+python scripts/verify_release.py
 ```
+
+This is the cross-platform CI-equivalent Python gate. Before a release, also
+run it with `--with-docker` in an isolated checkout that has a non-secret test
+`.env`; see [ops/release-gates.md](ops/release-gates.md).
 
 ## Code Style
 
-We use **ruff** for linting:
+We use **ruff** for linting. The release verifier applies a repo-wide fatal
+baseline plus stricter checks to booking, recovery, and readiness code:
 ```bash
-ruff check app/
-ruff format app/
+python -m ruff check app tests --select E9,F63,F7,F82
+python scripts/verify_release.py
 ```
 
 ## Pull Request Process

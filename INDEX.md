@@ -7,6 +7,7 @@
 3. `ops/deploy.md`
 4. `ops/backup.md`
 5. `ops/restore.md`
+6. `ops/release-gates.md`
 
 ## By Task
 
@@ -23,6 +24,8 @@
 - `docker-compose.yml`
 - `Dockerfile`
 - `.env.example`
+- `scripts/verify_release.py`
+- `ops/release-gates.md`
 
 ### Database and migrations
 - `alembic/`
