@@ -24,10 +24,15 @@ from app.assistant.gateway import (
     InMemoryAuditSink,
     ReadBoundary,
 )
+from app.assistant.ask import AssistantAskTransport, AskIntent, AskQuery, AskRequest
 
 __all__ = [
     "AssistantReadOnlyGateway",
+    "AssistantAskTransport",
     "AssistantRole",
+    "AskIntent",
+    "AskQuery",
+    "AskRequest",
     "BookingSource",
     "BookingStatus",
     "BoundaryRead",

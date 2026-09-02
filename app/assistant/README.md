@@ -19,6 +19,13 @@ wired into `app/main.py`; a future runtime must instantiate it only behind an
 owner-only feature flag and pass it to the disabled-by-default
 `AssistantReadOnlyGateway`.
 
+`AssistantAskTransport` is the internal structured `/ask` handler. It is not a
+FastAPI route and is not registered with Telegram or `app/main.py`. It accepts
+only `session_id + intent + arguments`, requires a trusted owner context and a
+server-side session verifier when enabled, and forwards only the six v1
+read-only intents. It has no natural-language planner and exposes no write
+operation.
+
 The model must never receive an `AsyncSession`, SQLAlchemy object, database
 path or raw query capability. A future wiring module may build a boundary over
 those services, but it must remain outside the model/tool planner layer.

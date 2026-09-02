@@ -642,6 +642,28 @@ class AssistantReadOnlyGateway:
             args_digest=_model_digest(parsed),
         )
 
+    async def reject(
+        self,
+        context: TrustedContext,
+        tool_name: str,
+        code: str,
+        message_public: str,
+        *,
+        retryable: bool = False,
+        field_errors: list[dict[str, str]] | None = None,
+        args_digest: str | None = None,
+    ) -> ToolResult[Any]:
+        """Return a policy rejection through the same audited result path."""
+        return await self._error(
+            context,
+            tool_name,
+            code,
+            message_public,
+            retryable=retryable,
+            field_errors=field_errors,
+            args_digest=args_digest,
+        )
+
     async def _parse(
         self,
         context: TrustedContext,
