@@ -1,7 +1,7 @@
 """Тесты Phase S10.1 — `POST /api/leads` в EasyCamp.
 
 Проверяем токен-аутентификацию, идемпотентность по external_ref,
-fallback резолва домика и факт создания Booking(NEW, source=DIRECT).
+fail-closed резолв домика и факт создания Booking(NEW, source=DIRECT).
 Avito/sheets/Telegram side-effects замоканы.
 """
 import os
@@ -24,8 +24,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.api.site_leads import get_async_session, router as site_leads_router
 from app.database import Base
 from app.models import (
-    Booking,
-    BookingSource,
     BookingStatus,
     House,
 )
@@ -57,7 +55,7 @@ async def session_factory():
 
 @pytest.fixture
 async def seeded_house(session_factory):
-    """Засеять минимум один дом, чтобы fallback-резолв работал."""
+    """Засеять стабильный house_id для входящих заявок."""
     async with session_factory() as s:
         house = House(name="Forest 34м²", description="", capacity=4, base_price=5500)
         s.add(house)
@@ -69,6 +67,11 @@ async def seeded_house(session_factory):
 @pytest.fixture
 def client(session_factory, monkeypatch):
     """FastAPI TestClient с подменённой сессией и заглушенными side-effects."""
+
+    from app.core.config import settings
+
+    # The full suite may import settings before this module sets its env default.
+    monkeypatch.setattr(settings, "site_lead_token", "test-token")
 
     async def override_session():
         async with session_factory() as s:
@@ -114,6 +117,7 @@ def _payload(**overrides):
         "check_in": (date.today() + timedelta(days=10)).isoformat(),
         "check_out": (date.today() + timedelta(days=12)).isoformat(),
         "guests_count": 2,
+        "house_id": 1,
         "house_name": "Forest 34м²",
         "comment": "Хочу домик в лесу",
         "source": "website",
@@ -192,14 +196,24 @@ def test_idempotent_on_external_ref(client, seeded_house):
     assert data2["duplicate"] is True
 
 
-def test_house_fallback_when_name_unknown(client, seeded_house):
-    """Если house_name не совпал — берём первый из БД и помечаем в комменте."""
+def test_unknown_house_id_is_rejected(client, seeded_house):
+    """Неизвестный house_id не должен подменяться первым домом из БД."""
     payload = _payload(house_name="Несуществующий домик X", external_ref="site-77")
+    payload["house_id"] = 999999
     response = client.post(
         "/api/leads", json=payload, headers={"X-Site-Token": "test-token"}
     )
-    assert response.status_code == 201
-    assert response.json()["house_id"] == seeded_house
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "unknown_house_id"
+
+
+def test_missing_stable_house_id_is_rejected(client, seeded_house):
+    payload = _payload(house_id=None, external_ref="site-78")
+    response = client.post(
+        "/api/leads", json=payload, headers={"X-Site-Token": "test-token"}
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "missing_house_id"
 
 
 def test_invalid_dates_422(client, seeded_house):
@@ -218,7 +232,8 @@ def test_no_houses_in_db_returns_422(client, session_factory):
     """Без посевного дома сервис не может создать бронь."""
     response = client.post(
         "/api/leads",
-        json=_payload(house_id=None, house_name=None),
+        json=_payload(house_id=1, house_name=None),
         headers={"X-Site-Token": "test-token"},
     )
     assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "unknown_house_id"

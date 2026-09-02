@@ -7,13 +7,16 @@ Polling (не webhooks) — Яндекс Travel API не поддерживае�
 
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models import Booking, BookingSource, BookingStatus
+from app.models import Booking, BookingSource, BookingStatus, House
+from app.schemas.booking import BookingCreate
+from app.services.booking_service import BookingService
 from app.services.yandex_travel_api_service import yandex_travel_api_service
 from app.yandex_travel.schemas import YaTrOrder, parse_order
 
@@ -48,8 +51,23 @@ async def _find_house_for_order(
     key = f"{order.hotel_id}/{order.room_id}"
     house_id = hotel_room_mapping.get(key) or hotel_room_mapping.get(order.room_id or "")
     if not house_id:
-        logger.warning("YaTr: не найден house_id для order %s (hotel=%s room=%s)", order.order_id, order.hotel_id, order.room_id)
-    return house_id
+        logger.error(
+            "YaTr rejected order %s: no stable house mapping for hotel=%s room=%s",
+            order.order_id,
+            order.hotel_id,
+            order.room_id,
+        )
+        return None
+
+    house = await db.get(House, house_id)
+    if house is None:
+        logger.error(
+            "YaTr rejected order %s: mapped house_id=%s does not exist",
+            order.order_id,
+            house_id,
+        )
+        return None
+    return house.id
 
 
 async def process_yatr_order(
@@ -90,29 +108,48 @@ async def process_yatr_order(
     if not order.check_in or not order.check_out:
         logger.warning("YaTr: заказ %s без дат, пропускаем", order.order_id)
         return None
+    if order.check_out <= order.check_in:
+        logger.error(
+            "YaTr rejected order %s: check_out=%s must be after check_in=%s",
+            order.order_id,
+            order.check_out,
+            order.check_in,
+        )
+        return None
 
     house_id = await _find_house_for_order(db, order, hotel_room_mapping)
+    if house_id is None:
+        return None
 
-    booking = Booking(
-        source=BookingSource.YANDEX_TRAVEL,
-        external_id=ext_id,
-        status=new_status,
+    create = BookingCreate(
         house_id=house_id,
         guest_name=order.guest.name if order.guest else "Гость (Яндекс)",
         guest_phone=order.guest.phone if order.guest else "",
         check_in=order.check_in,
         check_out=order.check_out,
         guests_count=order.guests_count or 1,
-        total_price=int(order.total_price or 0),
-        advance_amount=0,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        total_price=Decimal(str(order.total_price or 0)),
+        advance_amount=Decimal("0"),
+        commission=Decimal("0"),
+        prepayment_owner=Decimal("0"),
+        status=new_status,
+        source=BookingSource.YANDEX_TRAVEL,
+        external_id=ext_id,
     )
-    db.add(booking)
-    await db.commit()
-    await db.refresh(booking)
-    logger.info("YaTr: создана бронь #%d (order %s)", booking.id, order.order_id)
-    return booking
+    result = await BookingService.create_booking_result(db, create)
+    if result.created and result.booking:
+        logger.info("YaTr: создана бронь #%d (order %s)", result.booking.id, order.order_id)
+        return result.booking
+    if result.duplicate and result.booking:
+        logger.info("YaTr: duplicate order %s resolved to booking #%d", order.order_id, result.booking.id)
+        return result.booking
+
+    logger.error(
+        "YaTr rejected order %s before insert: %s",
+        order.order_id,
+        result.reason or "unknown_error",
+    )
+    return None
 
 
 def parse_hotel_room_mapping() -> Dict[str, int]:

@@ -12,18 +12,17 @@
 с тем же значением вернёт ту же бронь (по `Booking.external_id`).
 """
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.database import AsyncSessionLocal
-from app.models import Booking, BookingSource, BookingStatus, House
+from app.models import Booking, BookingSource, BookingStatus
 from app.schemas.booking import BookingCreate
 from app.services.booking_service import BookingService
 from app.services.notification_service import send_safe
@@ -99,55 +98,6 @@ def require_site_token(x_site_token: str | None = Header(default=None)) -> None:
 
 
 # -------------------------------------------------
-# House resolution
-# -------------------------------------------------
-
-
-async def _resolve_house_id(
-    session: AsyncSession,
-    *,
-    explicit_id: int | None,
-    explicit_name: str | None,
-) -> tuple[int | None, str | None]:
-    """Возвращает (house_id, fallback_note). Стратегия:
-    1. Явный id — берём, если House существует.
-    2. Имя — пробуем точное совпадение, потом ILIKE %x%.
-    3. Иначе — fallback на первый House. Возвращаем note для аудита.
-    """
-    if explicit_id:
-        h = await session.get(House, explicit_id)
-        if h:
-            return h.id, None
-
-    if explicit_name:
-        # exact
-        q = await session.execute(
-            select(House).where(House.name == explicit_name)
-        )
-        h = q.scalar_one_or_none()
-        if h:
-            return h.id, None
-        # fuzzy ILIKE
-        like = f"%{explicit_name}%"
-        q = await session.execute(
-            select(House).where(House.name.ilike(like)).limit(1)
-        )
-        h = q.scalar_one_or_none()
-        if h:
-            return h.id, f"fuzzy match by name: '{explicit_name}'"
-
-    # fallback: первый по id
-    q = await session.execute(select(House).order_by(House.id).limit(1))
-    fallback = q.scalar_one_or_none()
-    if fallback:
-        return fallback.id, (
-            f"fallback to first house (requested id={explicit_id}, "
-            f"name='{explicit_name}')"
-        )
-    return None, "no houses in database"
-
-
-# -------------------------------------------------
 # Notification (best-effort, не валит создание брони)
 # -------------------------------------------------
 
@@ -216,51 +166,31 @@ async def create_site_lead(
     payload: SiteLeadCreate,
     session: AsyncSession = Depends(get_async_session),
 ) -> SiteLeadOut:
-    # 1) Идемпотентность по external_ref
-    if payload.external_ref:
-        ext_id = f"site:{payload.external_ref}"
-        q = await session.execute(
-            select(Booking).where(
-                Booking.external_id == ext_id,
-                Booking.source == BookingSource.DIRECT,
-            )
-        )
-        existing = q.scalar_one_or_none()
-        if existing:
-            return SiteLeadOut(
-                lead_id=existing.id,
-                booking_id=existing.id,
-                status=existing.status.value,
-                house_id=existing.house_id,
-                duplicate=True,
-            )
-    else:
-        ext_id = None
-
-    # 2) Резолвим house
-    house_id, fallback_note = await _resolve_house_id(
-        session,
-        explicit_id=payload.house_id,
-        explicit_name=payload.house_name,
-    )
-    if not house_id:
+    # A numeric EasyCamp house_id is the stable cross-system identity. Names are
+    # display metadata only: fuzzy/name fallback can silently assign a real lead
+    # to the wrong house after a rename or typo.
+    if payload.house_id is None:
         raise HTTPException(
             status_code=422,
-            detail="Cannot resolve house: no houses in database",
+            detail={
+                "code": "missing_house_id",
+                "message": "house_id is required; house_name is not a stable booking identity",
+            },
         )
+
+    ext_id = f"site:{payload.external_ref}" if payload.external_ref else None
 
     comment_parts: list[str] = []
     if payload.comment:
         comment_parts.append(payload.comment.strip())
-    if fallback_note:
-        comment_parts.append(f"[house resolution: {fallback_note}]")
     if payload.source and payload.source != "website":
         comment_parts.append(f"[source: {payload.source}]")
     full_comment = " | ".join(comment_parts) if comment_parts else None
 
-    # 3) Создаём бронь через сервис (overlap guard внутри)
+    # The service owns idempotency, final overlap validation and insertion in a
+    # single serialized SQLite transaction.
     create = BookingCreate(
-        house_id=house_id,
+        house_id=payload.house_id,
         guest_name=payload.guest_name.strip(),
         guest_phone=payload.guest_phone.strip(),
         check_in=payload.check_in,
@@ -272,23 +202,41 @@ async def create_site_lead(
         prepayment_owner=Decimal("0"),
         status=BookingStatus.NEW,
         source=BookingSource.DIRECT,
+        external_id=ext_id,
     )
-    booking = await BookingService.create_booking(session, create)
-    if not booking:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot create booking — dates are not available",
+    result = await BookingService.create_booking_result(session, create)
+    if result.duplicate and result.booking:
+        existing = result.booking
+        return SiteLeadOut(
+            lead_id=existing.id,
+            booking_id=existing.id,
+            status=existing.status.value,
+            house_id=existing.house_id,
+            duplicate=True,
         )
 
-    # external_id вешаем после успешного create — чтобы повторный POST
-    # увидел эту бронь как идемпотентную.
-    if ext_id:
-        booking.external_id = ext_id
-        booking.updated_at = datetime.now(timezone.utc)
-        await session.commit()
-        await session.refresh(booking)
+    if not result.booking:
+        if result.reason == "unknown_house":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "unknown_house_id",
+                    "message": f"No EasyCamp house exists with house_id={payload.house_id}",
+                },
+            )
+        if result.reason == "unavailable":
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot create booking — dates are not available",
+            )
+        raise HTTPException(
+            status_code=500,
+            detail="Booking creation failed safely; no booking was written",
+        )
 
-    # 4) Telegram notify (best-effort, не валит ответ)
+    booking = result.booking
+
+    # Telegram notify is best-effort and happens only for a genuinely new row.
     await _notify_admins(booking, payload.source, full_comment)
 
     return SiteLeadOut(

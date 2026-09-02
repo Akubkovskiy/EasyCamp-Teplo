@@ -58,7 +58,19 @@ class BookingBase(BaseModel):
         return v
 
 class BookingCreate(BookingBase):
-    pass
+    external_id: Optional[str] = None
+
+    @field_validator("external_id")
+    @classmethod
+    def normalize_external_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        value = v.strip()
+        if not value:
+            return None
+        if len(value) > 255:
+            raise ValueError("external_id must be 255 characters or fewer")
+        return value
 
 class BookingUpdate(BaseModel):
     house_id: Optional[int] = None

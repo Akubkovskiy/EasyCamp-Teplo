@@ -5,9 +5,11 @@ Verifies that both ingestion paths (periodic sync + webhook) reject
 bookings that overlap with existing active bookings for the same house.
 """
 import pytest
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
+
+from app.services.booking_service import BookingCreateResult
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +92,14 @@ class TestSyncPathOverlapGuard:
         stats = {"total": 1, "new_bookings": [], "updated_bookings": [], "errors": 0}
         booking_data = _make_booking_data(avito_id="555", check_in="2026-04-12", check_out="2026-04-18")
 
-        await process_avito_booking(session, booking_data, house_id=1, stats=stats)
+        boundary = AsyncMock(
+            return_value=BookingCreateResult(None, created=False, reason="unavailable")
+        )
+        with patch(
+            "app.services.avito_sync_service.BookingService.create_booking_result",
+            new=boundary,
+        ):
+            await process_avito_booking(session, booking_data, house_id=1, stats=stats)
 
         # Booking must NOT have been added
         assert len(stats["new_bookings"]) == 0
@@ -125,11 +134,20 @@ class TestSyncPathOverlapGuard:
         stats = {"total": 1, "new_bookings": [], "updated_bookings": [], "errors": 0}
         booking_data = _make_booking_data(avito_id="556")
 
-        await process_avito_booking(session, booking_data, house_id=1, stats=stats)
+        created = MagicMock(id=123)
+        boundary = AsyncMock(return_value=BookingCreateResult(created, created=True))
+        with (
+            patch(
+                "app.services.avito_sync_service.BookingService.create_booking_result",
+                new=boundary,
+            ),
+            patch("app.services.avito_sync_service.set_committed_value"),
+        ):
+            await process_avito_booking(session, booking_data, house_id=1, stats=stats)
 
-        # Booking SHOULD have been added
+        # Booking SHOULD have been accepted by the shared persistence boundary.
         assert len(stats["new_bookings"]) == 1
-        session.add.assert_called_once()
+        boundary.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_existing_booking_update_still_works(self):
@@ -188,7 +206,16 @@ class TestSyncPathOverlapGuard:
         # Existing booking ends Apr 10, new one starts Apr 10 → adjacent, not overlapping
         booking_data = _make_booking_data(check_in="2026-04-10", check_out="2026-04-15")
 
-        await process_avito_booking(session, booking_data, house_id=1, stats=stats)
+        created = MagicMock(id=124)
+        boundary = AsyncMock(return_value=BookingCreateResult(created, created=True))
+        with (
+            patch(
+                "app.services.avito_sync_service.BookingService.create_booking_result",
+                new=boundary,
+            ),
+            patch("app.services.avito_sync_service.set_committed_value"),
+        ):
+            await process_avito_booking(session, booking_data, house_id=1, stats=stats)
 
         assert len(stats["new_bookings"]) == 1
 
@@ -232,7 +259,11 @@ class TestWebhookPathOverlapGuard:
 
         with patch("app.core.config.settings") as mock_settings:
             mock_settings.avito_item_ids = "100:1"
-            result = await BookingService.create_or_update_avito_booking(db, payload)
+            boundary = AsyncMock(
+                return_value=BookingCreateResult(None, created=False, reason="unavailable")
+            )
+            with patch.object(BookingService, "create_booking_result", new=boundary):
+                result = await BookingService.create_or_update_avito_booking(db, payload)
 
         assert result is None
         db.add.assert_not_called()
@@ -271,10 +302,15 @@ class TestWebhookPathOverlapGuard:
             mock_settings.avito_item_ids = "100:1"
 
             with patch("app.utils.validators.format_phone", return_value="+79001234567"):
-                result = await BookingService.create_or_update_avito_booking(db, payload)
+                created = MagicMock(id=125)
+                boundary = AsyncMock(
+                    return_value=BookingCreateResult(created, created=True)
+                )
+                with patch.object(BookingService, "create_booking_result", new=boundary):
+                    result = await BookingService.create_or_update_avito_booking(db, payload)
 
-        # Should have called db.add
-        db.add.assert_called_once()
+        assert result is created
+        boundary.assert_awaited_once()
 
 
 # ===========================================================================
