@@ -4,6 +4,17 @@ The package is intentionally not imported by the application entrypoint yet.
 It provides a typed, read-only seam for a later owner-only runtime.
 """
 
+from app.assistant.ask import (
+    ASSISTANT_READ_SCOPE,
+    AskIntent,
+    AskQuery,
+    AskRequest,
+    AssistantAskTransport,
+    TelegramActor,
+    TelegramTrustedAskAdapter,
+    TrustedSession,
+    TrustedSessionResolver,
+)
 from app.assistant.contracts import (
     AssistantRole,
     BookingSource,
@@ -24,15 +35,15 @@ from app.assistant.gateway import (
     InMemoryAuditSink,
     ReadBoundary,
 )
-from app.assistant.ask import AssistantAskTransport, AskIntent, AskQuery, AskRequest
 
 __all__ = [
-    "AssistantReadOnlyGateway",
-    "AssistantAskTransport",
-    "AssistantRole",
+    "ASSISTANT_READ_SCOPE",
     "AskIntent",
     "AskQuery",
     "AskRequest",
+    "AssistantAskTransport",
+    "AssistantReadOnlyGateway",
+    "AssistantRole",
     "BookingSource",
     "BookingStatus",
     "BoundaryRead",
@@ -46,5 +57,9 @@ __all__ = [
     "PiiMode",
     "ReadBoundary",
     "RevenueSummaryArgs",
+    "TelegramActor",
+    "TelegramTrustedAskAdapter",
     "TrustedContext",
+    "TrustedSession",
+    "TrustedSessionResolver",
 ]

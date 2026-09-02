@@ -26,6 +26,23 @@ server-side session verifier when enabled, and forwards only the six v1
 read-only intents. It has no natural-language planner and exposes no write
 operation.
 
+`TelegramTrustedAskAdapter` is the next integration boundary for a future
+Telegram handler. The handler must create `TelegramActor` from the aiogram
+update and pass a `TrustedSessionResolver` backed by a server-side session
+store. The resolver must return a `TrustedSession` containing the same
+Telegram ID, an unexpired timezone-aware lifetime, the `assistant:read` scope,
+and the `owner` role. The adapter rejects disabled, unknown, expired, malformed,
+unbound, out-of-scope and non-owner sessions before calling the gateway. A
+session-store failure is returned as a retryable upstream error.
+
+The current Telegram role cache and the web `admin_token` JWT are not assistant
+session stores: the former has no session lifetime and the latter does not bind
+to a Telegram ID. Do not wire either one into this adapter as a shortcut. Add a
+real server-side session issuer/store first, then add a narrow owner-only
+Telegram handler behind an explicit feature flag. Keep guest routing and all
+write tools out of this boundary until the confirmation and idempotency phase
+is approved.
+
 The model must never receive an `AsyncSession`, SQLAlchemy object, database
 path or raw query capability. A future wiring module may build a boundary over
 those services, but it must remain outside the model/tool planner layer.
