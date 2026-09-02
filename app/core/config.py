@@ -92,6 +92,11 @@ class Settings(BaseModel):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     setup_secret: str = "easycamp_secret"
 
+    # Assistant owner transport. The handler is not registered by default.
+    assistant_telegram_enabled: bool = False
+    assistant_session_ttl_seconds: int = 1800
+    assistant_session_cleanup_interval_seconds: int = 900
+
     # Яндекс Путешествия White Label Partner API
     # Документация: https://yandex.ru/dev/travel-partners-api/doc/ru/
     # Токен действует 1 год. Генерируется через OAuth:
@@ -129,6 +134,14 @@ def validate_security_settings(app_env: str, secret_key: str, setup_secret: str)
         )
 
 
+def validate_assistant_settings(app_env: str, assistant_telegram_enabled: bool) -> None:
+    """Keep the unfinished owner assistant transport off in production."""
+    if app_env.lower() == "production" and assistant_telegram_enabled:
+        raise RuntimeError(
+            "Owner assistant Telegram transport is not allowed in production yet"
+        )
+
+
 # Resolve database URL with preference for Docker volume path
 env_db_url = os.environ.get("DATABASE_URL")
 if not env_db_url or "./easycamp.db" in env_db_url:
@@ -142,7 +155,11 @@ else:
 app_env = os.environ.get("APP_ENV", "development").strip().lower()
 secret_key = os.environ.get("SECRET_KEY", "dev_secret_key_change_me")
 setup_secret = os.environ.get("SETUP_SECRET", "easycamp_secret")
+assistant_telegram_enabled = (
+    os.environ.get("ASSISTANT_TELEGRAM_ENABLED", "false").strip().lower() == "true"
+)
 validate_security_settings(app_env, secret_key, setup_secret)
+validate_assistant_settings(app_env, assistant_telegram_enabled)
 
 
 settings = Settings(
@@ -206,6 +223,13 @@ settings = Settings(
     algorithm="HS256",
     access_token_expire_minutes=int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))),
     setup_secret=setup_secret,
+    assistant_telegram_enabled=assistant_telegram_enabled,
+    assistant_session_ttl_seconds=int(
+        os.environ.get("ASSISTANT_SESSION_TTL_SECONDS", "1800")
+    ),
+    assistant_session_cleanup_interval_seconds=int(
+        os.environ.get("ASSISTANT_SESSION_CLEANUP_INTERVAL_SECONDS", "900")
+    ),
     yandex_travel_oauth_token=os.environ.get("YANDEX_TRAVEL_OAUTH_TOKEN", ""),
     yandex_travel_room_ids=os.environ.get("YANDEX_TRAVEL_ROOM_IDS", ""),
     yandex_travel_sync_interval_minutes=int(os.environ.get("YANDEX_TRAVEL_SYNC_INTERVAL_MINUTES", "15")),

@@ -43,6 +43,23 @@ Telegram handler behind an explicit feature flag. Keep guest routing and all
 write tools out of this boundary until the confirmation and idempotency phase
 is approved.
 
+`SqlAlchemyTrustedSessionStore` is the concrete lifecycle implementation. It
+issues opaque random tokens, stores only their SHA-256 hashes, binds each
+session to one current `UserRole.OWNER` Telegram ID, and records role, scopes, issue/expiry and
+revocation metadata. `revoke` requires the bound actor ID; `cleanup_expired`
+removes expired rows while leaving revoked-but-not-yet-expired metadata for
+audit. Its database table is added by the Alembic revision
+`b2c3d4e5f6a7_add_assistant_sessions.py`; applying that migration is a separate
+production operation and is not performed by this change.
+
+`build_owner_assistant_router` creates exactly one `/ask` command handler only
+when its explicit `enabled=True` argument is supplied. The command accepts
+JSON structured queries only, passes `message.from_user.id` as `TelegramActor`,
+and has no booking write commands or natural-language planner. It returns
+`None` when disabled, and `app/main.py` does not call it. The configuration
+flag `ASSISTANT_TELEGRAM_ENABLED` defaults to `false` and is rejected in
+production until this boundary has passed owner-only UAT.
+
 The model must never receive an `AsyncSession`, SQLAlchemy object, database
 path or raw query capability. A future wiring module may build a boundary over
 those services, but it must remain outside the model/tool planner layer.

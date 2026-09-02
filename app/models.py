@@ -164,6 +164,27 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class AssistantSession(Base):
+    """Server-side owner session metadata; the raw session token is never stored."""
+
+    __tablename__ = "assistant_sessions"
+
+    session_id_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    actor_telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    actor_role: Mapped[str] = mapped_column(String(16))
+    scopes_json: Mapped[str] = mapped_column(String(2048))
+    issued_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    revoked_by_telegram_id: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    revocation_reason: Mapped[Optional[str]] = mapped_column(
+        String(120), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class GlobalSetting(Base):
     __tablename__ = "global_settings"
 
