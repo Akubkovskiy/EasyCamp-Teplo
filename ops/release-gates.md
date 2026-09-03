@@ -52,6 +52,8 @@ Do not use a release-check `.env` for production and do not commit it.
 - [ ] Confirm `RESTORE_FROM_DRIVE_ENABLED=false`,
       `RESTORE_MAINTENANCE_MODE=false`, `RESTORE_ALLOW_OVERWRITE=false`, and an
       empty `RESTORE_DRIVE_FILE_ID` for normal startup.
+- [ ] Set `INGESTION_MAINTENANCE_MODE=true` only for the bounded database-ready
+      canary, then set it explicitly to `false` when enabling normal writers.
 
 ## 4. Compose-change review gate
 
@@ -74,14 +76,16 @@ them. Do not recreate the production container merely to test the YAML.
       has validated every ORM column used by the `House` and `Booking` models.
 - [ ] `/ready` reports no referential-integrity failure; active house inventory
       excludes the archived house.
+- [ ] The first `/ready` canary reports `"ingestion":"maintenance"`, all other
+      HTTP routes return 503, and logs contain no scheduler, sync, or polling start.
 - [ ] The container reaches `healthy` without a restart loop.
 - [ ] SQLite `PRAGMA integrity_check` returns `ok`.
 - [ ] Active booking counts/date ranges match the pre-change checkpoint.
 - [ ] Telegram responds in the intended private/admin context.
 - [ ] Logs show one scheduler and one polling process, not duplicates.
-- [ ] Keep scheduled sync flags off and hold Site/Avito HTTP ingress at the edge
-      during initial validation. Re-enable each independently controlled source
-      and inspect replay results. The app has no single global ingestion kill switch.
+- [ ] After database validation, recreate only `app` with
+      `INGESTION_MAINTENANCE_MODE=false`; re-enable each independently controlled
+      source in sequence and inspect replay results.
 
 ## 6. Rollback gate
 

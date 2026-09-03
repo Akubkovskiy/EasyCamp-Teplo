@@ -42,6 +42,7 @@ services:
       - TZ=Europe/Moscow
       - DATABASE_URL=sqlite+aiosqlite:////app/data/easycamp.db
       - PYTHONUTF8=1
+      - INGESTION_MAINTENANCE_MODE=${INGESTION_MAINTENANCE_MODE:-false}
     env_file:
       - .env
     volumes:

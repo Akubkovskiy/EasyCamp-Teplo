@@ -34,14 +34,17 @@ hardening series on `codex/booking-integrity-stage1`.
 
 ## Bounded start and canaries
 
-- [ ] Recreate only the `app` service from the recorded candidate image.
-- [ ] Confirm `/health` and `/ready` return 200 and the container stays healthy
-      without a restart loop.
+- [ ] Recreate only the `app` service from the recorded candidate image with
+      `INGESTION_MAINTENANCE_MODE=true`.
+- [ ] Confirm `/health` and `/ready` return 200, `/ready` reports
+      `"ingestion":"maintenance"`, all other HTTP routes return 503, and the
+      container stays healthy without a restart loop.
 - [ ] Confirm SQLite integrity and compare booking count/date range to the snapshot.
+- [ ] Confirm logs contain no scheduler, sync, or Telegram polling startup.
+- [ ] Recreate only `app` with `INGESTION_MAINTENANCE_MODE=false` after the
+      database and process canaries pass.
 - [ ] Confirm exactly one scheduler and one Telegram polling process in logs.
 - [ ] Run a private/admin bot canary during an operator-controlled quiet window.
-- [ ] Keep scheduled sync flags off and hold Site/Avito HTTP ingress at the edge
-      during initial validation; there is no global ingestion kill switch.
 - [ ] Re-enable each independently controlled source in sequence and verify
       replays resolve as duplicates and create no overlap window.
 

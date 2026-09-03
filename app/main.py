@@ -79,12 +79,20 @@ app.add_middleware(RequestLoggerMiddleware)
 
 @app.middleware("http")
 async def maintenance_mode_guard(request: Request, call_next):
-    """Keep application routes offline during a database restore boot."""
+    """Keep application routes offline during restore or release validation."""
 
     if settings.restore_maintenance_mode and request.url.path != "/health":
         return JSONResponse(
             status_code=503,
             content={"detail": "EasyCamp is in database restore maintenance mode"},
+        )
+    if (
+        settings.ingestion_maintenance_mode
+        and request.url.path not in {"/health", "/ready"}
+    ):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "EasyCamp ingestion is in maintenance mode"},
         )
     return await call_next(request)
 
@@ -188,6 +196,13 @@ async def on_startup():
     from app.services.readiness_service import assert_database_ready
 
     await assert_database_ready()
+
+    if settings.ingestion_maintenance_mode:
+        logger.warning(
+            "Ingestion maintenance boot complete; database is ready while HTTP "
+            "application routes, scheduler, sync, and Telegram polling remain disabled"
+        )
+        return
 
     # Start scheduler
     from app.services.scheduler_service import scheduler_service

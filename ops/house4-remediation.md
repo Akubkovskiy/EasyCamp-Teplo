@@ -33,8 +33,9 @@ This runbook is not authorization to mutate production.
    ```
 
 4. Confirm there are no `(source, external_id)` duplicates.
-5. Arrange a quiet window. Keep HTTP and scheduled ingestion disabled until
-   all post-repair canaries pass.
+5. Arrange a quiet window. Use `INGESTION_MAINTENANCE_MODE=true` so HTTP
+   application routes, Telegram polling, scheduler, and startup sync remain
+   disabled until the database and process canaries pass.
 
 ## Snapshot, migrate, repair
 
@@ -96,8 +97,26 @@ This runbook is not authorization to mutate production.
    - booking count and date range match the checkpoint
    - `uq_bookings_source_external_id` is unique on `(source, external_id)`
 
-Only then recreate the `app` service and run `/health`, `/ready`, private bot,
-scheduler, polling, and sequential-ingress canaries.
+Only then recreate the `app` service in ingestion maintenance mode:
+
+```sh
+INGESTION_MAINTENANCE_MODE=true EASYCAMP_IMAGE_TAG=<SHA> \
+  docker compose up -d --no-deps --force-recreate app
+```
+
+Require `/health` to return 200 and `/ready` to return 200 with
+`"ingestion":"maintenance"`. All other HTTP routes must return 503, and logs
+must show no scheduler, sync, or Telegram polling startup.
+
+After those canaries pass, recreate only `app` with the gate explicitly off:
+
+```sh
+INGESTION_MAINTENANCE_MODE=false EASYCAMP_IMAGE_TAG=<SHA> \
+  docker compose up -d --no-deps --force-recreate app
+```
+
+Then run the private bot, scheduler, polling, and sequential source canaries.
+Do not use `docker compose down` at any stage.
 
 ## Full rollback
 

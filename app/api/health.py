@@ -43,8 +43,11 @@ async def readiness(response: Response):
             payload["foreign_key_violations"] = database_readiness.foreign_key_violations
         return payload
 
-    return {
+    payload = {
         "status": "ready",
         "database": "ok",
         "booking_identity_index": REQUIRED_BOOKING_INDEX,
     }
+    if settings.ingestion_maintenance_mode:
+        payload["ingestion"] = "maintenance"
+    return payload
