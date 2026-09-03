@@ -32,6 +32,8 @@
 ### Architecture and external integrations
 - `docs/DEPLOYMENT.md`
 - `docs/architecture.md`
+- `docs/AVAILABILITY_LEDGER_SPEC.md`
+- `docs/AVAILABILITY_OPERATIONS_RUNBOOK.md`
 - `docs/google_sheets_setup.md`
 
 ## Shared Memory Links
