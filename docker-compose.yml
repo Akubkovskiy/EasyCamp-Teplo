@@ -3,8 +3,10 @@ version: '3.8'
 services:
   app:
     build: .
+    image: easycamp:${EASYCAMP_IMAGE_TAG:-local}
     container_name: easycamp_bot
-    restart: always
+    restart: unless-stopped
+    init: true
     environment:
       - TZ=Europe/Moscow
       - DATABASE_URL=sqlite+aiosqlite:////app/data/easycamp.db
@@ -14,9 +16,39 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-      - ./google-credentials.json:/app/google-credentials.json
+      - ./google-credentials.json:/app/google-credentials.json:ro
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3).read()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
-#  If we were using a real db like postgres, we'd add it here.
-#  Since we use sqlite (presumably in ./data or root), the volume binding handles persistence.
+  restore:
+    profiles: ["maintenance"]
+    build: .
+    image: easycamp:${EASYCAMP_IMAGE_TAG:-local}
+    restart: "no"
+    init: true
+    environment:
+      - TZ=Europe/Moscow
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/easycamp.db
+      - PYTHONUTF8=1
+      - INGESTION_MAINTENANCE_MODE=${INGESTION_MAINTENANCE_MODE:-false}
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./google-credentials.json:/app/google-credentials.json:ro
+    command: ["python", "-m", "app.services.backup_service", "restore-drive"]
+
+# SQLite state remains on the host under ./data; release and restore procedures
+# must follow ops/backup.md and ops/restore.md before replacing the app service.

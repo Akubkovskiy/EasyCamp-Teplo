@@ -47,9 +47,11 @@ python scripts/utils/migrate_global_settings.py
 
 ## Usage Notes
 
-1. **Always backup** the database before running any migration:
+1. Stop application writers and create a validated SQLite snapshot before any
+   migration. Never raw-copy a live database:
    ```bash
-   cp easycamp.db easycamp.db.backup
+   python -m app.services.sqlite_recovery snapshot \
+     easycamp.db easycamp.before-migration.db
    ```
 
 2. Scripts should be run **from the project root** (not from scripts/utils/):

@@ -39,6 +39,16 @@ python -m uvicorn app.main:app --reload
 
 Full setup guide (Google Sheets API, Telegram Bot, Avito): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
+Before opening a PR, run the reproducible verification gate:
+
+```bash
+pip install -r requirements-dev.txt
+python scripts/verify_release.py
+```
+
+Release builds additionally require the Docker-capable gate documented in
+**[ops/release-gates.md](ops/release-gates.md)**.
+
 ---
 
 ## 🔧 Stack

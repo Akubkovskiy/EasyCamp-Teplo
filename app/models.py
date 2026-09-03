@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     Enum as SQLEnum,
+    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,6 +44,7 @@ class House(Base):
     description: Mapped[Optional[str]] = mapped_column(String)
     capacity: Mapped[int] = mapped_column(Integer, default=2)
     base_price: Mapped[int] = mapped_column(Integer, default=0)  # Базовая цена ₽/сут
+    is_active: Mapped[bool] = mapped_column(default=True, index=True)
 
     # Динамический контент
     wifi_info: Mapped[Optional[str]] = mapped_column(
@@ -106,6 +108,14 @@ class HouseDiscount(Base):
 
 class Booking(Base):
     __tablename__ = "bookings"
+    __table_args__ = (
+        Index(
+            "uq_bookings_source_external_id",
+            "source",
+            "external_id",
+            unique=True,
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -135,7 +145,7 @@ class Booking(Base):
     )
     external_id: Mapped[Optional[str]] = mapped_column(
         String, index=True
-    )  # ID брони в Avito
+    )  # Stable source-owned identity (Avito, Yandex Travel, site lead, etc.)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

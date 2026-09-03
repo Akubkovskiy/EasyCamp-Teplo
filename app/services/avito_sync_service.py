@@ -7,11 +7,13 @@ from decimal import Decimal
 import logging
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.models import Booking, BookingStatus, BookingSource, House
+from app.schemas.booking import BookingCreate
 from app.services.avito_api_service import avito_api_service
-from app.services.booking_service import should_replace_avito_guest_value
+from app.services.booking_service import BookingService, should_replace_avito_guest_value
 from app.database import AsyncSessionLocal
 from app.utils.validators import format_phone
 
@@ -149,7 +151,7 @@ async def sync_avito_bookings(item_id: int, house_id: int) -> dict:
 
 
 async def process_avito_booking(
-    session: Session, booking_data: dict, house_id: int, stats: dict
+    session: AsyncSession, booking_data: dict, house_id: int, stats: dict
 ):
     """Обработка одной брони из Avito"""
     # Robust logging for debugging
@@ -222,7 +224,7 @@ async def process_avito_booking(
             existing.commission = new_commission
             existing.prepayment_owner = new_owner_prep
             existing.updated_at = datetime.now()
-            # Commission update doesn't necessarily warrant a user notification, but we track it
+            is_updated = True
 
         # Update advance amount if changed
         new_advance = get_prepayment(booking_data)
@@ -232,9 +234,10 @@ async def process_avito_booking(
             is_updated = True
 
         if is_updated:
-            # Ensure house is loaded for notification
+            await session.commit()
+            await session.refresh(existing)
             house = await session.get(House, house_id)
-            existing.house = house
+            set_committed_value(existing, "house", house)
             stats["updated_bookings"].append(existing)
 
     else:
@@ -242,31 +245,8 @@ async def process_avito_booking(
         check_in = datetime.strptime(booking_data["check_in"], "%Y-%m-%d").date()
         check_out = datetime.strptime(booking_data["check_out"], "%Y-%m-%d").date()
 
-        # Overlap guard: ищем активные брони для того же дома с пересечением дат
-        overlap_stmt = select(Booking).where(
-            Booking.house_id == house_id,
-            Booking.status != BookingStatus.CANCELLED,
-            Booking.check_in < check_out,
-            Booking.check_out > check_in,
-        ).limit(1)
-        overlap_result = await session.execute(overlap_stmt)
-        conflicting = overlap_result.scalar_one_or_none()
-
-        if conflicting:
-            logger.warning(
-                f"⚠️ OVERLAP BLOCKED: Avito booking {avito_id} "
-                f"({check_in} - {check_out}) conflicts with "
-                f"existing booking #{conflicting.id} "
-                f"({conflicting.check_in} - {conflicting.check_out}) "
-                f"for house {house_id}. Skipping creation."
-            )
-            stats.setdefault("conflicts", 0)
-            stats["conflicts"] += 1
-            return
-
         guest_name = extract_avito_contact_field(booking_data, "name") or "Гость Avito"
-
-        new_booking = Booking(
+        create = BookingCreate(
             house_id=house_id,
             guest_name=guest_name,
             guest_phone=format_phone(extract_avito_contact_field(booking_data, "phone") or ""),
@@ -285,13 +265,31 @@ async def process_avito_booking(
                 str((booking_data.get("safe_deposit") or {}).get("owner_amount", 0))
             ),
         )
+        outcome = await BookingService.create_booking_result(session, create)
 
-        session.add(new_booking)
+        if outcome.reason == "unavailable":
+            logger.warning(
+                "⚠️ OVERLAP BLOCKED: Avito booking %s (%s - %s) conflicts "
+                "with an active booking for house %s",
+                avito_id,
+                check_in,
+                check_out,
+                house_id,
+            )
+            stats.setdefault("conflicts", 0)
+            stats["conflicts"] += 1
+            return
+        if not outcome.created or not outcome.booking:
+            if outcome.duplicate:
+                logger.info("Avito booking %s already exists", avito_id)
+            else:
+                logger.error("Avito booking %s rejected before insert: %s", avito_id, outcome.reason)
+                stats["errors"] += 1
+            return
 
-        # Need to commit or flush to get ID, and load house
-        await session.flush()
+        new_booking = outcome.booking
         house = await session.get(House, house_id)
-        new_booking.house = house
+        set_committed_value(new_booking, "house", house)
 
         stats["new_bookings"].append(new_booking)
         logger.info(f"Created new booking {avito_id}")

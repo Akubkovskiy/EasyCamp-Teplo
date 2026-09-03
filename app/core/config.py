@@ -32,6 +32,17 @@ class Settings(BaseModel):
     sync_on_user_interaction: bool = True
     sync_cache_ttl_seconds: int = 30
 
+    # Disaster recovery is fail-closed. A restore is allowed only in an explicit
+    # maintenance boot with every background writer disabled.
+    restore_from_drive_enabled: bool = False
+    restore_maintenance_mode: bool = False
+    restore_allow_overwrite: bool = False
+    restore_drive_file_id: str = ""
+
+    # Operator-controlled release gate. Unlike restore maintenance this mode
+    # initializes and validates the database, but starts no ingestion writers.
+    ingestion_maintenance_mode: bool = False
+
     # Avito calendar settings
     booking_window_days: int = 180
 
@@ -149,6 +160,23 @@ settings = Settings(
     sync_on_user_interaction=os.environ.get("SYNC_ON_USER_INTERACTION", "true").lower()
     == "true",
     sync_cache_ttl_seconds=int(os.environ.get("SYNC_CACHE_TTL_SECONDS", "30")),
+    restore_from_drive_enabled=os.environ.get(
+        "RESTORE_FROM_DRIVE_ENABLED", "false"
+    ).lower()
+    == "true",
+    restore_maintenance_mode=os.environ.get(
+        "RESTORE_MAINTENANCE_MODE", "false"
+    ).lower()
+    == "true",
+    restore_allow_overwrite=os.environ.get(
+        "RESTORE_ALLOW_OVERWRITE", "false"
+    ).lower()
+    == "true",
+    restore_drive_file_id=os.environ.get("RESTORE_DRIVE_FILE_ID", ""),
+    ingestion_maintenance_mode=os.environ.get(
+        "INGESTION_MAINTENANCE_MODE", "false"
+    ).lower()
+    == "true",
     booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "180")),
     cleaning_notification_time=os.environ.get("CLEANING_NOTIFICATION_TIME", "20:00"),
     cleaning_confirm_window_min=int(os.environ.get("CLEANING_CONFIRM_WINDOW_MIN", "30")),

@@ -104,6 +104,9 @@ async def calculate_stay(
     db: AsyncSession = Depends(get_db),
 ):
     """Расчёт стоимости проживания (для формы бронирования на сайте)."""
+    house = await HouseService.get_house_by_id(db, house_id)
+    if not house:
+        return {}
     result = await PricingService.calculate_stay_total(db, house_id, check_in, check_out)
     return result
 

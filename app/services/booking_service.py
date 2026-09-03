@@ -1,13 +1,16 @@
 import logging
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, date, timezone
 from typing import List, Optional
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.models import (
     Booking,
+    BookingSource,
     BookingStatus,
     CleaningPaymentEntryType,
     CleaningPaymentLedger,
@@ -22,6 +25,19 @@ from app.avito.schemas import AvitoBookingPayload
 from app.services.sheets_service import sheets_service
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class BookingCreateResult:
+    """Outcome of the atomic booking-creation boundary."""
+
+    booking: Optional[Booking]
+    created: bool
+    reason: Optional[str] = None
+
+    @property
+    def duplicate(self) -> bool:
+        return self.booking is not None and not self.created and self.reason == "duplicate"
 
 
 def extract_avito_contact_value(payload: AvitoBookingPayload, field: str) -> str | None:
@@ -133,7 +149,10 @@ class BookingService:
             )
 
             # Выбираем дома, которых нет в списке занятых
-            query = select(House).where(House.id.not_in(busy_houses_query))
+            query = select(House).where(
+                House.is_active.is_(True),
+                House.id.not_in(busy_houses_query),
+            )
             result = await db.execute(query)
             return result.scalars().all()
 
@@ -141,67 +160,160 @@ class BookingService:
             logger.error(f"Error getting available houses: {e}")
             return []
 
-    @classmethod
-    async def create_booking(cls, db: AsyncSession, booking_in: BookingCreate | dict) -> Optional[Booking]:
+    @staticmethod
+    async def _begin_booking_create_transaction(db: AsyncSession) -> None:
+        """Start the serialized transaction used for every new booking.
+
+        SQLite has no interval-exclusion constraint. ``BEGIN IMMEDIATE`` takes
+        its database-wide reserved write lock before the final overlap read, so
+        two application workers cannot both observe a free interval and then
+        insert it. Read-only transactions opened by upstream validation are
+        rolled back first; pending ORM writes are rejected rather than silently
+        committed or discarded.
         """
-        Создание новой брони.
-        """
-        try:
-            # Convert dict to schema if needed
-            if isinstance(booking_in, dict):
-                booking_in = BookingCreate(**booking_in)
-            
-            # Single contract point: check availability before creating
-            is_available = await cls.check_availability(
-                db,
-                house_id=booking_in.house_id,
-                check_in=booking_in.check_in,
-                check_out=booking_in.check_out,
-            )
-            if not is_available:
-                logger.warning(
-                    f"Cannot create booking: dates {booking_in.check_in} - {booking_in.check_out} "
-                    f"not available for house {booking_in.house_id}"
+        if db.in_transaction():
+            if db.new or db.dirty or db.deleted:
+                raise RuntimeError(
+                    "booking creation requires a clean session; commit or rollback pending changes first"
                 )
-                return None
+            await db.rollback()
 
-            # Calculate defaults if not provided in schema (schema has defaults but logic might be specific)
-            # If commission is 0, owner gets full advance
+        bind = db.get_bind()
+        if bind.dialect.name == "sqlite":
+            await db.execute(text("BEGIN IMMEDIATE"))
+        else:
+            await db.begin()
+
+    @staticmethod
+    async def _find_external_booking(
+        db: AsyncSession,
+        source: BookingSource,
+        external_id: str,
+    ) -> Optional[Booking]:
+        result = await db.execute(
+            select(Booking).where(
+                Booking.source == source,
+                Booking.external_id == external_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    async def create_booking_result(
+        cls,
+        db: AsyncSession,
+        booking_in: BookingCreate | dict,
+    ) -> BookingCreateResult:
+        """Atomically validate availability and insert a booking.
+
+        External IDs are idempotent within their source.  The unique database
+        index is the durable last line of defence; the explicit lookup provides
+        a deterministic duplicate result during normal retries.
+        """
+        if isinstance(booking_in, dict):
+            booking_in = BookingCreate(**booking_in)
+
+        external_id = booking_in.external_id
+        source = booking_in.source
+
+        try:
+            await cls._begin_booking_create_transaction(db)
+
+            if external_id:
+                existing = await cls._find_external_booking(db, source, external_id)
+                if existing:
+                    await db.commit()
+                    return BookingCreateResult(existing, created=False, reason="duplicate")
+
+            house = await db.get(House, booking_in.house_id)
+            if house is None:
+                await db.rollback()
+                logger.warning("Cannot create booking: unknown house %s", booking_in.house_id)
+                return BookingCreateResult(None, created=False, reason="unknown_house")
+
+            conflict_result = await db.execute(
+                select(Booking.id)
+                .where(
+                    Booking.house_id == booking_in.house_id,
+                    Booking.status != BookingStatus.CANCELLED,
+                    Booking.check_in < booking_in.check_out,
+                    Booking.check_out > booking_in.check_in,
+                )
+                .limit(1)
+            )
+            conflicting_id = conflict_result.scalar_one_or_none()
+            if conflicting_id is not None:
+                await db.rollback()
+                logger.warning(
+                    "Cannot create booking: dates %s - %s conflict with booking #%s for house %s",
+                    booking_in.check_in,
+                    booking_in.check_out,
+                    conflicting_id,
+                    booking_in.house_id,
+                )
+                return BookingCreateResult(None, created=False, reason="unavailable")
+
+            prepayment_owner = booking_in.prepayment_owner
             if booking_in.commission == 0:
-                booking_in.prepayment_owner = booking_in.advance_amount
+                prepayment_owner = booking_in.advance_amount
 
+            now = datetime.now(timezone.utc)
             booking = Booking(
                 house_id=booking_in.house_id,
                 guest_name=booking_in.guest_name,
-                guest_phone=booking_in.guest_phone,
+                guest_phone=booking_in.guest_phone or "",
                 check_in=booking_in.check_in,
                 check_out=booking_in.check_out,
                 guests_count=booking_in.guests_count,
                 total_price=booking_in.total_price,
                 advance_amount=booking_in.advance_amount,
                 commission=booking_in.commission,
-                prepayment_owner=booking_in.prepayment_owner,
+                prepayment_owner=prepayment_owner,
                 status=booking_in.status,
-                source=booking_in.source,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                source=source,
+                external_id=external_id,
+                created_at=now,
+                updated_at=now,
             )
 
             db.add(booking)
+            await db.flush()
             await db.commit()
             await db.refresh(booking)
 
-            # Блокировка дат в Avito
+        except IntegrityError as exc:
+            await db.rollback()
+            if external_id:
+                existing = await cls._find_external_booking(db, source, external_id)
+                if existing:
+                    logger.info(
+                        "Booking create resolved unique conflict as duplicate: source=%s external_id=%s",
+                        source.value,
+                        external_id,
+                    )
+                    return BookingCreateResult(existing, created=False, reason="duplicate")
+            logger.error("Booking insert failed integrity validation: %s", exc)
+            return BookingCreateResult(None, created=False, reason="integrity_error")
+        except Exception as exc:
+            await db.rollback()
+            logger.error("Error creating booking: %s", exc, exc_info=True)
+            return BookingCreateResult(None, created=False, reason="database_error")
+
+        # External calls happen only after the database transaction is durable.
+        if booking.source != BookingSource.AVITO:
             await cls._block_avito_dates(booking)
+        asyncio.create_task(cls._safe_background_sheets_sync())
+        return BookingCreateResult(booking, created=True)
 
-            # Фоновая синхронизация с GS (safe wrapper)
-            asyncio.create_task(cls._safe_background_sheets_sync())
-
-            return booking
-
-        except Exception as e:
-            logger.error(f"Error creating booking: {e}")
-            return None
+    @classmethod
+    async def create_booking(
+        cls,
+        db: AsyncSession,
+        booking_in: BookingCreate | dict,
+    ) -> Optional[Booking]:
+        """Backward-compatible wrapper for callers that only need the booking."""
+        result = await cls.create_booking_result(db, booking_in)
+        return result.booking
 
     @staticmethod
     async def _block_avito_dates(booking: Booking):
@@ -636,8 +748,8 @@ class BookingService:
                 return existing
 
             else:
-                # Create — but check for overlaps first
-                # We need house_id. Since webhook might not contain internal house_id, we need mapping.
+                # Resolve the stable listing-to-house mapping, then delegate the
+                # final duplicate/overlap check and insert to the atomic boundary.
                 from app.core.config import settings
                 item_house_mapping = {}
                 for pair in settings.avito_item_ids.split(","):
@@ -653,22 +765,10 @@ class BookingService:
                 check_in = datetime.strptime(booking_payload.check_in, "%Y-%m-%d").date()
                 check_out = datetime.strptime(booking_payload.check_out, "%Y-%m-%d").date()
 
-                # Overlap guard
-                is_available = await BookingService.check_availability(
-                    db, house_id=house_id, check_in=check_in, check_out=check_out
-                )
-                if not is_available:
-                    logger.warning(
-                        f"⚠️ OVERLAP BLOCKED: Avito webhook booking {avito_id} "
-                        f"({check_in} - {check_out}) conflicts with existing booking "
-                        f"for house {house_id}. Skipping creation."
-                    )
-                    return None
-
                 guest_name = extract_avito_contact_value(booking_payload, "name") or "Гость Avito"
                 guest_phone = extract_avito_contact_value(booking_payload, "phone") or ""
 
-                new_booking = Booking(
+                create = BookingCreate(
                     house_id=house_id,
                     guest_name=guest_name,
                     guest_phone=format_phone(guest_phone),
@@ -686,18 +786,18 @@ class BookingService:
                     prepayment_owner=Decimal(
                         str(booking_payload.safe_deposit.owner_amount if booking_payload.safe_deposit else 0)
                     ),
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
                 )
-
-                db.add(new_booking)
-                await db.commit()
-                await db.refresh(new_booking)
-                
-                # Sync to sheets
-                asyncio.create_task(BookingService._safe_background_sheets_sync())
-
-                return new_booking
+                outcome = await BookingService.create_booking_result(db, create)
+                if outcome.reason == "unavailable":
+                    logger.warning(
+                        "⚠️ OVERLAP BLOCKED: Avito webhook booking %s (%s - %s) "
+                        "conflicts with an active booking for house %s",
+                        avito_id,
+                        check_in,
+                        check_out,
+                        house_id,
+                    )
+                return outcome.booking
 
         except Exception as e:
             logger.error(f"Error processing Avito booking {booking_payload.avito_booking_id}: {e}", exc_info=True)
