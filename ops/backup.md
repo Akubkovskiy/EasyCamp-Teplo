@@ -60,6 +60,14 @@ Before revision `c8b1a6f4d2e9` is applied:
 The migration aborts without deleting or merging rows when duplicates exist.
 Reconcile duplicates manually from the verified snapshot before retrying.
 
+## Known house-4 forensic checkpoint
+
+The current production database cannot pass the normal backup validator until
+its audited house-4 orphan graph is repaired. Do not add a general
+`allow_foreign_key_violations` switch. Use the exact fail-closed snapshot and
+repair flow in `ops/house4-remediation.md`; it accepts only the seven recorded
+violations and creates a checksum-addressed rollback artifact before migration.
+
 ## Restore testing
 
 A Drive upload is not a proven backup until a separate-path restore has passed

@@ -1,18 +1,28 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from app.models import House
 from app.schemas.house import HouseCreate, HouseUpdate
 
 class HouseService:
     @staticmethod
-    async def get_all_houses(db: AsyncSession) -> List[House]:
-        result = await db.execute(select(House).order_by(House.id))
+    async def get_all_houses(
+        db: AsyncSession, *, include_inactive: bool = False
+    ) -> List[House]:
+        stmt = select(House)
+        if not include_inactive:
+            stmt = stmt.where(House.is_active.is_(True))
+        result = await db.execute(stmt.order_by(House.id))
         return list(result.scalars().all())
 
     @staticmethod
-    async def get_house_by_id(db: AsyncSession, house_id: int) -> Optional[House]:
-        result = await db.execute(select(House).where(House.id == house_id))
+    async def get_house_by_id(
+        db: AsyncSession, house_id: int, *, include_inactive: bool = False
+    ) -> Optional[House]:
+        stmt = select(House).where(House.id == house_id)
+        if not include_inactive:
+            stmt = stmt.where(House.is_active.is_(True))
+        result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
     @staticmethod
@@ -44,7 +54,12 @@ class HouseService:
 
     @staticmethod
     async def delete_house(db: AsyncSession, house_id: int) -> bool:
-        stmt = delete(House).where(House.id == house_id)
-        result = await db.execute(stmt)
+        db_house = await HouseService.get_house_by_id(
+            db, house_id, include_inactive=True
+        )
+        if not db_house or not db_house.is_active:
+            return False
+
+        db_house.is_active = False
         await db.commit()
-        return result.rowcount > 0
+        return True

@@ -1,12 +1,15 @@
 import sqlite3
+from datetime import date
 from contextlib import closing
 from pathlib import Path
 
 import pytest
 from fastapi import Response
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api import health
+from app.database import Base
+from app.models import Booking, BookingSource, BookingStatus
 from app.services import readiness_service
 from app.services.readiness_service import DatabaseNotReadyError
 
@@ -106,6 +109,47 @@ async def test_readiness_requires_booking_identity_migration(tmp_path, monkeypat
         "status": "not_ready",
         "reason": "migration_required",
         "missing_index": "uq_bookings_source_external_id",
+    }
+
+
+@pytest.mark.asyncio
+async def test_readiness_rejects_foreign_key_violations(tmp_path, monkeypatch):
+    database_path = tmp_path / "orphan.db"
+    test_engine = create_async_engine(_database_url(database_path))
+    async with test_engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            Booking(
+                house_id=999,
+                guest_name="Orphan",
+                guest_phone="000",
+                check_in=date(2026, 9, 10),
+                check_out=date(2026, 9, 11),
+                guests_count=2,
+                status=BookingStatus.CONFIRMED,
+                source=BookingSource.DIRECT,
+            )
+        )
+        await session.commit()
+
+    monkeypatch.setattr(readiness_service, "engine", test_engine)
+    monkeypatch.setattr(health.settings, "restore_maintenance_mode", False)
+    try:
+        response = Response()
+        result = await health.readiness(response)
+        with pytest.raises(DatabaseNotReadyError, match="referential_integrity_failed"):
+            await readiness_service.assert_database_ready(test_engine)
+    finally:
+        await test_engine.dispose()
+
+    assert response.status_code == 503
+    assert result == {
+        "status": "not_ready",
+        "reason": "referential_integrity_failed",
+        "foreign_key_violations": 1,
     }
 
 

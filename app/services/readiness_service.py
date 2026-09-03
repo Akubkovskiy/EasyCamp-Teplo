@@ -26,6 +26,7 @@ class DatabaseReadiness:
     missing_tables: tuple[str, ...] = ()
     missing_columns: tuple[str, ...] = ()
     missing_index: str | None = None
+    foreign_key_violations: int = 0
 
 
 class DatabaseNotReadyError(RuntimeError):
@@ -74,6 +75,8 @@ async def check_database_readiness(
                 and booking_index[4] == 0
                 and booking_index_columns == ["source", "external_id"]
             )
+            foreign_key_rows = await connection.execute(text("PRAGMA foreign_key_check"))
+            foreign_key_violations = len(foreign_key_rows.fetchall())
     except SQLAlchemyError:
         return DatabaseReadiness(ready=False, reason="database_unavailable")
 
@@ -96,6 +99,12 @@ async def check_database_readiness(
             reason="migration_required",
             missing_index=REQUIRED_BOOKING_INDEX,
         )
+    if foreign_key_violations:
+        return DatabaseReadiness(
+            ready=False,
+            reason="referential_integrity_failed",
+            foreign_key_violations=foreign_key_violations,
+        )
     return DatabaseReadiness(ready=True, reason="ready")
 
 
@@ -107,5 +116,6 @@ async def assert_database_ready(database_engine: AsyncEngine | None = None) -> N
             f"reason={readiness.reason} "
             f"missing_tables={list(readiness.missing_tables)} "
             f"missing_columns={list(readiness.missing_columns)} "
-            f"missing_index={readiness.missing_index}"
+            f"missing_index={readiness.missing_index} "
+            f"foreign_key_violations={readiness.foreign_key_violations}"
         )

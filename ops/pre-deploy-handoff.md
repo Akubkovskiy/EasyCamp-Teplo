@@ -24,9 +24,13 @@ hardening series on `codex/booking-integrity-stage1`.
       active date range, and current Alembic revision.
 - [ ] Run the duplicate preflight from `ops/backup.md`. Do not alter or delete
       duplicate rows during the release window.
+- [ ] Complete the exact snapshot/migration/repair sequence in
+      `ops/house4-remediation.md`; abort if its audited IDs have drifted.
 - [ ] Apply `alembic upgrade head` only after the snapshot and preflight pass.
 - [ ] Confirm `uq_bookings_source_external_id` is unique over
       `(source, external_id)` and `/ready` validates all `House`/`Booking` columns.
+- [ ] Confirm `houses.id=4` is inactive, active inventory remains IDs `1`, `2`,
+      `3`, and `PRAGMA foreign_key_check` returns zero rows.
 
 ## Bounded start and canaries
 
@@ -43,9 +47,9 @@ hardening series on `codex/booking-integrity-stage1`.
 
 ## Rollback decision
 
-- Code/runtime failure before new writes: stop `app`, return to the previous
-  image/tag, downgrade `c8b1a6f4d2e9` if the previous code does not own the
-  index, and rerun health/integrity canaries.
+- Code/runtime failure before new writes: stop `app` and follow the full
+  house-4 rollback in `ops/house4-remediation.md` before returning to the
+  previous image/tag. A code-only rollback would expose the archived house.
 - Suspected data mutation or restore issue: keep writers stopped and follow
   `ops/restore.md` using the validated snapshot. Never raw-copy a live SQLite file.
 - Retain the previous image and snapshot until booking and ingestion canaries are

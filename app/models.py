@@ -44,6 +44,7 @@ class House(Base):
     description: Mapped[Optional[str]] = mapped_column(String)
     capacity: Mapped[int] = mapped_column(Integer, default=2)
     base_price: Mapped[int] = mapped_column(Integer, default=0)  # Базовая цена ₽/сут
+    is_active: Mapped[bool] = mapped_column(default=True, index=True)
 
     # Динамический контент
     wifi_info: Mapped[Optional[str]] = mapped_column(

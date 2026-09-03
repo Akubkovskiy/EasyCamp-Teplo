@@ -49,3 +49,11 @@ exist. Do not bypass that check or start ingestion until the index is present.
 
 Rollback is documented in `ops/restore.md`. No automatic production migration,
 deploy, restart, or duplicate-row deletion is part of this repository change.
+
+## Revision `f2a4c6e8b0d1`
+
+This revision introduces inactive/archived houses. The current production
+house-4 orphan graph requires the separate, fail-closed procedure in
+`ops/house4-remediation.md`; `alembic upgrade head` does not silently repair or
+delete business data. Do not start the candidate while any foreign-key
+violation remains because `/ready` will fail and booking writers stay disabled.

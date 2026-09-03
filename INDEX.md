@@ -9,6 +9,7 @@
 5. `ops/restore.md`
 6. `ops/release-gates.md`
 7. `ops/pre-deploy-handoff.md`
+8. `ops/house4-remediation.md`
 
 ## By Task
 
@@ -28,6 +29,7 @@
 - `scripts/verify_release.py`
 - `ops/release-gates.md`
 - `ops/pre-deploy-handoff.md`
+- `ops/house4-remediation.md`
 
 ### Database and migrations
 - `alembic/`

@@ -10,6 +10,7 @@ from app.core.config import settings
 
 PREVIOUS_REVISION = "a1b2c3d4e5f6"
 INDEX_NAME = "uq_bookings_source_external_id"
+TARGET_REVISION = "c8b1a6f4d2e9"
 
 
 def _legacy_database(path, *, with_duplicates: bool = False) -> None:
@@ -70,7 +71,7 @@ def test_external_identity_migration_upgrade_and_downgrade(tmp_path, monkeypatch
     monkeypatch.setattr(settings, "database_url", db_url)
     config = _alembic_config(db_path)
 
-    command.upgrade(config, "head")
+    command.upgrade(config, TARGET_REVISION)
     assert INDEX_NAME in _index_names(db_path)
 
     command.downgrade(config, PREVIOUS_REVISION)
@@ -85,7 +86,7 @@ def test_external_identity_migration_refuses_legacy_duplicates(tmp_path, monkeyp
     monkeypatch.setattr(settings, "database_url", db_url)
 
     with pytest.raises(RuntimeError, match="duplicate rows exist"):
-        command.upgrade(_alembic_config(db_path), "head")
+        command.upgrade(_alembic_config(db_path), TARGET_REVISION)
 
     assert INDEX_NAME not in _index_names(db_path)
     assert _alembic_revision(db_path) == PREVIOUS_REVISION
@@ -104,6 +105,6 @@ def test_external_identity_migration_refuses_incompatible_named_index(tmp_path, 
     monkeypatch.setattr(settings, "database_url", f"sqlite+aiosqlite:///{db_path_text}")
 
     with pytest.raises(RuntimeError, match="Existing index .* is incompatible"):
-        command.upgrade(_alembic_config(db_path), "head")
+        command.upgrade(_alembic_config(db_path), TARGET_REVISION)
 
     assert _alembic_revision(db_path) == PREVIOUS_REVISION

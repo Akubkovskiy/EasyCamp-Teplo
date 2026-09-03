@@ -82,7 +82,7 @@ async def _sync_yandex_travel(db: AsyncSession, house_id: Optional[int], days_fo
     errors = []
     today = date.today()
 
-    stmt = select(House)
+    stmt = select(House).where(House.is_active.is_(True))
     if house_id:
         stmt = stmt.where(House.id == house_id)
     result = await db.execute(stmt)

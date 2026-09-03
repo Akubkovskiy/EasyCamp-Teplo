@@ -149,7 +149,10 @@ class BookingService:
             )
 
             # Выбираем дома, которых нет в списке занятых
-            query = select(House).where(House.id.not_in(busy_houses_query))
+            query = select(House).where(
+                House.is_active.is_(True),
+                House.id.not_in(busy_houses_query),
+            )
             result = await db.execute(query)
             return result.scalars().all()
 

@@ -46,6 +46,9 @@ Do not use a release-check `.env` for production and do not commit it.
 - [ ] Create a validated SQLite backup through `ops/backup.md` and record SHA-256.
 - [ ] Run the stage 1 duplicate preflight before migration `c8b1a6f4d2e9`.
 - [ ] Apply Alembic migrations only after the backup and preflight are accepted.
+- [ ] For the known house-4 graph, follow `ops/house4-remediation.md`; require
+      exact row-ID matching, the forensic snapshot checksum, and zero remaining
+      foreign-key violations before startup.
 - [ ] Confirm `RESTORE_FROM_DRIVE_ENABLED=false`,
       `RESTORE_MAINTENANCE_MODE=false`, `RESTORE_ALLOW_OVERWRITE=false`, and an
       empty `RESTORE_DRIVE_FILE_ID` for normal startup.
@@ -69,6 +72,8 @@ them. Do not recreate the production container merely to test the YAML.
 - [ ] `/health` returns `200` (process liveness).
 - [ ] `/ready` returns `200`, reports the external-booking identity index, and
       has validated every ORM column used by the `House` and `Booking` models.
+- [ ] `/ready` reports no referential-integrity failure; active house inventory
+      excludes the archived house.
 - [ ] The container reaches `healthy` without a restart loop.
 - [ ] SQLite `PRAGMA integrity_check` returns `ok`.
 - [ ] Active booking counts/date ranges match the pre-change checkpoint.

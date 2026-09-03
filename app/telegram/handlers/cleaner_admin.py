@@ -903,7 +903,9 @@ async def admin_cleaning_task_photos(callback: CallbackQuery):
 
 async def _render_cleaning_settings(callback: CallbackQuery):
     async with AsyncSessionLocal() as s:
-        houses_q = await s.execute(select(House).where(House.id != 4).order_by(House.id))
+        houses_q = await s.execute(
+            select(House).where(House.is_active.is_(True)).order_by(House.id)
+        )
         houses = list(houses_q.scalars().all())
 
         rates_q = await s.execute(

@@ -1,6 +1,6 @@
 # EasyCamp-Teplo Status
 
-Updated: 2026-04-08
+Updated: 2026-09-03
 Tier: Tier 2
 Runs on: `FI-RZ-4`
 
@@ -44,3 +44,8 @@ DB-aware readiness gates. These changes are not deployed. The branch-local
 dependency audit is clean as of commit `0c8c98f`. Before first use, complete
 `ops/release-gates.md` and run the Docker-capable build/Compose gate on a host
 with Docker.
+
+The branch also contains a local-only, fail-closed remediation for the audited
+production `houses.id=4` orphan graph. Production has not been changed. The
+required snapshot, migration, repair, and full rollback order is documented in
+`ops/house4-remediation.md`.

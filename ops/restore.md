@@ -129,3 +129,11 @@ and run a read-only booking canary.
 SQLite cannot express a native exclusion constraint for overlapping date
 intervals. Direct SQL writes, older code that bypasses the booking service, and
 edits to an existing booking interval remain outside the stage 1 guarantee.
+
+## Archived-house repair rollback
+
+The pre-repair forensic snapshot contains the seven known foreign-key
+violations, so the normal strict restore intentionally refuses it. Use only the
+checksum-gated `restore-known-house4-snapshot` procedure in
+`ops/house4-remediation.md`. It accepts the exact audited row IDs, retains a
+strict forward snapshot, and fails on any drift.
